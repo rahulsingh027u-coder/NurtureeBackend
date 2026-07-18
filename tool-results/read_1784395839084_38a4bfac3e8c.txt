@@ -1,0 +1,659 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect } from 'react'
+     4→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+     5→import { Badge } from '@/components/ui/badge'
+     6→import { Button } from '@/components/ui/button'
+     7→import { Input } from '@/components/ui/input'
+     8→import { Label } from '@/components/ui/label'
+     9→import { Skeleton } from '@/components/ui/skeleton'
+    10→import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+    11→import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
+    12→import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+    13→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+    14→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    15→import { useToast } from '@/hooks/use-toast'
+    16→import { cn } from '@/lib/utils'
+    17→import { Plus, Search, Eye, Ban, CheckCircle, Loader2, Stethoscope, FileText, DollarSign } from 'lucide-react'
+    18→
+    19→interface Doctor {
+    20→  id: string
+    21→  name: string
+    22→  email: string
+    23→  phone: string
+    24→  specialty: string
+    25→  qualifications: string
+    26→  experience: number
+    27→  area: string
+    28→  feeOnline: number
+    29→  feeAtHome: number
+    30→  commissionRate: number
+    31→  status: string
+    32→  isVerified: boolean
+    33→  isBlocked: boolean
+    34→  hasPortalAccess: boolean
+    35→  bookingsCount: number
+    36→  commissionDue: number
+    37→}
+    38→
+    39→interface Booking {
+    40→  id: string
+    41→  bookingId: string
+    42→  patientName: string
+    43→  patientUhid?: string
+    44→  date: string
+    45→  status: string
+    46→}
+    47→
+    48→interface Prescription {
+    49→  id: string
+    50→  prescriptionId?: string
+    51→  patientName: string
+    52→  date: string
+    53→  diagnosis?: string
+    54→}
+    55→
+    56→const statusColor: Record<string, string> = {
+    57→  online: 'bg-blue-100 text-blue-700',
+    58→  offline: 'bg-gray-100 text-gray-600',
+    59→  blocked: 'bg-red-100 text-red-700',
+    60→}
+    61→
+    62→const bookingStatusColor: Record<string, string> = {
+    63→  pending: 'bg-yellow-100 text-yellow-800',
+    64→  confirmed: 'bg-blue-100 text-blue-800',
+    65→  in_progress: 'bg-purple-100 text-purple-800',
+    66→  completed: 'bg-blue-100 text-blue-800',
+    67→  cancelled: 'bg-red-100 text-red-800',
+    68→}
+    69→
+    70→const specialtyOptions = [
+    71→  'Gynaecologist',
+    72→  'Pediatrician',
+    73→  'Geriatric Specialist',
+    74→  'General Physician',
+    75→  'Internal Medicine',
+    76→  'Family Doctor',
+    77→]
+    78→
+    79→const emptyForm = {
+    80→  name: '',
+    81→  email: '',
+    82→  phone: '',
+    83→  password: '',
+    84→  specialty: '',
+    85→  qualifications: '',
+    86→  experience: '',
+    87→  area: '',
+    88→  feeOnline: '',
+    89→  feeAtHome: '',
+    90→  commissionRate: '15',
+    91→}
+    92→
+    93→export function DoctorsSection() {
+    94→  const { toast } = useToast()
+    95→
+    96→  // Data state
+    97→  const [doctors, setDoctors] = useState<Doctor[]>([])
+    98→  const [loading, setLoading] = useState(true)
+    99→
+   100→  // Filters
+   101→  const [search, setSearch] = useState('')
+   102→  const [statusFilter, setStatusFilter] = useState('all')
+   103→  const [verifiedFilter, setVerifiedFilter] = useState('all')
+   104→
+   105→  // Add doctor dialog
+   106→  const [addOpen, setAddOpen] = useState(false)
+   107→  const [creating, setCreating] = useState(false)
+   108→  const [form, setForm] = useState(emptyForm)
+   109→
+   110→  // View doctor dialog
+   111→  const [viewOpen, setViewOpen] = useState(false)
+   112→  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
+   113→  const [viewLoading, setViewLoading] = useState(false)
+   114→  const [doctorBookings, setDoctorBookings] = useState<Booking[]>([])
+   115→  const [doctorPrescriptions, setDoctorPrescriptions] = useState<Prescription[]>([])
+   116→
+   117→  // Block/Unblock dialog
+   118→  const [blockOpen, setBlockOpen] = useState(false)
+   119→  const [blocking, setBlocking] = useState(false)
+   120→
+   121→  // Fetch doctors
+   122→  useEffect(() => {
+   123→    fetchDoctors()
+   124→  }, [search, statusFilter, verifiedFilter])
+   125→
+   126→  const fetchDoctors = async () => {
+   127→    setLoading(true)
+   128→    try {
+   129→      const params = new URLSearchParams()
+   130→      if (search) params.set('search', search)
+   131→      if (statusFilter !== 'all') params.set('status', statusFilter)
+   132→      if (verifiedFilter !== 'all') params.set('verified', verifiedFilter)
+   133→
+   134→      const res = await fetch(`/api/doctors?${params.toString()}`)
+   135→      if (res.ok) {
+   136→        const data = await res.json()
+   137→        setDoctors(Array.isArray(data) ? data : data.doctors || [])
+   138→      }
+   139→    } catch {
+   140→      toast({ title: 'Error', description: 'Failed to fetch doctors', variant: 'destructive' })
+   141→    } finally {
+   142→      setLoading(false)
+   143→    }
+   144→  }
+   145→
+   146→  // Create doctor
+   147→  const handleCreate = async () => {
+   148→    if (!form.name || !form.email || !form.password || !form.specialty) {
+   149→      toast({ title: 'Error', description: 'Please fill required fields (name, email, password, specialty)', variant: 'destructive' })
+   150→      return
+   151→    }
+   152→    setCreating(true)
+   153→    try {
+   154→      const payload = {
+   155→        ...form,
+   156→        experience: Number(form.experience) || 0,
+   157→        feeOnline: Number(form.feeOnline) || 0,
+   158→        feeAtHome: Number(form.feeAtHome) || 0,
+   159→        commissionRate: Number(form.commissionRate) || 15,
+   160→      }
+   161→      const res = await fetch('/api/doctors', {
+   162→        method: 'POST',
+   163→        headers: { 'Content-Type': 'application/json' },
+   164→        body: JSON.stringify(payload),
+   165→      })
+   166→      if (res.ok) {
+   167→        toast({ title: 'Doctor Added', description: `${form.name} has been added successfully` })
+   168→        setAddOpen(false)
+   169→        setForm(emptyForm)
+   170→        fetchDoctors()
+   171→      } else {
+   172→        const data = await res.json()
+   173→        toast({ title: 'Error', description: data.error || 'Failed to add doctor', variant: 'destructive' })
+   174→      }
+   175→    } catch {
+   176→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   177→    } finally {
+   178→      setCreating(false)
+   179→    }
+   180→  }
+   181→
+   182→  // View doctor details
+   183→  const handleViewDoctor = async (doctor: Doctor) => {
+   184→    setSelectedDoctor(doctor)
+   185→    setViewOpen(true)
+   186→    setViewLoading(true)
+   187→    try {
+   188→      const [bookingsRes, prescriptionsRes] = await Promise.all([
+   189→        fetch(`/api/bookings?doctorId=${doctor.id}`),
+   190→        fetch(`/api/prescriptions?doctorId=${doctor.id}`),
+   191→      ])
+   192→      if (bookingsRes.ok) {
+   193→        const data = await bookingsRes.json()
+   194→        setDoctorBookings(Array.isArray(data) ? data : data.bookings || [])
+   195→      }
+   196→      if (prescriptionsRes.ok) {
+   197→        const data = await prescriptionsRes.json()
+   198→        setDoctorPrescriptions(Array.isArray(data) ? data : data.prescriptions || [])
+   199→      }
+   200→    } catch {
+   201→      // Silently fail – data will just be empty
+   202→    } finally {
+   203→      setViewLoading(false)
+   204→    }
+   205→  }
+   206→
+   207→  // Block / Unblock
+   208→  const handleBlockToggle = async () => {
+   209→    if (!selectedDoctor) return
+   210→    setBlocking(true)
+   211→    try {
+   212→      const isBlocked = !selectedDoctor.isBlocked
+   213→      const res = await fetch(`/api/doctors/${selectedDoctor.id}`, {
+   214→        method: 'PUT',
+   215→        headers: { 'Content-Type': 'application/json' },
+   216→        body: JSON.stringify({
+   217→          isBlocked,
+   218→          blockReason: isBlocked ? 'Commission unpaid' : undefined,
+   219→        }),
+   220→      })
+   221→      if (res.ok) {
+   222→        toast({
+   223→          title: isBlocked ? 'Doctor Blocked' : 'Doctor Unblocked',
+   224→          description: `${selectedDoctor.name} has been ${isBlocked ? 'blocked' : 'unblocked'}`,
+   225→        })
+   226→        setBlockOpen(false)
+   227→        setViewOpen(false)
+   228→        fetchDoctors()
+   229→      } else {
+   230→        const data = await res.json()
+   231→        toast({ title: 'Error', description: data.error || 'Failed to update doctor', variant: 'destructive' })
+   232→      }
+   233→    } catch {
+   234→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   235→    } finally {
+   236→      setBlocking(false)
+   237→    }
+   238→  }
+   239→
+   240→  const openBlockDialog = (doctor: Doctor) => {
+   241→    setSelectedDoctor(doctor)
+   242→    setBlockOpen(true)
+   243→  }
+   244→
+   245→  // Revenue calculations
+   246→  const totalEarnings = doctorBookings.length * (selectedDoctor?.feeOnline || 0)
+   247→  const totalCommission = Math.round(totalEarnings * ((selectedDoctor?.commissionRate || 15) / 100))
+   248→  const completedBookings = doctorBookings.filter(b => b.status === 'completed').length
+   249→
+   250→  return (
+   251→    <div className="space-y-6 p-4 md:p-6">
+   252→      {/* Filters Row */}
+   253→      <Card className="bg-white rounded-xl shadow-sm border-0">
+   254→        <CardContent className="p-4">
+   255→          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+   256→            <div className="relative flex-1 w-full">
+   257→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+   258→              <Input
+   259→                placeholder="Search by name, specialty or area..."
+   260→                className="pl-9"
+   261→                value={search}
+   262→                onChange={(e) => setSearch(e.target.value)}
+   263→              />
+   264→            </div>
+   265→            <Select value={statusFilter} onValueChange={setStatusFilter}>
+   266→              <SelectTrigger className="w-full sm:w-[150px]">
+   267→                <SelectValue placeholder="Status" />
+   268→              </SelectTrigger>
+   269→              <SelectContent>
+   270→                <SelectItem value="all">All Status</SelectItem>
+   271→                <SelectItem value="online">Online</SelectItem>
+   272→                <SelectItem value="offline">Offline</SelectItem>
+   273→                <SelectItem value="blocked">Blocked</SelectItem>
+   274→              </SelectContent>
+   275→            </Select>
+   276→            <Select value={verifiedFilter} onValueChange={setVerifiedFilter}>
+   277→              <SelectTrigger className="w-full sm:w-[160px]">
+   278→                <SelectValue placeholder="Verified" />
+   279→              </SelectTrigger>
+   280→              <SelectContent>
+   281→                <SelectItem value="all">All</SelectItem>
+   282→                <SelectItem value="verified">Verified</SelectItem>
+   283→                <SelectItem value="unverified">Unverified</SelectItem>
+   284→              </SelectContent>
+   285→            </Select>
+   286→          </div>
+   287→        </CardContent>
+   288→      </Card>
+   289→
+   290→      {/* Doctors Table */}
+   291→      <Card className="bg-white rounded-xl shadow-sm border-0">
+   292→        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+   293→          <CardTitle className="text-base font-semibold text-gray-900">Doctors</CardTitle>
+   294→          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+   295→            <DialogTrigger asChild>
+   296→              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+   297→                <Plus className="w-4 h-4" /> Add Doctor
+   298→              </Button>
+   299→            </DialogTrigger>
+   300→            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+   301→              <DialogHeader>
+   302→                <DialogTitle>Add New Doctor</DialogTitle>
+   303→              </DialogHeader>
+   304→              <div className="space-y-4 py-2">
+   305→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   306→                  <div className="space-y-2">
+   307→                    <Label>Name *</Label>
+   308→                    <Input placeholder="Dr. Full Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+   309→                  </div>
+   310→                  <div className="space-y-2">
+   311→                    <Label>Email *</Label>
+   312→                    <Input type="email" placeholder="doctor@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+   313→                  </div>
+   314→                </div>
+   315→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   316→                  <div className="space-y-2">
+   317→                    <Label>Phone</Label>
+   318→                    <Input placeholder="+91 98765 43210" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+   319→                  </div>
+   320→                  <div className="space-y-2">
+   321→                    <Label>Password *</Label>
+   322→                    <Input type="password" placeholder="Set password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+   323→                  </div>
+   324→                </div>
+   325→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   326→                  <div className="space-y-2">
+   327→                    <Label>Specialty *</Label>
+   328→                    <Select value={form.specialty} onValueChange={(v) => setForm({ ...form, specialty: v })}>
+   329→                      <SelectTrigger><SelectValue placeholder="Select specialty" /></SelectTrigger>
+   330→                      <SelectContent>
+   331→                        {specialtyOptions.map((s) => (
+   332→                          <SelectItem key={s} value={s}>{s}</SelectItem>
+   333→                        ))}
+   334→                      </SelectContent>
+   335→                    </Select>
+   336→                  </div>
+   337→                  <div className="space-y-2">
+   338→                    <Label>Experience (years)</Label>
+   339→                    <Input type="number" placeholder="e.g. 5" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} />
+   340→                  </div>
+   341→                </div>
+   342→                <div className="space-y-2">
+   343→                  <Label>Qualifications</Label>
+   344→                  <Input placeholder="MBBS, MD, etc." value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} />
+   345→                </div>
+   346→                <div className="space-y-2">
+   347→                  <Label>Area</Label>
+   348→                  <Input placeholder="City or locality" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
+   349→                </div>
+   350→                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+   351→                  <div className="space-y-2">
+   352→                    <Label>Fee Online (₹)</Label>
+   353→                    <Input type="number" placeholder="500" value={form.feeOnline} onChange={(e) => setForm({ ...form, feeOnline: e.target.value })} />
+   354→                  </div>
+   355→                  <div className="space-y-2">
+   356→                    <Label>Fee At Home (₹)</Label>
+   357→                    <Input type="number" placeholder="800" value={form.feeAtHome} onChange={(e) => setForm({ ...form, feeAtHome: e.target.value })} />
+   358→                  </div>
+   359→                  <div className="space-y-2">
+   360→                    <Label>Commission Rate (%)</Label>
+   361→                    <Input type="number" placeholder="15" value={form.commissionRate} onChange={(e) => setForm({ ...form, commissionRate: e.target.value })} />
+   362→                  </div>
+   363→                </div>
+   364→              </div>
+   365→              <DialogFooter>
+   366→                <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+   367→                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>
+   368→                  {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+   369→                  Add Doctor
+   370→                </Button>
+   371→              </DialogFooter>
+   372→            </DialogContent>
+   373→          </Dialog>
+   374→        </CardHeader>
+   375→        <CardContent className="p-0">
+   376→          <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   377→            <Table>
+   378→              <TableHeader>
+   379→                <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   380→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Name</TableHead>
+   381→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Specialty</TableHead>
+   382→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Area</TableHead>
+   383→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   384→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Portal</TableHead>
+   385→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Bookings</TableHead>
+   386→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Commission Due</TableHead>
+   387→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Actions</TableHead>
+   388→                </TableRow>
+   389→              </TableHeader>
+   390→              <TableBody>
+   391→                {loading ? (
+   392→                  Array.from({ length: 6 }).map((_, i) => (
+   393→                    <TableRow key={i}>
+   394→                      {Array.from({ length: 8 }).map((_, j) => (
+   395→                        <TableCell key={j}><Skeleton className="h-4 w-20" /></TableCell>
+   396→                      ))}
+   397→                    </TableRow>
+   398→                  ))
+   399→                ) : doctors.length > 0 ? (
+   400→                  doctors.map((d) => (
+   401→                    <TableRow key={d.id} className="hover:bg-gray-50/50">
+   402→                      <TableCell>
+   403→                        <div className="flex items-center gap-2">
+   404→                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+   405→                            <Stethoscope className="w-4 h-4 text-blue-600" />
+   406→                          </div>
+   407→                          <div>
+   408→                            <p className="text-sm font-medium text-gray-900">{d.name}</p>
+   409→                            {d.isVerified && (
+   410→                              <p className="text-[10px] text-blue-600 flex items-center gap-0.5">
+   411→                                <CheckCircle className="w-3 h-3" /> Verified
+   412→                              </p>
+   413→                            )}
+   414→                          </div>
+   415→                        </div>
+   416→                      </TableCell>
+   417→                      <TableCell className="text-sm text-gray-700">{d.specialty}</TableCell>
+   418→                      <TableCell className="text-sm text-gray-600">{d.area || '—'}</TableCell>
+   419→                      <TableCell>
+   420→                        <Badge variant="secondary" className={cn('text-[11px] capitalize', statusColor[d.status] || 'bg-gray-100 text-gray-800')}>
+   421→                          {d.status}
+   422→                        </Badge>
+   423→                      </TableCell>
+   424→                      <TableCell>
+   425→                        {d.hasPortalAccess ? (
+   426→                          <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[11px]">Yes</Badge>
+   427→                        ) : (
+   428→                          <Badge variant="secondary" className="bg-gray-100 text-gray-500 text-[11px]">No</Badge>
+   429→                        )}
+   430→                      </TableCell>
+   431→                      <TableCell className="text-sm text-gray-700 font-medium">{d.bookingsCount || 0}</TableCell>
+   432→                      <TableCell className="text-sm text-gray-700 font-medium">₹{d.commissionDue || 0}</TableCell>
+   433→                      <TableCell>
+   434→                        <div className="flex items-center gap-1">
+   435→                          <Button
+   436→                            size="sm"
+   437→                            variant="outline"
+   438→                            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+   439→                            onClick={() => handleViewDoctor(d)}
+   440→                          >
+   441→                            <Eye className="w-3 h-3 mr-1" /> View
+   442→                          </Button>
+   443→                          <Button
+   444→                            size="sm"
+   445→                            variant="outline"
+   446→                            className={cn(
+   447→                              'text-xs hover:bg-gray-50',
+   448→                              d.isBlocked
+   449→                                ? 'border-blue-200 text-blue-700 hover:bg-blue-50'
+   450→                                : 'border-red-200 text-red-600 hover:bg-red-50'
+   451→                            )}
+   452→                            onClick={() => openBlockDialog(d)}
+   453→                          >
+   454→                            {d.isBlocked ? (
+   455→                              <CheckCircle className="w-3 h-3 mr-1" />
+   456→                            ) : (
+   457→                              <Ban className="w-3 h-3 mr-1" />
+   458→                            )}
+   459→                            {d.isBlocked ? 'Unblock' : 'Block'}
+   460→                          </Button>
+   461→                        </div>
+   462→                      </TableCell>
+   463→                    </TableRow>
+   464→                  ))
+   465→                ) : (
+   466→                  <TableRow>
+   467→                    <TableCell colSpan={8} className="text-center py-8 text-gray-400 text-sm">
+   468→                      No doctors found
+   469→                    </TableCell>
+   470→                  </TableRow>
+   471→                )}
+   472→              </TableBody>
+   473→            </Table>
+   474→          </div>
+   475→        </CardContent>
+   476→      </Card>
+   477→
+   478→      {/* View Doctor Dialog */}
+   479→      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+   480→        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+   481→          {selectedDoctor && (
+   482→            <>
+   483→              <DialogHeader>
+   484→                <DialogTitle className="flex items-center gap-3">
+   485→                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+   486→                    <Stethoscope className="w-5 h-5 text-blue-600" />
+   487→                  </div>
+   488→                  <div>
+   489→                    <p>{selectedDoctor.name}</p>
+   490→                    <p className="text-sm font-normal text-gray-500">{selectedDoctor.specialty}</p>
+   491→                  </div>
+   492→                </DialogTitle>
+   493→              </DialogHeader>
+   494→
+   495→              {/* Doctor Info Grid */}
+   496→              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 py-3">
+   497→                <InfoItem label="Email" value={selectedDoctor.email} />
+   498→                <InfoItem label="Phone" value={selectedDoctor.phone || '—'} />
+   499→                <InfoItem label="Area" value={selectedDoctor.area || '—'} />
+   500→                <InfoItem label="Experience" value={`${selectedDoctor.experience || 0} years`} />
+   501→                <InfoItem label="Qualifications" value={selectedDoctor.qualifications || '—'} />
+   502→                <InfoItem label="Status" value={
+   503→                  <Badge variant="secondary" className={cn('text-[11px] capitalize', statusColor[selectedDoctor.status] || 'bg-gray-100 text-gray-800')}>
+   504→                    {selectedDoctor.status}
+   505→                  </Badge>
+   506→                } />
+   507→                <InfoItem label="Fee Online" value={`₹${selectedDoctor.feeOnline || 0}`} />
+   508→                <InfoItem label="Fee At Home" value={`₹${selectedDoctor.feeAtHome || 0}`} />
+   509→                <InfoItem label="Commission" value={`${selectedDoctor.commissionRate || 15}%`} />
+   510→              </div>
+   511→
+   512→              {/* Tabs */}
+   513→              <Tabs defaultValue="bookings" className="w-full">
+   514→                <TabsList className="w-full">
+   515→                  <TabsTrigger value="bookings" className="flex-1 gap-1.5">
+   516→                    <Stethoscope className="w-3.5 h-3.5" /> Bookings
+   517→                  </TabsTrigger>
+   518→                  <TabsTrigger value="prescriptions" className="flex-1 gap-1.5">
+   519→                    <FileText className="w-3.5 h-3.5" /> Prescriptions
+   520→                  </TabsTrigger>
+   521→                  <TabsTrigger value="revenue" className="flex-1 gap-1.5">
+   522→                    <DollarSign className="w-3.5 h-3.5" /> Revenue
+   523→                  </TabsTrigger>
+   524→                </TabsList>
+   525→
+   526→                <TabsContent value="bookings" className="mt-4">
+   527→                  {viewLoading ? (
+   528→                    <div className="space-y-2">
+   529→                      {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+   530→                    </div>
+   531→                  ) : doctorBookings.length > 0 ? (
+   532→                    <div className="max-h-[300px] overflow-y-auto rounded-lg border" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   533→                      <Table>
+   534→                        <TableHeader>
+   535→                          <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   536→                            <TableHead className="text-xs font-semibold uppercase text-gray-500">UHID</TableHead>
+   537→                            <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient</TableHead>
+   538→                            <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
+   539→                            <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   540→                          </TableRow>
+   541→                        </TableHeader>
+   542→                        <TableBody>
+   543→                          {doctorBookings.map((b) => (
+   544→                            <TableRow key={b.id} className="hover:bg-gray-50/50">
+   545→                              <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.patientUhid || '—'}</TableCell>
+   546→                              <TableCell className="text-sm text-gray-900">{b.patientName}</TableCell>
+   547→                              <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
+   548→                              <TableCell>
+   549→                                <Badge variant="secondary" className={cn('text-[11px] capitalize', bookingStatusColor[b.status] || 'bg-gray-100 text-gray-800')}>
+   550→                                  {b.status.replace('_', ' ')}
+   551→                                </Badge>
+   552→                              </TableCell>
+   553→                            </TableRow>
+   554→                          ))}
+   555→                        </TableBody>
+   556→                      </Table>
+   557→                    </div>
+   558→                  ) : (
+   559→                    <p className="text-center text-gray-400 text-sm py-6">No bookings found for this doctor</p>
+   560→                  )}
+   561→                </TabsContent>
+   562→
+   563→                <TabsContent value="prescriptions" className="mt-4">
+   564→                  {viewLoading ? (
+   565→                    <div className="space-y-2">
+   566→                      {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+   567→                    </div>
+   568→                  ) : doctorPrescriptions.length > 0 ? (
+   569→                    <div className="max-h-[300px] overflow-y-auto space-y-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   570→                      {doctorPrescriptions.map((p) => (
+   571→                        <div key={p.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+   572→                          <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+   573→                          <div className="flex-1 min-w-0">
+   574→                            <p className="text-sm font-medium text-gray-900 truncate">{p.patientName}</p>
+   575→                            {p.diagnosis && <p className="text-xs text-gray-500 truncate">{p.diagnosis}</p>}
+   576→                          </div>
+   577→                          <p className="text-xs text-gray-400 flex-shrink-0">{p.date}</p>
+   578→                        </div>
+   579→                      ))}
+   580→                    </div>
+   581→                  ) : (
+   582→                    <p className="text-center text-gray-400 text-sm py-6">No prescriptions found for this doctor</p>
+   583→                  )}
+   584→                </TabsContent>
+   585→
+   586→                <TabsContent value="revenue" className="mt-4">
+   587→                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+   588→                    <div className="bg-blue-50 rounded-xl p-4 text-center">
+   589→                      <p className="text-xs text-gray-500 mb-1">Total Bookings</p>
+   590→                      <p className="text-2xl font-bold text-blue-700">{doctorBookings.length}</p>
+   591→                    </div>
+   592→                    <div className="bg-blue-50 rounded-xl p-4 text-center">
+   593→                      <p className="text-xs text-gray-500 mb-1">Total Earnings</p>
+   594→                      <p className="text-2xl font-bold text-blue-700">₹{totalEarnings.toLocaleString()}</p>
+   595→                    </div>
+   596→                    <div className="bg-blue-50 rounded-xl p-4 text-center">
+   597→                      <p className="text-xs text-gray-500 mb-1">Commission ({selectedDoctor.commissionRate || 15}%)</p>
+   598→                      <p className="text-2xl font-bold text-blue-700">₹{totalCommission.toLocaleString()}</p>
+   599→                    </div>
+   600→                  </div>
+   601→                  <div className="mt-4 bg-gray-50 rounded-lg p-4">
+   602→                    <div className="flex items-center justify-between text-sm">
+   603→                      <span className="text-gray-500">Completed Bookings</span>
+   604→                      <span className="font-medium text-gray-900">{completedBookings}</span>
+   605→                    </div>
+   606→                    <div className="flex items-center justify-between text-sm mt-2">
+   607→                      <span className="text-gray-500">Commission Due</span>
+   608→                      <span className="font-medium text-blue-700">₹{selectedDoctor.commissionDue || 0}</span>
+   609→                    </div>
+   610→                  </div>
+   611→                </TabsContent>
+   612→              </Tabs>
+   613→            </>
+   614→          )}
+   615→        </DialogContent>
+   616→      </Dialog>
+   617→
+   618→      {/* Block/Unblock AlertDialog */}
+   619→      <AlertDialog open={blockOpen} onOpenChange={setBlockOpen}>
+   620→        <AlertDialogContent>
+   621→          <AlertDialogHeader>
+   622→            <AlertDialogTitle>
+   623→              {selectedDoctor?.isBlocked ? 'Unblock Doctor' : 'Block Doctor'}
+   624→            </AlertDialogTitle>
+   625→            <AlertDialogDescription>
+   626→              {selectedDoctor?.isBlocked
+   627→                ? `Are you sure you want to unblock ${selectedDoctor?.name}? They will regain access to their portal and can accept new bookings.`
+   628→                : `Are you sure you want to block ${selectedDoctor?.name}? They will lose access to their portal and won't be able to accept new bookings. This action can be reversed later.`}
+   629→            </AlertDialogDescription>
+   630→          </AlertDialogHeader>
+   631→          <AlertDialogFooter>
+   632→            <AlertDialogCancel disabled={blocking}>Cancel</AlertDialogCancel>
+   633→            <AlertDialogAction
+   634→              onClick={handleBlockToggle}
+   635→              disabled={blocking}
+   636→              className={selectedDoctor?.isBlocked
+   637→                ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-600'
+   638→                : 'bg-red-600 hover:bg-red-700 focus:ring-red-600'
+   639→              }
+   640→            >
+   641→              {blocking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+   642→              {selectedDoctor?.isBlocked ? 'Unblock' : 'Block'} Doctor
+   643→            </AlertDialogAction>
+   644→          </AlertDialogFooter>
+   645→        </AlertDialogContent>
+   646→      </AlertDialog>
+   647→    </div>
+   648→  )
+   649→}
+   650→
+   651→// Small helper component for doctor info display
+   652→function InfoItem({ label, value }: { label: string; value: React.ReactNode }) {
+   653→  return (
+   654→    <div className="space-y-1">
+   655→      <p className="text-[11px] uppercase font-medium text-gray-400">{label}</p>
+   656→      <div className="text-sm text-gray-900 truncate">{value || '—'}</div>
+   657→    </div>
+   658→  )
+   659→}

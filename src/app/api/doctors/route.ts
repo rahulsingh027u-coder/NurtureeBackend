@@ -11,13 +11,15 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
     const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") ?? "20")));
 
+    const specialization = searchParams.get("specialization");
     const where: Record<string, unknown> = {};
 
     if (search) {
       where.OR = [
         { name: { contains: search } },
+        { email: { contains: search } },
+        { phone: { contains: search } },
         { specialty: { contains: search } },
-        { area: { contains: search } },
       ];
     }
 
@@ -27,6 +29,8 @@ export async function GET(req: NextRequest) {
 
     if (verified === "true") where.verified = true;
     else if (verified === "false") where.verified = false;
+
+    if (specialization) where.specialty = specialization;
 
     const [doctors, total] = await Promise.all([
       db.doctor.findMany({
@@ -44,6 +48,20 @@ export async function GET(req: NextRequest) {
       }),
       db.doctor.count({ where }),
     ]);
+
+    // Get total earnings per doctor from completed bookings
+    const doctorIds = doctors.map((d) => d.id);
+    const earningsMap: Record<string, number> = {};
+    if (doctorIds.length > 0) {
+      const earningsRows = await db.booking.groupBy({
+        by: ["doctorId"],
+        where: { doctorId: { in: doctorIds }, status: "completed" },
+        _sum: { doctorEarnings: true },
+      });
+      for (const row of earningsRows) {
+        earningsMap[row.doctorId] = row._sum.doctorEarnings || 0;
+      }
+    }
 
     const data = doctors.map((d) => ({
       id: d.id,
@@ -65,6 +83,7 @@ export async function GET(req: NextRequest) {
       avgRating: d.avgRating,
       totalConsultations: d.totalConsultations,
       bookingCount: d._count.bookings,
+      totalEarnings: earningsMap[d.id] || 0,
       commissionDue: d.commissions.reduce(
         (sum: number, c: { commissionAmount: number }) => sum + c.commissionAmount,
         0

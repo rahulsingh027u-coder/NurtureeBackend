@@ -1,0 +1,659 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState, useEffect } from 'react'
+     4→     4→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+     5→     5→import { Badge } from '@/components/ui/badge'
+     6→     6→import { Button } from '@/components/ui/button'
+     7→     7→import { Input } from '@/components/ui/input'
+     8→     8→import { Label } from '@/components/ui/label'
+     9→     9→import { Skeleton } from '@/components/ui/skeleton'
+    10→    10→import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+    11→    11→import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
+    12→    12→import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+    13→    13→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+    14→    14→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    15→    15→import { useToast } from '@/hooks/use-toast'
+    16→    16→import { cn } from '@/lib/utils'
+    17→    17→import { Plus, Search, Eye, Ban, CheckCircle, Loader2, Stethoscope, FileText, DollarSign } from 'lucide-react'
+    18→    18→
+    19→    19→interface Doctor {
+    20→    20→  id: string
+    21→    21→  name: string
+    22→    22→  email: string
+    23→    23→  phone: string
+    24→    24→  specialty: string
+    25→    25→  qualifications: string
+    26→    26→  experience: number
+    27→    27→  area: string
+    28→    28→  feeOnline: number
+    29→    29→  feeAtHome: number
+    30→    30→  commissionRate: number
+    31→    31→  status: string
+    32→    32→  isVerified: boolean
+    33→    33→  isBlocked: boolean
+    34→    34→  hasPortalAccess: boolean
+    35→    35→  bookingsCount: number
+    36→    36→  commissionDue: number
+    37→    37→}
+    38→    38→
+    39→    39→interface Booking {
+    40→    40→  id: string
+    41→    41→  bookingId: string
+    42→    42→  patientName: string
+    43→    43→  patientUhid?: string
+    44→    44→  date: string
+    45→    45→  status: string
+    46→    46→}
+    47→    47→
+    48→    48→interface Prescription {
+    49→    49→  id: string
+    50→    50→  prescriptionId?: string
+    51→    51→  patientName: string
+    52→    52→  date: string
+    53→    53→  diagnosis?: string
+    54→    54→}
+    55→    55→
+    56→    56→const statusColor: Record<string, string> = {
+    57→    57→  online: 'bg-blue-100 text-blue-700',
+    58→    58→  offline: 'bg-gray-100 text-gray-600',
+    59→    59→  blocked: 'bg-red-100 text-red-700',
+    60→    60→}
+    61→    61→
+    62→    62→const bookingStatusColor: Record<string, string> = {
+    63→    63→  pending: 'bg-yellow-100 text-yellow-800',
+    64→    64→  confirmed: 'bg-blue-100 text-blue-800',
+    65→    65→  in_progress: 'bg-purple-100 text-purple-800',
+    66→    66→  completed: 'bg-blue-100 text-blue-800',
+    67→    67→  cancelled: 'bg-red-100 text-red-800',
+    68→    68→}
+    69→    69→
+    70→    70→const specialtyOptions = [
+    71→    71→  'Gynaecologist',
+    72→    72→  'Pediatrician',
+    73→    73→  'Geriatric Specialist',
+    74→    74→  'General Physician',
+    75→    75→  'Internal Medicine',
+    76→    76→  'Family Doctor',
+    77→    77→]
+    78→    78→
+    79→    79→const emptyForm = {
+    80→    80→  name: '',
+    81→    81→  email: '',
+    82→    82→  phone: '',
+    83→    83→  password: '',
+    84→    84→  specialty: '',
+    85→    85→  qualifications: '',
+    86→    86→  experience: '',
+    87→    87→  area: '',
+    88→    88→  feeOnline: '',
+    89→    89→  feeAtHome: '',
+    90→    90→  commissionRate: '15',
+    91→    91→}
+    92→    92→
+    93→    93→export function DoctorsSection() {
+    94→    94→  const { toast } = useToast()
+    95→    95→
+    96→    96→  // Data state
+    97→    97→  const [doctors, setDoctors] = useState<Doctor[]>([])
+    98→    98→  const [loading, setLoading] = useState(true)
+    99→    99→
+   100→   100→  // Filters
+   101→   101→  const [search, setSearch] = useState('')
+   102→   102→  const [statusFilter, setStatusFilter] = useState('all')
+   103→   103→  const [verifiedFilter, setVerifiedFilter] = useState('all')
+   104→   104→
+   105→   105→  // Add doctor dialog
+   106→   106→  const [addOpen, setAddOpen] = useState(false)
+   107→   107→  const [creating, setCreating] = useState(false)
+   108→   108→  const [form, setForm] = useState(emptyForm)
+   109→   109→
+   110→   110→  // View doctor dialog
+   111→   111→  const [viewOpen, setViewOpen] = useState(false)
+   112→   112→  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
+   113→   113→  const [viewLoading, setViewLoading] = useState(false)
+   114→   114→  const [doctorBookings, setDoctorBookings] = useState<Booking[]>([])
+   115→   115→  const [doctorPrescriptions, setDoctorPrescriptions] = useState<Prescription[]>([])
+   116→   116→
+   117→   117→  // Block/Unblock dialog
+   118→   118→  const [blockOpen, setBlockOpen] = useState(false)
+   119→   119→  const [blocking, setBlocking] = useState(false)
+   120→   120→
+   121→   121→  // Fetch doctors
+   122→   122→  useEffect(() => {
+   123→   123→    fetchDoctors()
+   124→   124→  }, [search, statusFilter, verifiedFilter])
+   125→   125→
+   126→   126→  const fetchDoctors = async () => {
+   127→   127→    setLoading(true)
+   128→   128→    try {
+   129→   129→      const params = new URLSearchParams()
+   130→   130→      if (search) params.set('search', search)
+   131→   131→      if (statusFilter !== 'all') params.set('status', statusFilter)
+   132→   132→      if (verifiedFilter !== 'all') params.set('verified', verifiedFilter)
+   133→   133→
+   134→   134→      const res = await fetch(`/api/doctors?${params.toString()}`)
+   135→   135→      if (res.ok) {
+   136→   136→        const data = await res.json()
+   137→   137→        setDoctors(Array.isArray(data) ? data : data.doctors || [])
+   138→   138→      }
+   139→   139→    } catch {
+   140→   140→      toast({ title: 'Error', description: 'Failed to fetch doctors', variant: 'destructive' })
+   141→   141→    } finally {
+   142→   142→      setLoading(false)
+   143→   143→    }
+   144→   144→  }
+   145→   145→
+   146→   146→  // Create doctor
+   147→   147→  const handleCreate = async () => {
+   148→   148→    if (!form.name || !form.email || !form.password || !form.specialty) {
+   149→   149→      toast({ title: 'Error', description: 'Please fill required fields (name, email, password, specialty)', variant: 'destructive' })
+   150→   150→      return
+   151→   151→    }
+   152→   152→    setCreating(true)
+   153→   153→    try {
+   154→   154→      const payload = {
+   155→   155→        ...form,
+   156→   156→        experience: Number(form.experience) || 0,
+   157→   157→        feeOnline: Number(form.feeOnline) || 0,
+   158→   158→        feeAtHome: Number(form.feeAtHome) || 0,
+   159→   159→        commissionRate: Number(form.commissionRate) || 15,
+   160→   160→      }
+   161→   161→      const res = await fetch('/api/doctors', {
+   162→   162→        method: 'POST',
+   163→   163→        headers: { 'Content-Type': 'application/json' },
+   164→   164→        body: JSON.stringify(payload),
+   165→   165→      })
+   166→   166→      if (res.ok) {
+   167→   167→        toast({ title: 'Doctor Added', description: `${form.name} has been added successfully` })
+   168→   168→        setAddOpen(false)
+   169→   169→        setForm(emptyForm)
+   170→   170→        fetchDoctors()
+   171→   171→      } else {
+   172→   172→        const data = await res.json()
+   173→   173→        toast({ title: 'Error', description: data.error || 'Failed to add doctor', variant: 'destructive' })
+   174→   174→      }
+   175→   175→    } catch {
+   176→   176→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   177→   177→    } finally {
+   178→   178→      setCreating(false)
+   179→   179→    }
+   180→   180→  }
+   181→   181→
+   182→   182→  // View doctor details
+   183→   183→  const handleViewDoctor = async (doctor: Doctor) => {
+   184→   184→    setSelectedDoctor(doctor)
+   185→   185→    setViewOpen(true)
+   186→   186→    setViewLoading(true)
+   187→   187→    try {
+   188→   188→      const [bookingsRes, prescriptionsRes] = await Promise.all([
+   189→   189→        fetch(`/api/bookings?doctorId=${doctor.id}`),
+   190→   190→        fetch(`/api/prescriptions?doctorId=${doctor.id}`),
+   191→   191→      ])
+   192→   192→      if (bookingsRes.ok) {
+   193→   193→        const data = await bookingsRes.json()
+   194→   194→        setDoctorBookings(Array.isArray(data) ? data : data.bookings || [])
+   195→   195→      }
+   196→   196→      if (prescriptionsRes.ok) {
+   197→   197→        const data = await prescriptionsRes.json()
+   198→   198→        setDoctorPrescriptions(Array.isArray(data) ? data : data.prescriptions || [])
+   199→   199→      }
+   200→   200→    } catch {
+   201→   201→      // Silently fail – data will just be empty
+   202→   202→    } finally {
+   203→   203→      setViewLoading(false)
+   204→   204→    }
+   205→   205→  }
+   206→   206→
+   207→   207→  // Block / Unblock
+   208→   208→  const handleBlockToggle = async () => {
+   209→   209→    if (!selectedDoctor) return
+   210→   210→    setBlocking(true)
+   211→   211→    try {
+   212→   212→      const isBlocked = !selectedDoctor.isBlocked
+   213→   213→      const res = await fetch(`/api/doctors/${selectedDoctor.id}`, {
+   214→   214→        method: 'PUT',
+   215→   215→        headers: { 'Content-Type': 'application/json' },
+   216→   216→        body: JSON.stringify({
+   217→   217→          isBlocked,
+   218→   218→          blockReason: isBlocked ? 'Commission unpaid' : undefined,
+   219→   219→        }),
+   220→   220→      })
+   221→   221→      if (res.ok) {
+   222→   222→        toast({
+   223→   223→          title: isBlocked ? 'Doctor Blocked' : 'Doctor Unblocked',
+   224→   224→          description: `${selectedDoctor.name} has been ${isBlocked ? 'blocked' : 'unblocked'}`,
+   225→   225→        })
+   226→   226→        setBlockOpen(false)
+   227→   227→        setViewOpen(false)
+   228→   228→        fetchDoctors()
+   229→   229→      } else {
+   230→   230→        const data = await res.json()
+   231→   231→        toast({ title: 'Error', description: data.error || 'Failed to update doctor', variant: 'destructive' })
+   232→   232→      }
+   233→   233→    } catch {
+   234→   234→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   235→   235→    } finally {
+   236→   236→      setBlocking(false)
+   237→   237→    }
+   238→   238→  }
+   239→   239→
+   240→   240→  const openBlockDialog = (doctor: Doctor) => {
+   241→   241→    setSelectedDoctor(doctor)
+   242→   242→    setBlockOpen(true)
+   243→   243→  }
+   244→   244→
+   245→   245→  // Revenue calculations
+   246→   246→  const totalEarnings = doctorBookings.length * (selectedDoctor?.feeOnline || 0)
+   247→   247→  const totalCommission = Math.round(totalEarnings * ((selectedDoctor?.commissionRate || 15) / 100))
+   248→   248→  const completedBookings = doctorBookings.filter(b => b.status === 'completed').length
+   249→   249→
+   250→   250→  return (
+   251→   251→    <div className="space-y-6 p-4 md:p-6">
+   252→   252→      {/* Filters Row */}
+   253→   253→      <Card className="bg-white rounded-xl shadow-sm border-0">
+   254→   254→        <CardContent className="p-4">
+   255→   255→          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+   256→   256→            <div className="relative flex-1 w-full">
+   257→   257→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+   258→   258→              <Input
+   259→   259→                placeholder="Search by name, specialty or area..."
+   260→   260→                className="pl-9"
+   261→   261→                value={search}
+   262→   262→                onChange={(e) => setSearch(e.target.value)}
+   263→   263→              />
+   264→   264→            </div>
+   265→   265→            <Select value={statusFilter} onValueChange={setStatusFilter}>
+   266→   266→              <SelectTrigger className="w-full sm:w-[150px]">
+   267→   267→                <SelectValue placeholder="Status" />
+   268→   268→              </SelectTrigger>
+   269→   269→              <SelectContent>
+   270→   270→                <SelectItem value="all">All Status</SelectItem>
+   271→   271→                <SelectItem value="online">Online</SelectItem>
+   272→   272→                <SelectItem value="offline">Offline</SelectItem>
+   273→   273→                <SelectItem value="blocked">Blocked</SelectItem>
+   274→   274→              </SelectContent>
+   275→   275→            </Select>
+   276→   276→            <Select value={verifiedFilter} onValueChange={setVerifiedFilter}>
+   277→   277→              <SelectTrigger className="w-full sm:w-[160px]">
+   278→   278→                <SelectValue placeholder="Verified" />
+   279→   279→              </SelectTrigger>
+   280→   280→              <SelectContent>
+   281→   281→                <SelectItem value="all">All</SelectItem>
+   282→   282→                <SelectItem value="verified">Verified</SelectItem>
+   283→   283→                <SelectItem value="unverified">Unverified</SelectItem>
+   284→   284→              </SelectContent>
+   285→   285→            </Select>
+   286→   286→          </div>
+   287→   287→        </CardContent>
+   288→   288→      </Card>
+   289→   289→
+   290→   290→      {/* Doctors Table */}
+   291→   291→      <Card className="bg-white rounded-xl shadow-sm border-0">
+   292→   292→        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+   293→   293→          <CardTitle className="text-base font-semibold text-gray-900">Doctors</CardTitle>
+   294→   294→          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+   295→   295→            <DialogTrigger asChild>
+   296→   296→              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+   297→   297→                <Plus className="w-4 h-4" /> Add Doctor
+   298→   298→              </Button>
+   299→   299→            </DialogTrigger>
+   300→   300→            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+   301→   301→              <DialogHeader>
+   302→   302→                <DialogTitle>Add New Doctor</DialogTitle>
+   303→   303→              </DialogHeader>
+   304→   304→              <div className="space-y-4 py-2">
+   305→   305→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   306→   306→                  <div className="space-y-2">
+   307→   307→                    <Label>Name *</Label>
+   308→   308→                    <Input placeholder="Dr. Full Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+   309→   309→                  </div>
+   310→   310→                  <div className="space-y-2">
+   311→   311→                    <Label>Email *</Label>
+   312→   312→                    <Input type="email" placeholder="doctor@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+   313→   313→                  </div>
+   314→   314→                </div>
+   315→   315→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   316→   316→                  <div className="space-y-2">
+   317→   317→                    <Label>Phone</Label>
+   318→   318→                    <Input placeholder="+91 98765 43210" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+   319→   319→                  </div>
+   320→   320→                  <div className="space-y-2">
+   321→   321→                    <Label>Password *</Label>
+   322→   322→                    <Input type="password" placeholder="Set password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+   323→   323→                  </div>
+   324→   324→                </div>
+   325→   325→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   326→   326→                  <div className="space-y-2">
+   327→   327→                    <Label>Specialty *</Label>
+   328→   328→                    <Select value={form.specialty} onValueChange={(v) => setForm({ ...form, specialty: v })}>
+   329→   329→                      <SelectTrigger><SelectValue placeholder="Select specialty" /></SelectTrigger>
+   330→   330→                      <SelectContent>
+   331→   331→                        {specialtyOptions.map((s) => (
+   332→   332→                          <SelectItem key={s} value={s}>{s}</SelectItem>
+   333→   333→                        ))}
+   334→   334→                      </SelectContent>
+   335→   335→                    </Select>
+   336→   336→                  </div>
+   337→   337→                  <div className="space-y-2">
+   338→   338→                    <Label>Experience (years)</Label>
+   339→   339→                    <Input type="number" placeholder="e.g. 5" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} />
+   340→   340→                  </div>
+   341→   341→                </div>
+   342→   342→                <div className="space-y-2">
+   343→   343→                  <Label>Qualifications</Label>
+   344→   344→                  <Input placeholder="MBBS, MD, etc." value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} />
+   345→   345→                </div>
+   346→   346→                <div className="space-y-2">
+   347→   347→                  <Label>Area</Label>
+   348→   348→                  <Input placeholder="City or locality" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
+   349→   349→                </div>
+   350→   350→                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+   351→   351→                  <div className="space-y-2">
+   352→   352→                    <Label>Fee Online (₹)</Label>
+   353→   353→                    <Input type="number" placeholder="500" value={form.feeOnline} onChange={(e) => setForm({ ...form, feeOnline: e.target.value })} />
+   354→   354→                  </div>
+   355→   355→                  <div className="space-y-2">
+   356→   356→                    <Label>Fee At Home (₹)</Label>
+   357→   357→                    <Input type="number" placeholder="800" value={form.feeAtHome} onChange={(e) => setForm({ ...form, feeAtHome: e.target.value })} />
+   358→   358→                  </div>
+   359→   359→                  <div className="space-y-2">
+   360→   360→                    <Label>Commission Rate (%)</Label>
+   361→   361→                    <Input type="number" placeholder="15" value={form.commissionRate} onChange={(e) => setForm({ ...form, commissionRate: e.target.value })} />
+   362→   362→                  </div>
+   363→   363→                </div>
+   364→   364→              </div>
+   365→   365→              <DialogFooter>
+   366→   366→                <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+   367→   367→                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>
+   368→   368→                  {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+   369→   369→                  Add Doctor
+   370→   370→                </Button>
+   371→   371→              </DialogFooter>
+   372→   372→            </DialogContent>
+   373→   373→          </Dialog>
+   374→   374→        </CardHeader>
+   375→   375→        <CardContent className="p-0">
+   376→   376→          <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   377→   377→            <Table>
+   378→   378→              <TableHeader>
+   379→   379→                <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   380→   380→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Name</TableHead>
+   381→   381→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Specialty</TableHead>
+   382→   382→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Area</TableHead>
+   383→   383→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   384→   384→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Portal</TableHead>
+   385→   385→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Bookings</TableHead>
+   386→   386→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Commission Due</TableHead>
+   387→   387→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Actions</TableHead>
+   388→   388→                </TableRow>
+   389→   389→              </TableHeader>
+   390→   390→              <TableBody>
+   391→   391→                {loading ? (
+   392→   392→                  Array.from({ length: 6 }).map((_, i) => (
+   393→   393→                    <TableRow key={i}>
+   394→   394→                      {Array.from({ length: 8 }).map((_, j) => (
+   395→   395→                        <TableCell key={j}><Skeleton className="h-4 w-20" /></TableCell>
+   396→   396→                      ))}
+   397→   397→                    </TableRow>
+   398→   398→                  ))
+   399→   399→                ) : doctors.length > 0 ? (
+   400→   400→                  doctors.map((d) => (
+   401→   401→                    <TableRow key={d.id} className="hover:bg-gray-50/50">
+   402→   402→                      <TableCell>
+   403→   403→                        <div className="flex items-center gap-2">
+   404→   404→                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+   405→   405→                            <Stethoscope className="w-4 h-4 text-blue-600" />
+   406→   406→                          </div>
+   407→   407→                          <div>
+   408→   408→                            <p className="text-sm font-medium text-gray-900">{d.name}</p>
+   409→   409→                            {d.isVerified && (
+   410→   410→                              <p className="text-[10px] text-blue-600 flex items-center gap-0.5">
+   411→   411→                                <CheckCircle className="w-3 h-3" /> Verified
+   412→   412→                              </p>
+   413→   413→                            )}
+   414→   414→                          </div>
+   415→   415→                        </div>
+   416→   416→                      </TableCell>
+   417→   417→                      <TableCell className="text-sm text-gray-700">{d.specialty}</TableCell>
+   418→   418→                      <TableCell className="text-sm text-gray-600">{d.area || '—'}</TableCell>
+   419→   419→                      <TableCell>
+   420→   420→                        <Badge variant="secondary" className={cn('text-[11px] capitalize', statusColor[d.status] || 'bg-gray-100 text-gray-800')}>
+   421→   421→                          {d.status}
+   422→   422→                        </Badge>
+   423→   423→                      </TableCell>
+   424→   424→                      <TableCell>
+   425→   425→                        {d.hasPortalAccess ? (
+   426→   426→                          <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[11px]">Yes</Badge>
+   427→   427→                        ) : (
+   428→   428→                          <Badge variant="secondary" className="bg-gray-100 text-gray-500 text-[11px]">No</Badge>
+   429→   429→                        )}
+   430→   430→                      </TableCell>
+   431→   431→                      <TableCell className="text-sm text-gray-700 font-medium">{d.bookingsCount || 0}</TableCell>
+   432→   432→                      <TableCell className="text-sm text-gray-700 font-medium">₹{d.commissionDue || 0}</TableCell>
+   433→   433→                      <TableCell>
+   434→   434→                        <div className="flex items-center gap-1">
+   435→   435→                          <Button
+   436→   436→                            size="sm"
+   437→   437→                            variant="outline"
+   438→   438→                            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+   439→   439→                            onClick={() => handleViewDoctor(d)}
+   440→   440→                          >
+   441→   441→                            <Eye className="w-3 h-3 mr-1" /> View
+   442→   442→                          </Button>
+   443→   443→                          <Button
+   444→   444→                            size="sm"
+   445→   445→                            variant="outline"
+   446→   446→                            className={cn(
+   447→   447→                              'text-xs hover:bg-gray-50',
+   448→   448→                              d.isBlocked
+   449→   449→                                ? 'border-blue-200 text-blue-700 hover:bg-blue-50'
+   450→   450→                                : 'border-red-200 text-red-600 hover:bg-red-50'
+   451→   451→                            )}
+   452→   452→                            onClick={() => openBlockDialog(d)}
+   453→   453→                          >
+   454→   454→                            {d.isBlocked ? (
+   455→   455→                              <CheckCircle className="w-3 h-3 mr-1" />
+   456→   456→                            ) : (
+   457→   457→                              <Ban className="w-3 h-3 mr-1" />
+   458→   458→                            )}
+   459→   459→                            {d.isBlocked ? 'Unblock' : 'Block'}
+   460→   460→                          </Button>
+   461→   461→                        </div>
+   462→   462→                      </TableCell>
+   463→   463→                    </TableRow>
+   464→   464→                  ))
+   465→   465→                ) : (
+   466→   466→                  <TableRow>
+   467→   467→                    <TableCell colSpan={8} className="text-center py-8 text-gray-400 text-sm">
+   468→   468→                      No doctors found
+   469→   469→                    </TableCell>
+   470→   470→                  </TableRow>
+   471→   471→                )}
+   472→   472→              </TableBody>
+   473→   473→            </Table>
+   474→   474→          </div>
+   475→   475→        </CardContent>
+   476→   476→      </Card>
+   477→   477→
+   478→   478→      {/* View Doctor Dialog */}
+   479→   479→      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+   480→   480→        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+   481→   481→          {selectedDoctor && (
+   482→   482→            <>
+   483→   483→              <DialogHeader>
+   484→   484→                <DialogTitle className="flex items-center gap-3">
+   485→   485→                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+   486→   486→                    <Stethoscope className="w-5 h-5 text-blue-600" />
+   487→   487→                  </div>
+   488→   488→                  <div>
+   489→   489→                    <p>{selectedDoctor.name}</p>
+   490→   490→                    <p className="text-sm font-normal text-gray-500">{selectedDoctor.specialty}</p>
+   491→   491→                  </div>
+   492→   492→                </DialogTitle>
+   493→   493→              </DialogHeader>
+   494→   494→
+   495→   495→              {/* Doctor Info Grid */}
+   496→   496→              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 py-3">
+   497→   497→                <InfoItem label="Email" value={selectedDoctor.email} />
+   498→   498→                <InfoItem label="Phone" value={selectedDoctor.phone || '—'} />
+   499→   499→                <InfoItem label="Area" value={selectedDoctor.area || '—'} />
+   500→   500→                <InfoItem label="Experience" value={`${selectedDoctor.experience || 0} years`} />
+   501→   501→                <InfoItem label="Qualifications" value={selectedDoctor.qualifications || '—'} />
+   502→   502→                <InfoItem label="Status" value={
+   503→   503→                  <Badge variant="secondary" className={cn('text-[11px] capitalize', statusColor[selectedDoctor.status] || 'bg-gray-100 text-gray-800')}>
+   504→   504→                    {selectedDoctor.status}
+   505→   505→                  </Badge>
+   506→   506→                } />
+   507→   507→                <InfoItem label="Fee Online" value={`₹${selectedDoctor.feeOnline || 0}`} />
+   508→   508→                <InfoItem label="Fee At Home" value={`₹${selectedDoctor.feeAtHome || 0}`} />
+   509→   509→                <InfoItem label="Commission" value={`${selectedDoctor.commissionRate || 15}%`} />
+   510→   510→              </div>
+   511→   511→
+   512→   512→              {/* Tabs */}
+   513→   513→              <Tabs defaultValue="bookings" className="w-full">
+   514→   514→                <TabsList className="w-full">
+   515→   515→                  <TabsTrigger value="bookings" className="flex-1 gap-1.5">
+   516→   516→                    <Stethoscope className="w-3.5 h-3.5" /> Bookings
+   517→   517→                  </TabsTrigger>
+   518→   518→                  <TabsTrigger value="prescriptions" className="flex-1 gap-1.5">
+   519→   519→                    <FileText className="w-3.5 h-3.5" /> Prescriptions
+   520→   520→                  </TabsTrigger>
+   521→   521→                  <TabsTrigger value="revenue" className="flex-1 gap-1.5">
+   522→   522→                    <DollarSign className="w-3.5 h-3.5" /> Revenue
+   523→   523→                  </TabsTrigger>
+   524→   524→                </TabsList>
+   525→   525→
+   526→   526→                <TabsContent value="bookings" className="mt-4">
+   527→   527→                  {viewLoading ? (
+   528→   528→                    <div className="space-y-2">
+   529→   529→                      {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+   530→   530→                    </div>
+   531→   531→                  ) : doctorBookings.length > 0 ? (
+   532→   532→                    <div className="max-h-[300px] overflow-y-auto rounded-lg border" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   533→   533→                      <Table>
+   534→   534→                        <TableHeader>
+   535→   535→                          <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   536→   536→                            <TableHead className="text-xs font-semibold uppercase text-gray-500">UHID</TableHead>
+   537→   537→                            <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient</TableHead>
+   538→   538→                            <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
+   539→   539→                            <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   540→   540→                          </TableRow>
+   541→   541→                        </TableHeader>
+   542→   542→                        <TableBody>
+   543→   543→                          {doctorBookings.map((b) => (
+   544→   544→                            <TableRow key={b.id} className="hover:bg-gray-50/50">
+   545→   545→                              <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.patientUhid || '—'}</TableCell>
+   546→   546→                              <TableCell className="text-sm text-gray-900">{b.patientName}</TableCell>
+   547→   547→                              <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
+   548→   548→                              <TableCell>
+   549→   549→                                <Badge variant="secondary" className={cn('text-[11px] capitalize', bookingStatusColor[b.status] || 'bg-gray-100 text-gray-800')}>
+   550→   550→                                  {b.status.replace('_', ' ')}
+   551→   551→                                </Badge>
+   552→   552→                              </TableCell>
+   553→   553→                            </TableRow>
+   554→   554→                          ))}
+   555→   555→                        </TableBody>
+   556→   556→                      </Table>
+   557→   557→                    </div>
+   558→   558→                  ) : (
+   559→   559→                    <p className="text-center text-gray-400 text-sm py-6">No bookings found for this doctor</p>
+   560→   560→                  )}
+   561→   561→                </TabsContent>
+   562→   562→
+   563→   563→                <TabsContent value="prescriptions" className="mt-4">
+   564→   564→                  {viewLoading ? (
+   565→   565→                    <div className="space-y-2">
+   566→   566→                      {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+   567→   567→                    </div>
+   568→   568→                  ) : doctorPrescriptions.length > 0 ? (
+   569→   569→                    <div className="max-h-[300px] overflow-y-auto space-y-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   570→   570→                      {doctorPrescriptions.map((p) => (
+   571→   571→                        <div key={p.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+   572→   572→                          <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+   573→   573→                          <div className="flex-1 min-w-0">
+   574→   574→                            <p className="text-sm font-medium text-gray-900 truncate">{p.patientName}</p>
+   575→   575→                            {p.diagnosis && <p className="text-xs text-gray-500 truncate">{p.diagnosis}</p>}
+   576→   576→                          </div>
+   577→   577→                          <p className="text-xs text-gray-400 flex-shrink-0">{p.date}</p>
+   578→   578→                        </div>
+   579→   579→                      ))}
+   580→   580→                    </div>
+   581→   581→                  ) : (
+   582→   582→                    <p className="text-center text-gray-400 text-sm py-6">No prescriptions found for this doctor</p>
+   583→   583→                  )}
+   584→   584→                </TabsContent>
+   585→   585→
+   586→   586→                <TabsContent value="revenue" className="mt-4">
+   587→   587→                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+   588→   588→                    <div className="bg-blue-50 rounded-xl p-4 text-center">
+   589→   589→                      <p className="text-xs text-gray-500 mb-1">Total Bookings</p>
+   590→   590→                      <p className="text-2xl font-bold text-blue-700">{doctorBookings.length}</p>
+   591→   591→                    </div>
+   592→   592→                    <div className="bg-blue-50 rounded-xl p-4 text-center">
+   593→   593→                      <p className="text-xs text-gray-500 mb-1">Total Earnings</p>
+   594→   594→                      <p className="text-2xl font-bold text-blue-700">₹{totalEarnings.toLocaleString()}</p>
+   595→   595→                    </div>
+   596→   596→                    <div className="bg-blue-50 rounded-xl p-4 text-center">
+   597→   597→                      <p className="text-xs text-gray-500 mb-1">Commission ({selectedDoctor.commissionRate || 15}%)</p>
+   598→   598→                      <p className="text-2xl font-bold text-blue-700">₹{totalCommission.toLocaleString()}</p>
+   599→   599→                    </div>
+   600→   600→                  </div>
+   601→   601→                  <div className="mt-4 bg-gray-50 rounded-lg p-4">
+   602→   602→                    <div className="flex items-center justify-between text-sm">
+   603→   603→                      <span className="text-gray-500">Completed Bookings</span>
+   604→   604→                      <span className="font-medium text-gray-900">{completedBookings}</span>
+   605→   605→                    </div>
+   606→   606→                    <div className="flex items-center justify-between text-sm mt-2">
+   607→   607→                      <span className="text-gray-500">Commission Due</span>
+   608→   608→                      <span className="font-medium text-blue-700">₹{selectedDoctor.commissionDue || 0}</span>
+   609→   609→                    </div>
+   610→   610→                  </div>
+   611→   611→                </TabsContent>
+   612→   612→              </Tabs>
+   613→   613→            </>
+   614→   614→          )}
+   615→   615→        </DialogContent>
+   616→   616→      </Dialog>
+   617→   617→
+   618→   618→      {/* Block/Unblock AlertDialog */}
+   619→   619→      <AlertDialog open={blockOpen} onOpenChange={setBlockOpen}>
+   620→   620→        <AlertDialogContent>
+   621→   621→          <AlertDialogHeader>
+   622→   622→            <AlertDialogTitle>
+   623→   623→              {selectedDoctor?.isBlocked ? 'Unblock Doctor' : 'Block Doctor'}
+   624→   624→            </AlertDialogTitle>
+   625→   625→            <AlertDialogDescription>
+   626→   626→              {selectedDoctor?.isBlocked
+   627→   627→                ? `Are you sure you want to unblock ${selectedDoctor?.name}? They will regain access to their portal and can accept new bookings.`
+   628→   628→                : `Are you sure you want to block ${selectedDoctor?.name}? They will lose access to their portal and won't be able to accept new bookings. This action can be reversed later.`}
+   629→   629→            </AlertDialogDescription>
+   630→   630→          </AlertDialogHeader>
+   631→   631→          <AlertDialogFooter>
+   632→   632→            <AlertDialogCancel disabled={blocking}>Cancel</AlertDialogCancel>
+   633→   633→            <AlertDialogAction
+   634→   634→              onClick={handleBlockToggle}
+   635→   635→              disabled={blocking}
+   636→   636→              className={selectedDoctor?.isBlocked
+   637→   637→                ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-600'
+   638→   638→                : 'bg-red-600 hover:bg-red-700 focus:ring-red-600'
+   639→   639→              }
+   640→   640→            >
+   641→   641→              {blocking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+   642→   642→              {selectedDoctor?.isBlocked ? 'Unblock' : 'Block'} Doctor
+   643→   643→            </AlertDialogAction>
+   644→   644→          </AlertDialogFooter>
+   645→   645→        </AlertDialogContent>
+   646→   646→      </AlertDialog>
+   647→   647→    </div>
+   648→   648→  )
+   649→   649→}
+   650→   650→
+   651→   651→// Small helper component for doctor info display
+   652→   652→function InfoItem({ label, value }: { label: string; value: React.ReactNode }) {
+   653→   653→  return (
+   654→   654→    <div className="space-y-1">
+   655→   655→      <p className="text-[11px] uppercase font-medium text-gray-400">{label}</p>
+   656→   656→      <div className="text-sm text-gray-900 truncate">{value || '—'}</div>
+   657→   657→    </div>
+   658→   658→  )
+   659→   659→}
