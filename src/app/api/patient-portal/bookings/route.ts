@@ -1,25 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-function generateUhid(): string {
-  const now = new Date();
-  const year = now.getFullYear().toString().slice(-2);
-  const month = (now.getMonth() + 1).toString().padStart(2, "0");
-  const random = Math.floor(10000 + Math.random() * 90000);
-  return `NUR-P-${year}${month}-${random}`;
+async function generateUhid(): Promise<string> {
+  const count = await db.patient.count();
+  return `NUR${String(count + 1).padStart(7, "0")}`;
 }
 
 async function generateBookingId(): Promise<string> {
-  const now = new Date();
-  const year = now.getFullYear();
-  const todayStr = now.toISOString().split("T")[0];
-
-  const todayCount = await db.booking.count({
-    where: { date: todayStr },
-  });
-
-  const seq = (todayCount + 1).toString().padStart(5, "0");
-  return `NUR-B-${year}-${seq}`;
+  let id: string;
+  do {
+    id = `RA${String(Math.floor(100000 + Math.random() * 900000)).padStart(6, "0")}`;
+  } while (await db.booking.findUnique({ where: { bookingId: id } }));
+  return id;
 }
 
 export async function POST(req: NextRequest) {
@@ -56,10 +48,11 @@ export async function POST(req: NextRequest) {
     });
 
     if (!patient) {
-      let uhid = generateUhid();
-      // Ensure unique UHID
+      let uhid = await generateUhid();
+      // Ensure unique UHID (handle race conditions)
       while (await db.patient.findUnique({ where: { uhid } })) {
-        uhid = generateUhid();
+        const count = await db.patient.count();
+        uhid = `NUR${String(count + 1).padStart(7, "0")}`;
       }
       patient = await db.patient.create({
         data: {
