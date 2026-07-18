@@ -87,6 +87,8 @@ model Patient {
   phone           String
   age             Int?
   gender          String?
+  bloodGroup      String?
+  allergies       String?
   address         String?
   city            String   @default("Gurugram")
   pincode         String?

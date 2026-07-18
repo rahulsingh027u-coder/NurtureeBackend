@@ -44,6 +44,8 @@ export async function GET(req: NextRequest) {
       phone: p.phone,
       age: p.age,
       gender: p.gender,
+      bloodGroup: p.bloodGroup,
+      allergies: p.allergies,
       city: p.city,
       bookingCount: p._count.bookings,
       lastVisit: p.bookings[0]?.date ?? null,
