@@ -70,7 +70,8 @@ export function PrescriptionsSection() {
       const res = await fetch(`/api/prescriptions?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
-        setPrescriptions(Array.isArray(data) ? data : data.prescriptions || [])
+        const list = Array.isArray(data) ? data : data.data || data.prescriptions || []
+        setPrescriptions(list)
       } else {
         toast({ title: 'Error', description: 'Failed to fetch prescriptions', variant: 'destructive' })
       }
