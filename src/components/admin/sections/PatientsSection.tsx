@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -15,7 +16,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
-import { Search, Eye, User, CalendarDays, FileText, Phone, Mail, MapPin, X, Loader2 } from 'lucide-react'
+import {
+  Search, Eye, User, Users, UserPlus, CalendarDays,
+  FileText, Phone, Mail, MapPin, X, Loader2, Activity,
+} from 'lucide-react'
 
 interface Patient {
   id: string
@@ -25,11 +29,14 @@ interface Patient {
   email?: string
   age?: number
   gender?: string
+  bloodGroup?: string
+  allergies?: string
   address?: string
   city?: string
   pincode?: string
-  totalBookings?: number
+  bookingCount?: number
   lastVisit?: string
+  createdAt: string
 }
 
 interface Booking {
@@ -59,16 +66,27 @@ const statusColor: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue-100 text-blue-800',
   in_progress: 'bg-purple-100 text-purple-800',
-  completed: 'bg-blue-100 text-blue-800',
+  completed: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
+}
+
+const bloodGroupColor: Record<string, string> = {
+  'A+': 'bg-blue-100 text-blue-800',
+  'A-': 'bg-blue-50 text-blue-700',
+  'B+': 'bg-blue-100 text-blue-800',
+  'B-': 'bg-blue-50 text-blue-700',
+  'AB+': 'bg-purple-100 text-purple-800',
+  'AB-': 'bg-purple-50 text-purple-700',
+  'O+': 'bg-green-100 text-green-800',
+  'O-': 'bg-green-50 text-green-700',
 }
 
 export function PatientsSection() {
   const { toast } = useToast()
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [patientBookings, setPatientBookings] = useState<Booking[]>([])
@@ -82,7 +100,8 @@ export function PatientsSection() {
       const res = await fetch(`/api/patients${params}`)
       if (res.ok) {
         const data = await res.json()
-        setPatients(Array.isArray(data) ? data : data.patients || [])
+        const list = Array.isArray(data) ? data : data.data || data.patients || []
+        setPatients(list)
       } else {
         toast({ title: 'Error', description: 'Failed to fetch patients', variant: 'destructive' })
       }
@@ -124,13 +143,13 @@ export function PatientsSection() {
 
       if (bookingsRes.ok) {
         const data = await bookingsRes.json()
-        const allBookings: Booking[] = Array.isArray(data) ? data : data.bookings || []
+        const allBookings: Booking[] = Array.isArray(data) ? data : data.bookings || data.data || []
         setPatientBookings(allBookings.filter((b: Booking) => b.patientId === patient.id))
       }
 
       if (prescriptionsRes.ok) {
         const data = await prescriptionsRes.json()
-        const allPrescriptions: Prescription[] = Array.isArray(data) ? data : data.prescriptions || []
+        const allPrescriptions: Prescription[] = Array.isArray(data) ? data : data.data || data.prescriptions || []
         setPatientPrescriptions(allPrescriptions.filter((p: Prescription) => p.patientId === patient.id))
       }
     } catch {
@@ -140,80 +159,75 @@ export function PatientsSection() {
     }
   }
 
+  // Stat calculations
   const totalPatients = patients.length
+  const now = new Date()
+  const thisMonth = now.getMonth()
+  const thisYear = now.getFullYear()
+  const newThisMonth = patients.filter(p => {
+    const d = new Date(p.createdAt)
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear
+  }).length
+  const withActiveBookings = patients.filter(p => (p.bookingCount || 0) > 0).length
+
+  const statCards = [
+    { label: 'Total Patients', value: totalPatients, icon: Users, bg: 'bg-blue-100', text: 'text-blue-600' },
+    { label: 'New This Month', value: newThisMonth, icon: UserPlus, bg: 'bg-green-100', text: 'text-green-600' },
+    { label: 'With Active Bookings', value: withActiveBookings, icon: Activity, bg: 'bg-purple-100', text: 'text-purple-600' },
+  ]
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    } catch {
+      return dateStr
+    }
+  }
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-white rounded-xl shadow-sm border-0">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-              <User className="w-5 h-5" />
-            </div>
-            <div>
-              {loading ? <Skeleton className="h-7 w-12" /> : <p className="text-2xl font-bold text-gray-900">{totalPatients}</p>}
-              <p className="text-xs text-gray-500">Total Patients</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white rounded-xl shadow-sm border-0">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-              <CalendarDays className="w-5 h-5" />
-            </div>
-            <div>
-              {loading ? <Skeleton className="h-7 w-12" /> : (
-                <p className="text-2xl font-bold text-gray-900">
-                  {patients.filter(p => p.lastVisit).length}
-                </p>
-              )}
-              <p className="text-xs text-gray-500">Active Patients</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white rounded-xl shadow-sm border-0">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
-              <FileText className="w-5 h-5" />
-            </div>
-            <div>
-              {loading ? <Skeleton className="h-7 w-12" /> : (
-                <p className="text-2xl font-bold text-gray-900">
-                  {patients.reduce((sum, p) => sum + (p.totalBookings || 0), 0)}
-                </p>
-              )}
-              <p className="text-xs text-gray-500">Total Bookings</p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-bold text-gray-900">Patient Management</h2>
+        <p className="text-sm text-gray-500 mt-0.5">View and manage all patients with their Unique Health ID (UHID)</p>
       </div>
 
-      {/* Patients Table */}
+      {/* Stat Cards - 3 in a row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {statCards.map((s) => (
+          <Card key={s.label} className="bg-white rounded-xl shadow-sm border-0">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={cn('w-10 h-10 rounded-full flex items-center justify-center shrink-0', s.bg, s.text)}>
+                <s.icon className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                {loading ? (
+                  <Skeleton className="h-6 w-10 mb-1" />
+                ) : (
+                  <p className="text-xl font-bold text-gray-900">{s.value}</p>
+                )}
+                <p className="text-[11px] text-gray-500">{s.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Table Card */}
       <Card className="bg-white rounded-xl shadow-sm border-0">
-        <CardHeader className="pb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <CardTitle className="text-base font-semibold text-gray-900">All Patients</CardTitle>
-          <form onSubmit={handleSearch} className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search UHID, name, phone..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9 h-9 text-sm"
-              />
-            </div>
-            <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white h-9">
-              Search
-            </Button>
-            {search && (
-              <Button type="button" variant="ghost" size="sm" className="h-9 text-gray-500 hover:text-gray-700" onClick={clearSearch}>
-                <X className="w-4 h-4" />
-              </Button>
-            )}
+        <CardContent className="p-4 space-y-4">
+          {/* Search Bar */}
+          <form onSubmit={handleSearch} className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search by name, phone, or UHID..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-10 h-10 text-sm w-full"
+            />
           </form>
-        </CardHeader>
-        <CardContent className="p-0">
+
+          {/* Table */}
           <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
             <Table>
               <TableHeader>
@@ -221,47 +235,67 @@ export function PatientsSection() {
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">UHID</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Name</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Phone</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Age</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Gender</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Age</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Blood Group</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Allergies</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Bookings</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Last Visit</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Actions</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Created Date</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 8 }).map((_, j) => (
-                        <TableCell key={j}><Skeleton className="h-4 w-20" /></TableCell>
+                      {Array.from({ length: 10 }).map((_, j) => (
+                        <TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : patients.length > 0 ? (
                   patients.map((p) => (
                     <TableRow key={p.id} className="hover:bg-gray-50/50">
-                      <TableCell className="font-mono text-xs text-blue-700 font-medium">{p.uhid}</TableCell>
+                      <TableCell className="font-mono text-xs text-blue-600 font-medium">{p.uhid}</TableCell>
                       <TableCell className="text-sm font-medium text-gray-900">{p.name}</TableCell>
                       <TableCell className="text-sm text-gray-600">{p.phone}</TableCell>
+                      <TableCell className="text-sm text-gray-600 capitalize">{p.gender || '-'}</TableCell>
                       <TableCell className="text-sm text-gray-600">{p.age ?? '-'}</TableCell>
-                      <TableCell className="text-sm text-gray-600 capitalize">{p.gender ?? '-'}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{p.totalBookings ?? 0}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{p.lastVisit ?? '-'}</TableCell>
                       <TableCell>
+                        {p.bloodGroup ? (
+                          <Badge variant="secondary" className={cn('text-[11px] font-medium', bloodGroupColor[p.bloodGroup] || 'bg-gray-100 text-gray-800')}>
+                            {p.bloodGroup}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {p.allergies ? (
+                          <Badge variant="secondary" className="text-[11px] bg-red-100 text-red-800">
+                            {p.allergies}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600 text-center">{p.bookingCount ?? 0}</TableCell>
+                      <TableCell className="text-sm text-gray-600 whitespace-nowrap">{formatDate(p.createdAt)}</TableCell>
+                      <TableCell className="text-center">
                         <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-blue-600 hover:bg-blue-50"
                           onClick={() => handleViewPatient(p)}
                         >
-                          <Eye className="w-3 h-3 mr-1" /> View
+                          <Eye className="w-4 h-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-gray-400 text-sm">
+                    <TableCell colSpan={10} className="text-center py-8 text-gray-400 text-sm">
                       {search ? 'No patients found matching your search' : 'No patients found'}
                     </TableCell>
                   </TableRow>
@@ -317,6 +351,26 @@ export function PatientsSection() {
                   <div className="space-y-1">
                     <p className="text-[11px] uppercase font-semibold text-gray-400">Gender</p>
                     <p className="text-sm text-gray-700 capitalize">{selectedPatient.gender || '-'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[11px] uppercase font-semibold text-gray-400">Blood Group</p>
+                    {selectedPatient.bloodGroup ? (
+                      <Badge variant="secondary" className={cn('text-[11px] font-medium', bloodGroupColor[selectedPatient.bloodGroup] || 'bg-gray-100 text-gray-800')}>
+                        {selectedPatient.bloodGroup}
+                      </Badge>
+                    ) : (
+                      <p className="text-sm text-gray-400">-</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[11px] uppercase font-semibold text-gray-400">Allergies</p>
+                    {selectedPatient.allergies ? (
+                      <Badge variant="secondary" className="text-[11px] bg-red-100 text-red-800">
+                        {selectedPatient.allergies}
+                      </Badge>
+                    ) : (
+                      <p className="text-sm text-gray-400">None</p>
+                    )}
                   </div>
                   <div className="space-y-1 sm:col-span-2">
                     <p className="text-[11px] uppercase font-semibold text-gray-400">Address</p>

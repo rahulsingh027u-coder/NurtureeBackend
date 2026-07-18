@@ -177,6 +177,9 @@ async function main() {
     { name: "Rekha Gupta", phone: "9988776615", age: 29, gender: "Female" },
   ];
 
+  const bloodGroups = ["B+", "O+", "A+", "AB+", "O-", "A-", "B-", "AB-", "A+", "O+", "B+", "A-", "AB+", "O+", "B+"];
+  const allergiesList = [null, "Penicillin", null, "Aspirin", null, null, "Sulfa", null, null, "Latex", null, null, "Codeine", null, null];
+
   const patients = [];
   for (let i = 0; i < patientNames.length; i++) {
     const p = patientNames[i];
@@ -188,6 +191,8 @@ async function main() {
         email: `${p.name.split(" ")[0].toLowerCase()}@email.com`,
         age: p.age,
         gender: p.gender,
+        bloodGroup: bloodGroups[i],
+        allergies: allergiesList[i],
         address: `House ${100 + i}, Sector ${18 + (i % 5)}`,
         city: "Gurugram",
         pincode: "1220" + (15 + i),
