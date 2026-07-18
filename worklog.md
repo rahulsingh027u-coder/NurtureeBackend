@@ -19,3 +19,21 @@ Stage Summary:
 - SubUser credentials: rahul@nurturee.in / rahul123, priya@nurturee.in / priya123
 - Doctor portal APIs and patient portal APIs ready for frontend integration
 - Dev server running clean (200 OK, zero lint errors)
+---
+Task ID: 1
+Agent: Main
+Task: Update BookingsSection to match reference image + verify DoctorsSection accessibility fix
+
+Work Log:
+- Analyzed reference image via VLM: identified 6 stat cards, 10-column table layout, search bar + 3 dropdown filters
+- Rewrote BookingsSection.tsx to match reference exactly
+- Verified DoctorsSection DialogContent already has sr-only DialogTitle (fixed in prior session)
+- Build passes cleanly with no errors
+
+Stage Summary:
+- BookingsSection now has 6 stat cards: Total Bookings, Today's, Online, Offline, Completed, Revenue
+- Table columns: Booking ID, Patient, UHID (separate blue link column), Doctor, Date & Time (combined), Mode (teal/amber badges), Service, Status (green/blue/etc badges), Amount, Actions (eye icon only)
+- Filters: Search bar at top, Date From/To, Mode dropdown, Status dropdown, Service dropdown (client-side)
+- Mode displayed as "online"/"offline" (in_home mapped to "offline")
+- UHID shown as clickable blue monospace link in its own column
+- DoctorsSection accessibility warning was already resolved
