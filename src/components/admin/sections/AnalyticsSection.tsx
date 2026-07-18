@@ -97,7 +97,7 @@ export function AnalyticsSection() {
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
             <div className="flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-emerald-600" />
+              <CalendarDays className="w-4 h-4 text-blue-600" />
               <p className="text-sm font-medium text-gray-700">Date Range</p>
             </div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1">
@@ -122,7 +122,7 @@ export function AnalyticsSection() {
               </div>
               <Button
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
                 onClick={fetchAnalytics}
                 disabled={loading}
               >
@@ -138,7 +138,7 @@ export function AnalyticsSection() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <BarChart3 className="w-5 h-5" />
             </div>
             <div>
@@ -149,7 +149,7 @@ export function AnalyticsSection() {
         </Card>
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <IndianRupee className="w-5 h-5" />
             </div>
             <div>
@@ -160,7 +160,7 @@ export function AnalyticsSection() {
         </Card>
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
@@ -204,7 +204,7 @@ export function AnalyticsSection() {
                       {day.count}
                     </div>
                     <div
-                      className="w-full max-w-[28px] bg-emerald-500 hover:bg-emerald-600 rounded-t-sm transition-colors cursor-default min-h-[4px]"
+                      className="w-full max-w-[28px] bg-blue-500 hover:bg-blue-600 rounded-t-sm transition-colors cursor-default min-h-[4px]"
                       style={{ height: `${Math.max(heightPct, 2)}%` }}
                       title={`${day.date}: ${day.count} bookings`}
                     />
@@ -237,7 +237,7 @@ export function AnalyticsSection() {
                   {onlineOffline.total > 0 ? (
                     <>
                       <div
-                        className="bg-emerald-500 flex items-center justify-center transition-all"
+                        className="bg-blue-500 flex items-center justify-center transition-all"
                         style={{ width: `${(onlineOffline.online / onlineOffline.total) * 100}%` }}
                       >
                         <span className="text-xs font-semibold text-white">
@@ -265,7 +265,7 @@ export function AnalyticsSection() {
                 </div>
                 <div className="flex items-center justify-center gap-6">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-sm bg-emerald-500" />
+                    <div className="w-3 h-3 rounded-sm bg-blue-500" />
                     <span className="text-sm text-gray-600">Online</span>
                     <span className="text-sm font-semibold text-gray-900">{onlineOffline.online}</span>
                   </div>
@@ -303,11 +303,11 @@ export function AnalyticsSection() {
                     <div key={i} className="space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-900 truncate mr-2">{doc.doctorName}</span>
-                        <span className="text-sm font-mono text-emerald-700 font-medium flex-shrink-0">{formatCurrency(doc.amount)}</span>
+                        <span className="text-sm font-mono text-blue-700 font-medium flex-shrink-0">{formatCurrency(doc.amount)}</span>
                       </div>
                       <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-emerald-500 rounded-full transition-all"
+                          className="h-full bg-blue-500 rounded-full transition-all"
                           style={{ width: `${widthPct}%` }}
                         />
                       </div>

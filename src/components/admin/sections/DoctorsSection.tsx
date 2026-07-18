@@ -54,7 +54,7 @@ interface Prescription {
 }
 
 const statusColor: Record<string, string> = {
-  online: 'bg-green-100 text-green-700',
+  online: 'bg-blue-100 text-blue-700',
   offline: 'bg-gray-100 text-gray-600',
   blocked: 'bg-red-100 text-red-700',
 }
@@ -63,7 +63,7 @@ const bookingStatusColor: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue-100 text-blue-800',
   in_progress: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
+  completed: 'bg-blue-100 text-blue-800',
   cancelled: 'bg-red-100 text-red-800',
 }
 
@@ -293,7 +293,7 @@ export function DoctorsSection() {
           <CardTitle className="text-base font-semibold text-gray-900">Doctors</CardTitle>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
                 <Plus className="w-4 h-4" /> Add Doctor
               </Button>
             </DialogTrigger>
@@ -364,7 +364,7 @@ export function DoctorsSection() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleCreate} disabled={creating}>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>
                   {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Add Doctor
                 </Button>
@@ -401,13 +401,13 @@ export function DoctorsSection() {
                     <TableRow key={d.id} className="hover:bg-gray-50/50">
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
-                            <Stethoscope className="w-4 h-4 text-emerald-600" />
+                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                            <Stethoscope className="w-4 h-4 text-blue-600" />
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-900">{d.name}</p>
                             {d.isVerified && (
-                              <p className="text-[10px] text-emerald-600 flex items-center gap-0.5">
+                              <p className="text-[10px] text-blue-600 flex items-center gap-0.5">
                                 <CheckCircle className="w-3 h-3" /> Verified
                               </p>
                             )}
@@ -423,7 +423,7 @@ export function DoctorsSection() {
                       </TableCell>
                       <TableCell>
                         {d.hasPortalAccess ? (
-                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 text-[11px]">Yes</Badge>
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[11px]">Yes</Badge>
                         ) : (
                           <Badge variant="secondary" className="bg-gray-100 text-gray-500 text-[11px]">No</Badge>
                         )}
@@ -435,7 +435,7 @@ export function DoctorsSection() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
                             onClick={() => handleViewDoctor(d)}
                           >
                             <Eye className="w-3 h-3 mr-1" /> View
@@ -446,7 +446,7 @@ export function DoctorsSection() {
                             className={cn(
                               'text-xs hover:bg-gray-50',
                               d.isBlocked
-                                ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                                ? 'border-blue-200 text-blue-700 hover:bg-blue-50'
                                 : 'border-red-200 text-red-600 hover:bg-red-50'
                             )}
                             onClick={() => openBlockDialog(d)}
@@ -482,8 +482,8 @@ export function DoctorsSection() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
-                    <Stethoscope className="w-5 h-5 text-emerald-600" />
+                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                    <Stethoscope className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
                     <p>{selectedDoctor.name}</p>
@@ -542,7 +542,7 @@ export function DoctorsSection() {
                         <TableBody>
                           {doctorBookings.map((b) => (
                             <TableRow key={b.id} className="hover:bg-gray-50/50">
-                              <TableCell className="font-mono text-xs text-emerald-700 font-medium">{b.patientUhid || '—'}</TableCell>
+                              <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.patientUhid || '—'}</TableCell>
                               <TableCell className="text-sm text-gray-900">{b.patientName}</TableCell>
                               <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
                               <TableCell>
@@ -569,7 +569,7 @@ export function DoctorsSection() {
                     <div className="max-h-[300px] overflow-y-auto space-y-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
                       {doctorPrescriptions.map((p) => (
                         <div key={p.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
-                          <FileText className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                          <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">{p.patientName}</p>
                             {p.diagnosis && <p className="text-xs text-gray-500 truncate">{p.diagnosis}</p>}
@@ -585,17 +585,17 @@ export function DoctorsSection() {
 
                 <TabsContent value="revenue" className="mt-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-emerald-50 rounded-xl p-4 text-center">
+                    <div className="bg-blue-50 rounded-xl p-4 text-center">
                       <p className="text-xs text-gray-500 mb-1">Total Bookings</p>
-                      <p className="text-2xl font-bold text-emerald-700">{doctorBookings.length}</p>
+                      <p className="text-2xl font-bold text-blue-700">{doctorBookings.length}</p>
                     </div>
-                    <div className="bg-emerald-50 rounded-xl p-4 text-center">
+                    <div className="bg-blue-50 rounded-xl p-4 text-center">
                       <p className="text-xs text-gray-500 mb-1">Total Earnings</p>
-                      <p className="text-2xl font-bold text-emerald-700">₹{totalEarnings.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-blue-700">₹{totalEarnings.toLocaleString()}</p>
                     </div>
-                    <div className="bg-emerald-50 rounded-xl p-4 text-center">
+                    <div className="bg-blue-50 rounded-xl p-4 text-center">
                       <p className="text-xs text-gray-500 mb-1">Commission ({selectedDoctor.commissionRate || 15}%)</p>
-                      <p className="text-2xl font-bold text-emerald-700">₹{totalCommission.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-blue-700">₹{totalCommission.toLocaleString()}</p>
                     </div>
                   </div>
                   <div className="mt-4 bg-gray-50 rounded-lg p-4">
@@ -605,7 +605,7 @@ export function DoctorsSection() {
                     </div>
                     <div className="flex items-center justify-between text-sm mt-2">
                       <span className="text-gray-500">Commission Due</span>
-                      <span className="font-medium text-emerald-700">₹{selectedDoctor.commissionDue || 0}</span>
+                      <span className="font-medium text-blue-700">₹{selectedDoctor.commissionDue || 0}</span>
                     </div>
                   </div>
                 </TabsContent>
@@ -634,7 +634,7 @@ export function DoctorsSection() {
               onClick={handleBlockToggle}
               disabled={blocking}
               className={selectedDoctor?.isBlocked
-                ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-600'
+                ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-600'
                 : 'bg-red-600 hover:bg-red-700 focus:ring-red-600'
               }
             >

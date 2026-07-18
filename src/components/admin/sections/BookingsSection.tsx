@@ -53,7 +53,7 @@ const statusColor: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue-100 text-blue-800',
   in_progress: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
+  completed: 'bg-blue-100 text-blue-800',
   cancelled: 'bg-red-100 text-red-800',
 }
 
@@ -63,7 +63,7 @@ const modeColor: Record<string, string> = {
 }
 
 const sourceColor: Record<string, string> = {
-  portal: 'bg-emerald-100 text-emerald-800',
+  portal: 'bg-blue-100 text-blue-800',
   website: 'bg-violet-100 text-violet-800',
   admin: 'bg-gray-200 text-gray-800',
 }
@@ -153,7 +153,7 @@ export function BookingsSection() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <CalendarDays className="w-5 h-5" />
             </div>
             <div>
@@ -175,7 +175,7 @@ export function BookingsSection() {
         </Card>
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <FileText className="w-5 h-5" />
             </div>
             <div>
@@ -281,7 +281,7 @@ export function BookingsSection() {
                     className="pl-8 h-9 text-sm w-48"
                   />
                 </div>
-                <Button type="submit" size="sm" variant="outline" className="h-9 border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+                <Button type="submit" size="sm" variant="outline" className="h-9 border-blue-200 text-blue-700 hover:bg-blue-50">
                   <Search className="w-3.5 h-3.5" />
                 </Button>
               </form>
@@ -323,7 +323,7 @@ export function BookingsSection() {
                 ) : bookings.length > 0 ? (
                   bookings.map((b) => (
                     <TableRow key={b.id} className="hover:bg-gray-50/50">
-                      <TableCell className="font-mono text-xs text-emerald-700 font-medium">{b.bookingId}</TableCell>
+                      <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.bookingId}</TableCell>
                       <TableCell>
                         <p className="text-sm font-medium text-gray-900">{b.patientName}</p>
                         {b.patientUhid && <p className="text-xs text-gray-400 font-mono">{b.patientUhid}</p>}
@@ -354,7 +354,7 @@ export function BookingsSection() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                          className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
                           onClick={() => handleViewBooking(b)}
                         >
                           <Eye className="w-3 h-3 mr-1" /> View
@@ -380,7 +380,7 @@ export function BookingsSection() {
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CalendarDays className="w-5 h-5 text-emerald-600" />
+              <CalendarDays className="w-5 h-5 text-blue-600" />
               Booking Details
             </DialogTitle>
           </DialogHeader>
@@ -389,7 +389,7 @@ export function BookingsSection() {
             <div className="space-y-5">
               {/* Booking ID & Status Row */}
               <div className="flex items-center justify-between">
-                <p className="font-mono text-sm text-emerald-700 font-medium">{selectedBooking.bookingId}</p>
+                <p className="font-mono text-sm text-blue-700 font-medium">{selectedBooking.bookingId}</p>
                 <Badge variant="secondary" className={cn('text-xs capitalize', statusColor[selectedBooking.status] || 'bg-gray-100 text-gray-800')}>
                   {selectedBooking.status.replace('_', ' ')}
                 </Badge>
@@ -404,7 +404,7 @@ export function BookingsSection() {
                   <div>
                     <p className="text-sm font-medium text-gray-900">{selectedBooking.patientName}</p>
                     {selectedBooking.patientUhid && (
-                      <p className="text-xs font-mono text-emerald-600 mt-0.5">{selectedBooking.patientUhid}</p>
+                      <p className="text-xs font-mono text-blue-600 mt-0.5">{selectedBooking.patientUhid}</p>
                     )}
                   </div>
                   {selectedBooking.patientPhone && (
@@ -490,8 +490,8 @@ export function BookingsSection() {
               )}
 
               {/* Amount & Commission */}
-              <div className="bg-emerald-50 rounded-lg p-4 space-y-2">
-                <h4 className="text-xs font-semibold text-emerald-600 uppercase flex items-center gap-1.5">
+              <div className="bg-blue-50 rounded-lg p-4 space-y-2">
+                <h4 className="text-xs font-semibold text-blue-600 uppercase flex items-center gap-1.5">
                   <IndianRupee className="w-3.5 h-3.5" /> Financial Details
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -509,7 +509,7 @@ export function BookingsSection() {
                   </div>
                   <div>
                     <p className="text-[11px] text-gray-500">Commission</p>
-                    <p className="text-sm font-bold text-emerald-700">
+                    <p className="text-sm font-bold text-blue-700">
                       {selectedBooking.commissionAmount != null ? `₹${selectedBooking.commissionAmount.toLocaleString('en-IN')}` : '-'}
                     </p>
                   </div>

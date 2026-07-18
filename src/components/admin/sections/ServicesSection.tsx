@@ -88,7 +88,7 @@ function ServiceTable({ services, loading }: { services: Service[]; loading: boo
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1.5">
-                    <div className={cn('w-2 h-2 rounded-full', s.active ? 'bg-green-500' : 'bg-red-500')} />
+                    <div className={cn('w-2 h-2 rounded-full', s.active ? 'bg-blue-500' : 'bg-red-500')} />
                     <span className="text-sm text-gray-600">{s.active ? 'Active' : 'Inactive'}</span>
                   </div>
                 </TableCell>
@@ -152,7 +152,7 @@ export function ServicesSection() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <Stethoscope className="w-5 h-5" />
             </div>
             <div>
@@ -163,7 +163,7 @@ export function ServicesSection() {
         </Card>
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <UserCheck className="w-5 h-5" />
             </div>
             <div>
@@ -202,7 +202,7 @@ export function ServicesSection() {
           <Button
             size="sm"
             variant="outline"
-            className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-1.5"
+            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50 gap-1.5"
             onClick={fetchServices}
             disabled={loading}
           >

@@ -153,7 +153,7 @@ export function CaregiversSection() {
 
   const VerificationIcon = ({ verified }: { verified: boolean | undefined }) => {
     if (verified) {
-      return <Check className="w-4 h-4 text-green-600" />
+      return <Check className="w-4 h-4 text-blue-600" />
     }
     return <X className="w-4 h-4 text-red-400" />
   }
@@ -164,12 +164,12 @@ export function CaregiversSection() {
       <Card className="bg-white rounded-xl shadow-sm border-0">
         <CardHeader className="pb-3 flex flex-row items-center justify-between flex-wrap gap-3">
           <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            <UserCog className="w-4 h-4 text-emerald-600" />
+            <UserCog className="w-4 h-4 text-blue-600" />
             Caregivers
           </CardTitle>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
                 <Plus className="w-4 h-4" /> Add Caregiver
               </Button>
             </DialogTrigger>
@@ -213,7 +213,7 @@ export function CaregiversSection() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleCreate} disabled={creating}>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>
                   {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Add Caregiver
                 </Button>
@@ -304,7 +304,7 @@ export function CaregiversSection() {
                       <TableCell>
                         <Badge variant="secondary" className={cn(
                           'text-[11px]',
-                          c.isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          c.isAvailable ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
                         )}>
                           {c.isAvailable ? 'Available' : 'Unavailable'}
                         </Badge>
@@ -313,7 +313,7 @@ export function CaregiversSection() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                          className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
                           onClick={() => {
                             toast({ title: 'Caregiver Profile', description: `Viewing profile for ${c.name}` })
                           }}
