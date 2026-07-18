@@ -1,0 +1,252 @@
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:355:                <p className={cn('text-xl font-bold leading-tight', card.valueColor)}>{loading ? '—' : card.value}</p>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:356:                <p className="text-xs text-gray-500 mt-0.5">{card.label}</p>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:357:              </div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:358:            </CardContent>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:359:          </Card>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:360:        ))}
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:361:      </div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:362:
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:363:      {/* Doctors Table */}
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:364:      <Card className="bg-white rounded-lg shadow-sm border-0 overflow-hidden">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:365:        <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:366:          <h3 className="text-base font-semibold text-gray-900">Doctors</h3>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:367:          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:368:            <DialogTrigger asChild>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:369:              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 h-8 text-xs font-medium rounded-lg">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:370:                <Plus className="w-3.5 h-3.5" /> Add Doctor
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:371:              </Button>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:372:            </DialogTrigger>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:373:            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:374:              <DialogHeader><DialogTitle>Add New Doctor</DialogTitle></DialogHeader>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:375:              <div className="space-y-4 py-2">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:376:                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:377:                  <div className="space-y-2"><Label className="text-xs font-medium">Name *</Label><Input placeholder="Dr. Full Name" className="h-9 text-sm rounded-lg" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:378:                  <div className="space-y-2"><Label className="text-xs font-medium">Email *</Label><Input type="email" placeholder="doctor@example.com" className="h-9 text-sm rounded-lg" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:379:                </div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:380:                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:381:                  <div className="space-y-2"><Label className="text-xs font-medium">Phone</Label><Input placeholder="+91 98765 43210" className="h-9 text-sm rounded-lg" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:382:                  <div className="space-y-2"><Label className="text-xs font-medium">Password *</Label><Input type="password" placeholder="Set password" className="h-9 text-sm rounded-lg" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:383:                </div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:384:                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:385:                  <div className="space-y-2">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:386:                    <Label className="text-xs font-medium">Specialty *</Label>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:387:                    <Select value={form.specialty} onValueChange={(v) => setForm({ ...form, specialty: v })}>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:388:                      <SelectTrigger className="h-9 text-sm rounded-lg"><SelectValue placeholder="Select" /></SelectTrigger>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:389:                      <SelectContent>{specialtyOptions.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:390:                    </Select>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:391:                  </div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:392:                  <div className="space-y-2"><Label className="text-xs font-medium">Experience (yrs)</Label><Input type="number" placeholder="e.g. 5" className="h-9 text-sm rounded-lg" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} /></div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:393:                </div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:394:                <div className="space-y-2"><Label className="text-xs font-medium">Qualifications</Label><Input placeholder="MBBS, MD" className="h-9 text-sm rounded-lg" value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} /></div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:395:                <div className="space-y-2"><Label className="text-xs font-medium">Area</Label><Input placeholder="City or locality" className="h-9 text-sm rounded-lg" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} /></div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:396:                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:397:                  <div className="space-y-2"><Label className="text-xs font-medium">Fee Online</Label><Input type="number" placeholder="500" className="h-9 text-sm rounded-lg" value={form.feeOnline} onChange={(e) => setForm({ ...form, feeOnline: e.target.value })} /></div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:398:                  <div className="space-y-2"><Label className="text-xs font-medium">Fee At Home</Label><Input type="number" placeholder="800" className="h-9 text-sm rounded-lg" value={form.feeAtHome} onChange={(e) => setForm({ ...form, feeAtHome: e.target.value })} /></div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:399:                  <div className="space-y-2"><Label className="text-xs font-medium">Commission %</Label><Input type="number" placeholder="15" className="h-9 text-sm rounded-lg" value={form.commissionRate} onChange={(e) => setForm({ ...form, commissionRate: e.target.value })} /></div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:400:                </div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:401:              </div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:402:              <DialogFooter>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:403:                <Button variant="outline" onClick={() => setAddOpen(false)} className="rounded-lg">Cancel</Button>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:404:                <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg" onClick={handleCreate} disabled={creating}>{creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Add Doctor</Button>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:405:              </DialogFooter>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:406:            </DialogContent>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:407:          </Dialog>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:408:        </div>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:409:
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:410:        <div className="overflow-x-auto">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:411:          <Table>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:412:            <TableHeader>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:413:              <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-0">
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:414:                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10 pl-5">Name</TableHead>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:415:                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Phone</TableHead>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:416:                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Status</TableHead>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:417:                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Fee (On/Off)</TableHead>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:418:                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Comm. %</TableHead>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:419:                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Bookings</TableHead>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:420:                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Earnings</TableHead>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:421:                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Verified</TableHead>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:422:                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10 pr-5 w-12"></TableHead>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:423:              </TableRow>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:424:            </TableHeader>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:425:            <TableBody>
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:426:              {loading ? (
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:427:                Array.from({ length: 4 }).map((_, i) => (
+/home/z/my-project/src/components/admin/sections/DoctorsSection.tsx:428:                  <TableRow key={i} className="border-0">{Array.from({ length: 9 }).map((_, j) => (<TableCell key={j} className={j === 0 ? 'pl-5' : j === 8 ? 'pr-5' : ''}><Skeleton className="h-4 w-20" /></TableCell>))}</TableRow>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:166:              {loading ? <Skeleton className="h-7 w-12" /> : <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:167:              <p className="text-xs text-gray-500">Total Bookings</p>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:168:            </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:169:          </CardContent>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:170:        </Card>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:171:        <Card className="bg-white rounded-xl shadow-sm border-0">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:172:          <CardContent className="p-4 flex items-center gap-3">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:173:            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:174:              <UserCheck className="w-5 h-5" />
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:175:            </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:176:            <div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:177:              {loading ? <Skeleton className="h-7 w-12" /> : <p className="text-2xl font-bold text-gray-900">{activeAssignments}</p>}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:178:              <p className="text-xs text-gray-500">Active Assignments</p>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:179:            </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:180:          </CardContent>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:181:        </Card>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:182:        <Card className="bg-white rounded-xl shadow-sm border-0">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:183:          <CardContent className="p-4 flex items-center gap-3">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:184:            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:185:              <Users className="w-5 h-5" />
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:186:            </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:187:            <div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:188:              {loading ? <Skeleton className="h-7 w-12" /> : <p className="text-2xl font-bold text-gray-900">{availableCaregivers.length}</p>}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:189:              <p className="text-xs text-gray-500">Available Caregivers</p>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:190:            </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:191:          </CardContent>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:192:        </Card>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:193:      </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:194:
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:195:      {/* Bookings Table */}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:196:      <Card className="bg-white rounded-xl shadow-sm border-0">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:197:        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:198:          <CardTitle className="text-base font-semibold text-gray-900">Child Care Bookings</CardTitle>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:199:          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:200:            <DialogTrigger asChild>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:201:              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:202:                <Plus className="w-4 h-4" /> Create Booking
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:203:              </Button>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:204:            </DialogTrigger>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:205:            <DialogContent className="sm:max-w-md">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:206:              <DialogHeader>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:207:                <DialogTitle>Create Child Care Booking</DialogTitle>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:208:              </DialogHeader>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:209:              <div className="space-y-4 py-2">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:210:                <div className="space-y-2">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:211:                  <Label>Patient Name *</Label>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:212:                  <Input placeholder="Enter patient name" value={form.patientName} onChange={(e) => setForm({ ...form, patientName: e.target.value })} />
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:213:                </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:214:                <div className="space-y-2">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:215:                  <Label>Phone *</Label>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:216:                  <Input placeholder="Enter phone number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:217:                </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:218:                <div className="space-y-2">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:219:                  <Label>Service</Label>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:220:                  <Select value={form.service} onValueChange={(v) => setForm({ ...form, service: v })}>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:221:                    <SelectTrigger><SelectValue placeholder="Select service" /></SelectTrigger>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:222:                    <SelectContent>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:223:                      <SelectItem value="nanny">Nanny Service</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:224:                      <SelectItem value="babysitter">Baby Sitter</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:225:                      <SelectItem value="post_natal">Post-Natal Care</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:226:                      <SelectItem value="child_development">Child Development</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:227:                    </SelectContent>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:228:                  </Select>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:229:                </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:230:                <div className="grid grid-cols-2 gap-3">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:231:                  <div className="space-y-2">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:232:                    <Label>Date *</Label>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:233:                    <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:234:                  </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:235:                  <div className="space-y-2">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:236:                    <Label>Time</Label>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:237:                    <Select value={form.time} onValueChange={(v) => setForm({ ...form, time: v })}>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:238:                      <SelectTrigger><SelectValue placeholder="Select time" /></SelectTrigger>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:239:                      <SelectContent>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:240:                        <SelectItem value="08:00">08:00 AM</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:241:                        <SelectItem value="09:00">09:00 AM</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:242:                        <SelectItem value="10:00">10:00 AM</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:243:                        <SelectItem value="11:00">11:00 AM</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:244:                        <SelectItem value="12:00">12:00 PM</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:245:                        <SelectItem value="14:00">02:00 PM</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:246:                        <SelectItem value="16:00">04:00 PM</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:247:                        <SelectItem value="18:00">06:00 PM</SelectItem>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:248:                      </SelectContent>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:249:                    </Select>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:250:                  </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:251:                </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:252:                <div className="space-y-2">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:253:                  <Label>Notes</Label>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:254:                  <Textarea placeholder="Any special requirements..." value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} />
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:255:                </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:256:              </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:257:              <DialogFooter>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:258:                <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:259:                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:260:                  {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:261:                  Create Booking
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:262:                </Button>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:263:              </DialogFooter>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:264:            </DialogContent>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:265:          </Dialog>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:266:        </CardHeader>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:267:        <CardContent className="p-0">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:268:          <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:269:            <Table>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:270:              <TableHeader>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:271:                <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:272:                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Booking ID</TableHead>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:273:                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient</TableHead>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:274:                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Caregiver</TableHead>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:275:                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:276:                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:277:                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Actions</TableHead>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:278:                </TableRow>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:279:              </TableHeader>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:280:              <TableBody>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:281:                {loading ? (
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:282:                  Array.from({ length: 5 }).map((_, i) => (
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:283:                    <TableRow key={i}>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:284:                      {Array.from({ length: 6 }).map((_, j) => (
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:285:                        <TableCell key={j}><Skeleton className="h-4 w-20" /></TableCell>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:286:                      ))}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:287:                    </TableRow>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:288:                  ))
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:289:                ) : bookings.length > 0 ? (
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:290:                  bookings.map((b) => (
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:291:                    <TableRow key={b.id} className="hover:bg-gray-50/50">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:292:                      <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.bookingId}</TableCell>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:293:                      <TableCell>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:294:                        <p className="text-sm font-medium text-gray-900">{b.patientName}</p>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:295:                        {b.patientUhid && <p className="text-xs text-gray-400">{b.patientUhid}</p>}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:296:                      </TableCell>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:297:                      <TableCell className="text-sm text-gray-700">{b.caregiverName || <span className="text-gray-400">Unassigned</span>}</TableCell>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:298:                      <TableCell>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:299:                        <Badge variant="secondary" className={cn('text-[11px] capitalize', statusColor[b.status] || 'bg-gray-100 text-gray-800')}>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:300:                          {b.status.replace('_', ' ')}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:301:                        </Badge>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:302:                      </TableCell>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:303:                      <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:304:                      <TableCell>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:305:                        {!b.caregiverId && b.status !== 'cancelled' && b.status !== 'completed' && (
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:306:                          <Button
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:307:                            size="sm"
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:308:                            variant="outline"
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:309:                            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:310:                            onClick={() => { setSelectedBooking(b); setAssignOpen(true) }}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:311:                          >
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:312:                            <UserCheck className="w-3 h-3 mr-1" /> Assign
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:313:                          </Button>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:314:                        )}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:315:                      </TableCell>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:316:                    </TableRow>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:317:                  ))
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:318:                ) : (
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:319:                  <TableRow>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:320:                    <TableCell colSpan={6} className="text-center py-8 text-gray-400 text-sm">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:321:                      No child care bookings found
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:322:                    </TableCell>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:323:                  </TableRow>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:324:                )}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:325:              </TableBody>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:326:            </Table>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:327:          </div>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:328:        </CardContent>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:329:      </Card>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:330:
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:331:      {/* Caregivers Panel */}
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:332:      <Card className="bg-white rounded-xl shadow-sm border-0">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:333:        <CardHeader className="pb-3">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:334:          <CardTitle className="text-base font-semibold text-gray-900">Child Care Caregivers</CardTitle>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:335:        </CardHeader>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:336:        <CardContent>
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:337:          {loading ? (
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:338:            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:339:              {Array.from({ length: 3 }).map((_, i) => (
+/home/z/my-project/src/components/admin/sections/ChildCareSection.tsx:340:                <Skeleton key={i} className="h-20 w-full" />
+/home/z/my-project/src/components/admin/sections/DashboardSection.tsx:155:        <p className="text-sm text-gray-500 mt-0.5">{getFormattedDate()}</p>
+
+[Showing results with pagination = limit: 250]
