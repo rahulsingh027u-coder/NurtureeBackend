@@ -1,31 +1,36 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useAppStore } from '@/lib/store'
+import { LoginPage } from '@/components/admin/sections/LoginPage'
+import { AdminLayout } from '@/components/admin/layout/AdminLayout'
+
 export default function Home() {
-  return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      gap: '2rem',
-      padding: '1rem'
-    }}>
-      <div style={{
-        position: 'relative',
-        width: '6rem',
-        height: '6rem'
-      }}>
-        <img
-          src="/logo.svg"
-          alt="Z.ai Logo"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain'
-          }}
-        />
-      </div>
-    </div>
-  )
+  const { isAuthenticated, setActiveSection, logout } = useAppStore()
+
+  useEffect(() => {
+    // Check if there's a stored session
+    const stored = localStorage.getItem('nurturee_admin_session')
+    if (stored) {
+      try {
+        const user = JSON.parse(stored)
+        useAppStore.getState().login(user)
+      } catch {
+        localStorage.removeItem('nurturee_admin_session')
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const user = useAppStore.getState().user
+    if (user) {
+      localStorage.setItem('nurturee_admin_session', JSON.stringify(user))
+    }
+  }, [isAuthenticated])
+
+  if (!isAuthenticated) {
+    return <LoginPage />
+  }
+
+  return <AdminLayout />
 }
