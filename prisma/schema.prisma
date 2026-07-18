@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,20 +7,310 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ============ AUTH & USERS ============
+
+model Admin {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  password      String
+  role          String   @default("super_admin") // super_admin, sub_user
+  permissions   String   @default("{}") // JSON: { doctors: true, bookings: true, ... }
+  activeBranches String @default("[]") // JSON: ["child_care", "elder_care", "doctors"]
+  isActive      Boolean  @default(true)
+  assignedBy    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  assignedSubUsers SubUser[] @relation("AssignedBy")
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model SubUser {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  password      String
+  permissions   String   @default("{}") // JSON
+  activeBranches String @default("[]") // JSON: ["child_care", "elder_care", "doctors"]
+  isActive      Boolean  @default(true)
+  assignedBy    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  assigner Admin @relation("AssignedBy", fields: [assignedBy], references: [id])
+}
+
+// ============ DOCTORS ============
+
+model Doctor {
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  phone           String
+  password        String
+  specialty       String
+  qualifications  String
+  experience      Int
+  languages       String   @default("[]") // JSON: ["English", "Hindi"]
+  area            String   @default("")
+  avatar          String?
+  bio             String?
+  feeOnline       Float    @default(0)
+  feeAtHome       Float    @default(0)
+  isOnline        Boolean  @default(false)
+  isPortalUser    Boolean  @default(false)
+  isBlocked       Boolean  @default(false)
+  blockReason     String?
+  commissionRate  Float    @default(15) // percentage
+  commissionDue   Float    @default(0)
+  totalConsultations Int   @default(0)
+  avgRating       Float    @default(0)
+  verified        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bookings       Booking[]
+  prescriptions  Prescription[]
+  schedules      DoctorSchedule[]
+  reviews        Review[]
+  commissions    Commission[]
+  transactions   Transaction[]
+}
+
+// ============ PATIENTS ============
+
+model Patient {
+  id              String   @id @default(cuid())
+  uhid            String   @unique
+  name            String
+  email           String?
+  phone           String
+  age             Int?
+  gender          String?
+  address         String?
+  city            String   @default("Gurugram")
+  pincode         String?
+  landmark        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bookings        Booking[]
+  prescriptions   Prescription[]
+  documents       Document[]
+  reviews         Review[]
+}
+
+// ============ SERVICES CATALOG ============
+
+model Service {
+  id              String   @id @default(cuid())
+  name            String
+  category        String   // child_care, elder_care, doctor_consultation, caregiver_verification
+  subCategory     String?  // maternal_child_health, nanny, etc.
+  description     String?
+  duration        String   // "30 min", "8-10 hrs/day", etc.
+  priceType       String   @default("per_consultation") // per_consultation, monthly, per_visit, per_verification
+  priceOnline     Float?
+  priceAtHome     Float?
+  price           Float?   // for single-price services
+  mode            String   @default("both") // online, in_home, both
+  includes        String   @default("[]") // JSON: ["item1", "item2"]
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bookings        Booking[]
+}
+
+// ============ BOOKINGS ============
+
+model Booking {
+  id              String   @id @default(cuid())
+  bookingId       String   @unique // human-readable: NUR-B-2026-00001
+  patientId       String
+  doctorId        String?
+  caregiverId     String?
+  serviceId       String
+  bookingType     String   // doctor_consultation, child_care, elder_care, verification
+  consultationMode String  @default("in_home") // online, in_home
+  status          String   @default("pending") // pending, confirmed, in_progress, completed, cancelled
+  source          String   @default("portal") // portal, website, admin
+  date            String   // YYYY-MM-DD
+  startTime       String   // HH:MM
+  endTime         String?  // HH:MM
+  patientName     String
+  patientPhone    String
+  address         String?
+  city            String?
+  pincode         String?
+  notes           String?
+  totalAmount     Float    @default(0)
+  commissionAmount Float   @default(0)
+  doctorEarnings  Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  patient         Patient    @relation(fields: [patientId], references: [id])
+  doctor          Doctor?    @relation(fields: [doctorId], references: [id])
+  caregiver       Caregiver? @relation(fields: [caregiverId], references: [id])
+  service         Service    @relation(fields: [serviceId], references: [id])
+  prescription    Prescription?
+  review          Review?
+  commission      Commission?
+  notifications   Notification[]
+}
+
+// ============ PRESCRIPTIONS ============
+
+model Prescription {
+  id              String   @id @default(cuid())
+  bookingId       String   @unique
+  doctorId        String
+  patientId       String
+  patientUhid     String
+  medications     String   @default("[]") // JSON: [{name, dosage, frequency, duration}]
+  notes           String?
+  diagnosis       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  booking         Booking @relation(fields: [bookingId], references: [id])
+  doctor          Doctor  @relation(fields: [doctorId], references: [id])
+  patient         Patient @relation(fields: [patientId], references: [id])
+}
+
+// ============ CAREGIVERS ============
+
+model Caregiver {
+  id              String   @id @default(cuid())
+  name            String
+  phone           String
+  email           String?
+  specialty       String   // child_care, elder_care
+  experience      Int
+  qualifications  String?
+  isAvailable     Boolean  @default(true)
+  isVerified      Boolean  @default(false)
+  rating          Float    @default(0)
+  aadhaarVerified Boolean  @default(false)
+  policeVerified  Boolean  @default(false)
+  medicalFitness  Boolean  @default(false)
+  videoVerified   Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bookings        Booking[]
+}
+
+// ============ DOCTOR SCHEDULE ============
+
+model DoctorSchedule {
+  id              String   @id @default(cuid())
+  doctorId        String
+  dayOfWeek       Int      // 0=Sunday, 1=Monday, ...
+  startTime       String   // HH:MM
+  endTime         String   // HH:MM
+  slotDuration    Int      @default(60) // minutes
+  maxPatients     Int      @default(10)
+  isAvailable     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  doctor          Doctor @relation(fields: [doctorId], references: [id])
+}
+
+// ============ REVIEWS ============
+
+model Review {
+  id              String   @id @default(cuid())
+  bookingId       String   @unique
+  doctorId        String
+  patientId       String
+  rating          Float    // 1-5
+  comment         String?
+  createdAt       DateTime @default(now())
+
+  booking         Booking @relation(fields: [bookingId], references: [id])
+  doctor          Doctor  @relation(fields: [doctorId], references: [id])
+  patient         Patient @relation(fields: [patientId], references: [id])
+}
+
+// ============ COMMISSION & REVENUE ============
+
+model Commission {
+  id              String   @id @default(cuid())
+  bookingId       String   @unique
+  doctorId        String
+  totalAmount     Float
+  commissionRate  Float
+  commissionAmount Float
+  doctorEarnings  Float
+  paymentStatus   String   @default("pending") // pending, paid, overdue
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  booking         Booking @relation(fields: [bookingId], references: [id])
+  doctor          Doctor  @relation(fields: [doctorId], references: [id])
+}
+
+// ============ TRANSACTIONS ============
+
+model Transaction {
+  id              String   @id @default(cuid())
+  doctorId        String
+  amount          Float
+  type            String   // commission_received, refund, adjustment
+  description     String
+  createdAt       DateTime @default(now())
+
+  doctor          Doctor @relation(fields: [doctorId], references: [id])
+}
+
+// ============ DOCUMENTS ============
+
+model Document {
+  id              String   @id @default(cuid())
+  patientId       String
+  bookingId       String?
+  fileName        String
+  fileType        String   // jpg, png, pdf
+  fileUrl         String
+  category        String   @default("prescription") // prescription, lab_report, id_proof
+  uploadedAt      DateTime @default(now())
+
+  patient         Patient @relation(fields: [patientId], references: [id])
+}
+
+// ============ NOTIFICATIONS ============
+
+model Notification {
+  id              String   @id @default(cuid())
+  userId          String
+  userType        String   // admin, doctor, patient
+  title           String
+  message         String
+  type            String   @default("info") // info, booking, prescription, commission, verification
+  isRead          Boolean  @default(false)
+  bookingId       String?
+  createdAt       DateTime @default(now())
+
+  booking         Booking? @relation(fields: [bookingId], references: [id])
+}
+
+// ============ VERIFICATION ============
+
+model Verification {
+  id              String   @id @default(cuid())
+  entityType      String   // doctor, caregiver
+  entityId        String
+  status          String   @default("pending") // pending, in_progress, approved, rejected
+  package         String?  // basic, comprehensive, video
+  documents       String   @default("[]") // JSON: [{type, url, verified}]
+  reviewNotes     String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
