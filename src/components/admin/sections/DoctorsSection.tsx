@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,9 +15,11 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
   Plus, Search, Eye, Ban, CheckCircle, Loader2, Stethoscope, FileText,
-  DollarSign, Wifi, WifiOff, ShieldOff, Monitor, MoreVertical,
+  DollarSign, Wifi, WifiOff, ShieldOff, Monitor, MoreVertical, X,
+  Pencil, Save, CalendarDays, Clock, Languages, MapPin, Award, Phone, Mail,
 } from 'lucide-react'
 
+/* ─── Types ─── */
 interface Doctor {
   id: string
   name: string
@@ -42,6 +43,14 @@ interface Doctor {
   totalConsultations: number
 }
 
+interface DoctorDetail extends Doctor {
+  bio?: string | null
+  blockReason?: string | null
+  languages?: string | null
+  totalRevenue?: number
+  totalCommissionPaid?: number
+}
+
 interface Booking {
   id: string
   bookingId: string
@@ -49,6 +58,9 @@ interface Booking {
   patientUhid?: string
   date: string
   status: string
+  serviceName?: string
+  consultationMode?: string
+  totalAmount?: number
 }
 
 interface Prescription {
@@ -76,45 +88,66 @@ const specialtyOptions = [
 ]
 
 const emptyForm = {
-  name: '',
-  email: '',
-  phone: '',
-  password: '',
-  specialty: '',
-  qualifications: '',
-  experience: '',
-  area: '',
-  feeOnline: '',
-  feeAtHome: '',
-  commissionRate: '15',
+  name: '', email: '', phone: '', password: '', specialty: '',
+  qualifications: '', experience: '', area: '',
+  feeOnline: '', feeAtHome: '', commissionRate: '15',
 }
 
+/* ─── Toggle Switch Component ─── */
+function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
+        checked ? 'bg-blue-600' : 'bg-gray-300',
+        disabled && 'opacity-50 cursor-not-allowed'
+      )}
+    >
+      <span
+        className={cn(
+          'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out',
+          checked ? 'translate-x-4' : 'translate-x-0'
+        )}
+      />
+    </button>
+  )
+}
+
+/* ─── Main Component ─── */
 export function DoctorsSection() {
   const { toast } = useToast()
-
-  // Data state
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Filters
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [specFilter, setSpecFilter] = useState('all')
   const [verifiedFilter, setVerifiedFilter] = useState('all')
 
-  // Add doctor dialog
+  // Add doctor
   const [addOpen, setAddOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState(emptyForm)
 
-  // View doctor dialog
+  // View doctor (large dialog)
   const [viewOpen, setViewOpen] = useState(false)
-  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
-  const [viewLoading, setViewLoading] = useState(false)
+  const [docLoading, setDocLoading] = useState(false)
+  const [doctor, setDoctor] = useState<DoctorDetail | null>(null)
   const [doctorBookings, setDoctorBookings] = useState<Booking[]>([])
   const [doctorPrescriptions, setDoctorPrescriptions] = useState<Prescription[]>([])
+  const [bookingsTabLoading, setBookingsTabLoading] = useState(false)
 
-  // Block/Unblock dialog
+  // Edit commission inline
+  const [editingCommission, setEditingCommission] = useState(false)
+  const [commissionValue, setCommissionValue] = useState('')
+  const [savingCommission, setSavingCommission] = useState(false)
+
+  // Block dialog
   const [blockOpen, setBlockOpen] = useState(false)
   const [blocking, setBlocking] = useState(false)
 
@@ -122,21 +155,44 @@ export function DoctorsSection() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // Toggle handlers
+  const toggleOnline = useCallback(async (val: boolean) => {
+    if (!doctor) return
+    try {
+      const res = await fetch(`/api/doctors/${doctor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isOnline: val }) })
+      if (res.ok) { setDoctor({ ...doctor, isOnline: val }); fetchDoctors() }
+    } catch { toast({ title: 'Error', variant: 'destructive' }) }
+  }, [doctor, toast])
+
+  const toggleBlocked = useCallback(async (val: boolean) => {
+    if (!doctor) return
+    setDocLoading(true)
+    try {
+      const res = await fetch(`/api/doctors/${doctor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isBlocked: val }) })
+      if (res.ok) { setDoctor({ ...doctor, isBlocked: val }); fetchDoctors() }
+      else toast({ title: 'Error', variant: 'destructive' })
+    } catch { toast({ title: 'Error', variant: 'destructive' }) }
+    finally { setDocLoading(false) }
+  }, [doctor, toast])
+
+  const toggleVerified = useCallback(async (val: boolean) => {
+    if (!doctor) return
+    try {
+      const res = await fetch(`/api/doctors/${doctor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verified: val }) })
+      if (res.ok) { setDoctor({ ...doctor, verified: val }); fetchDoctors() }
+    } catch { toast({ title: 'Error', variant: 'destructive' }) }
+  }, [doctor, toast])
+
   // Close menu on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpenMenuId(null)
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenuId(null)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  // Fetch doctors
-  useEffect(() => {
-    fetchDoctors()
-  }, [search, statusFilter, specFilter, verifiedFilter])
+  useEffect(() => { fetchDoctors() }, [search, statusFilter, specFilter, verifiedFilter])
 
   const fetchDoctors = async () => {
     setLoading(true)
@@ -146,80 +202,50 @@ export function DoctorsSection() {
       if (statusFilter !== 'all') params.set('status', statusFilter)
       if (specFilter !== 'all') params.set('specialization', specFilter)
       if (verifiedFilter !== 'all') params.set('verified', verifiedFilter)
-
       const res = await fetch(`/api/doctors?${params.toString()}`)
-      if (res.ok) {
-        const data = await res.json()
-        setDoctors(Array.isArray(data) ? data : data.data || [])
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Failed to fetch doctors', variant: 'destructive' })
-    } finally {
-      setLoading(false)
-    }
+      if (res.ok) { const data = await res.json(); setDoctors(Array.isArray(data) ? data : data.data || []) }
+    } catch { toast({ title: 'Error', description: 'Failed to fetch doctors', variant: 'destructive' }) }
+    finally { setLoading(false) }
   }
 
-  // Derived stats
-  const totalDoctors = doctors.length
-  const onlineCount = doctors.filter(d => d.isOnline && !d.isBlocked).length
-  const offlineCount = doctors.filter(d => !d.isOnline && !d.isBlocked).length
-  const blockedCount = doctors.filter(d => d.isBlocked).length
-  const portalCount = doctors.filter(d => d.isPortalUser).length
-
-  // Get doctor status string
   const getDoctorStatus = (d: Doctor): string => {
     if (d.isBlocked) return 'blocked'
     if (d.isOnline) return 'online'
     return 'offline'
   }
 
-  // Create doctor
   const handleCreate = async () => {
     if (!form.name || !form.email || !form.password || !form.specialty) {
-      toast({ title: 'Error', description: 'Please fill required fields (name, email, password, specialty)', variant: 'destructive' })
-      return
+      toast({ title: 'Error', description: 'Please fill required fields', variant: 'destructive' }); return
     }
     setCreating(true)
     try {
-      const payload = {
-        ...form,
-        experience: Number(form.experience) || 0,
-        feeOnline: Number(form.feeOnline) || 0,
-        feeAtHome: Number(form.feeAtHome) || 0,
-        commissionRate: Number(form.commissionRate) || 15,
-      }
-      const res = await fetch('/api/doctors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (res.ok) {
-        toast({ title: 'Doctor Added', description: `${form.name} has been added successfully` })
-        setAddOpen(false)
-        setForm(emptyForm)
-        fetchDoctors()
-      } else {
-        const data = await res.json()
-        toast({ title: 'Error', description: data.error || 'Failed to add doctor', variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
-    } finally {
-      setCreating(false)
-    }
+      const payload = { ...form, experience: Number(form.experience) || 0, feeOnline: Number(form.feeOnline) || 0, feeAtHome: Number(form.feeAtHome) || 0, commissionRate: Number(form.commissionRate) || 15 }
+      const res = await fetch('/api/doctors', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if (res.ok) { toast({ title: 'Doctor Added', description: `${form.name} added successfully` }); setAddOpen(false); setForm(emptyForm); fetchDoctors() }
+      else { const data = await res.json(); toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' }) }
+    } catch { toast({ title: 'Error', variant: 'destructive' }) }
+    finally { setCreating(false) }
   }
 
-  // View doctor details
-  const handleViewDoctor = async (doctor: Doctor) => {
-    setSelectedDoctor(doctor)
+  // Open doctor detail dialog
+  const handleViewDoctor = async (doc: Doctor) => {
+    setSelectedDoctorForBlock(doc)
     setViewOpen(true)
-    setViewLoading(true)
+    setDocLoading(true)
+    setEditingCommission(false)
     setOpenMenuId(null)
     try {
-      const [bookingsRes, prescriptionsRes] = await Promise.all([
-        fetch(`/api/bookings?doctorId=${doctor.id}`),
-        fetch(`/api/prescriptions?doctorId=${doctor.id}`),
+      const [docRes, bookingsRes, prescriptionsRes] = await Promise.all([
+        fetch(`/api/doctors/${doc.id}`),
+        fetch(`/api/bookings?doctorId=${doc.id}`),
+        fetch(`/api/prescriptions?doctorId=${doc.id}`),
       ])
+      if (docRes.ok) {
+        const d = await docRes.json()
+        setDoctor(d)
+        setCommissionValue(String(d.commissionRate))
+      }
       if (bookingsRes.ok) {
         const data = await bookingsRes.json()
         setDoctorBookings(Array.isArray(data) ? data : data.data || [])
@@ -228,81 +254,71 @@ export function DoctorsSection() {
         const data = await prescriptionsRes.json()
         setDoctorPrescriptions(Array.isArray(data) ? data : data.data || [])
       }
-    } catch {
-      // Silently fail
-    } finally {
-      setViewLoading(false)
-    }
+    } catch { /* silent */ }
+    finally { setDocLoading(false) }
   }
 
-  // Block / Unblock
+  const saveCommission = async () => {
+    if (!doctor) return
+    setSavingCommission(true)
+    try {
+      const res = await fetch(`/api/doctors/${doctor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commissionRate: Number(commissionValue) }) })
+      if (res.ok) {
+        setDoctor({ ...doctor, commissionRate: Number(commissionValue) })
+        setEditingCommission(false)
+        fetchDoctors()
+        toast({ title: 'Updated', description: 'Commission rate updated' })
+      }
+    } catch { toast({ title: 'Error', variant: 'destructive' }) }
+    finally { setSavingCommission(false) }
+  }
+
+  // Block/unblock via alert dialog
+  const [selectedDoctorForBlock, setSelectedDoctorForBlock] = useState<Doctor | null>(null)
+  const openBlockDialog = (doc: Doctor) => { setSelectedDoctorForBlock(doc); setBlockOpen(true); setOpenMenuId(null) }
   const handleBlockToggle = async () => {
-    if (!selectedDoctor) return
+    if (!selectedDoctorForBlock) return
     setBlocking(true)
     try {
-      const isBlocked = !selectedDoctor.isBlocked
-      const res = await fetch(`/api/doctors/${selectedDoctor.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          isBlocked,
-          blockReason: isBlocked ? 'Commission unpaid' : undefined,
-        }),
-      })
+      const isBlocked = !selectedDoctorForBlock.isBlocked
+      const res = await fetch(`/api/doctors/${selectedDoctorForBlock.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isBlocked }) })
       if (res.ok) {
-        toast({
-          title: isBlocked ? 'Doctor Blocked' : 'Doctor Unblocked',
-          description: `${selectedDoctor.name} has been ${isBlocked ? 'blocked' : 'unblocked'}`,
-        })
-        setBlockOpen(false)
-        setViewOpen(false)
-        fetchDoctors()
-      } else {
-        const data = await res.json()
-        toast({ title: 'Error', description: data.error || 'Failed to update doctor', variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
-    } finally {
-      setBlocking(false)
-    }
+        toast({ title: isBlocked ? 'Blocked' : 'Unblocked', description: `${selectedDoctorForBlock.name} ${isBlocked ? 'blocked' : 'unblocked'}` })
+        setBlockOpen(false); setViewOpen(false); fetchDoctors()
+      } else toast({ title: 'Error', variant: 'destructive' })
+    } catch { toast({ title: 'Error', variant: 'destructive' }) }
+    finally { setBlocking(false) }
   }
 
-  const openBlockDialog = (doctor: Doctor) => {
-    setSelectedDoctor(doctor)
-    setBlockOpen(true)
-    setOpenMenuId(null)
-  }
+  // Parsed languages
+  const parsedLanguages = doctor?.languages ? (typeof doctor.languages === 'string' ? JSON.parse(doctor.languages) : doctor.languages) : []
 
-  // Revenue calculations for view dialog
-  const completedBookings = doctorBookings.filter(b => b.status === 'completed').length
+  // Stats
+  const onlineCount = doctors.filter(d => d.isOnline && !d.isBlocked).length
+  const offlineCount = doctors.filter(d => !d.isOnline && !d.isBlocked).length
+  const blockedCount = doctors.filter(d => d.isBlocked).length
+  const portalCount = doctors.filter(d => d.isPortalUser).length
 
-  // Stat cards config
   const statCards = [
-    { label: 'Total Doctors', value: totalDoctors, icon: Stethoscope, color: 'bg-blue-50', iconColor: 'text-blue-600', valueColor: 'text-blue-700' },
+    { label: 'Total Doctors', value: doctors.length, icon: Stethoscope, color: 'bg-blue-50', iconColor: 'text-blue-600', valueColor: 'text-blue-700' },
     { label: 'Online', value: onlineCount, icon: Wifi, color: 'bg-green-50', iconColor: 'text-green-500', valueColor: 'text-green-700' },
     { label: 'Offline', value: offlineCount, icon: WifiOff, color: 'bg-gray-50', iconColor: 'text-gray-400', valueColor: 'text-gray-700' },
     { label: 'Blocked', value: blockedCount, icon: ShieldOff, color: 'bg-red-50', iconColor: 'text-red-500', valueColor: 'text-red-700' },
     { label: 'Using Portal', value: portalCount, icon: Monitor, color: 'bg-purple-50', iconColor: 'text-purple-500', valueColor: 'text-purple-700' },
   ]
 
+  const completedBookings = doctorBookings.filter(b => b.status === 'completed').length
+
   return (
     <div className="space-y-5 p-4 md:p-6">
-      {/* Search and Filter Bar */}
+      {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            placeholder="Search doctors by name, email, or phone..."
-            className="pl-9 h-9 rounded-lg border-gray-200 text-sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <Input placeholder="Search doctors by name, email, or phone..." className="pl-9 h-9 rounded-lg border-gray-200 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[140px] h-9 rounded-lg border-gray-200 text-sm">
-            <SelectValue placeholder="All Status" />
-          </SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[140px] h-9 rounded-lg border-gray-200 text-sm"><SelectValue placeholder="All Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="online">Online</SelectItem>
@@ -311,20 +327,14 @@ export function DoctorsSection() {
           </SelectContent>
         </Select>
         <Select value={specFilter} onValueChange={setSpecFilter}>
-          <SelectTrigger className="w-full sm:w-[170px] h-9 rounded-lg border-gray-200 text-sm">
-            <SelectValue placeholder="All Specializations" />
-          </SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[170px] h-9 rounded-lg border-gray-200 text-sm"><SelectValue placeholder="All Specializations" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Specializations</SelectItem>
-            {specialtyOptions.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
-            ))}
+            {specialtyOptions.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
           </SelectContent>
         </Select>
         <Select value={verifiedFilter} onValueChange={setVerifiedFilter}>
-          <SelectTrigger className="w-full sm:w-[100px] h-9 rounded-lg border-gray-200 text-sm">
-            <SelectValue placeholder="All" />
-          </SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[100px] h-9 rounded-lg border-gray-200 text-sm"><SelectValue placeholder="All" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All</SelectItem>
             <SelectItem value="true">Verified</SelectItem>
@@ -333,7 +343,7 @@ export function DoctorsSection() {
         </Select>
       </div>
 
-      {/* Stat Cards - 5 in a row */}
+      {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {statCards.map((card) => (
           <Card key={card.label} className="bg-white rounded-lg shadow-sm border-0">
@@ -361,76 +371,37 @@ export function DoctorsSection() {
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Add New Doctor</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>Add New Doctor</DialogTitle></DialogHeader>
               <div className="space-y-4 py-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Name *</Label>
-                    <Input placeholder="Dr. Full Name" className="h-9 text-sm rounded-lg" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Email *</Label>
-                    <Input type="email" placeholder="doctor@example.com" className="h-9 text-sm rounded-lg" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                  </div>
+                  <div className="space-y-2"><Label className="text-xs font-medium">Name *</Label><Input placeholder="Dr. Full Name" className="h-9 text-sm rounded-lg" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+                  <div className="space-y-2"><Label className="text-xs font-medium">Email *</Label><Input type="email" placeholder="doctor@example.com" className="h-9 text-sm rounded-lg" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Phone</Label>
-                    <Input placeholder="+91 98765 43210" className="h-9 text-sm rounded-lg" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Password *</Label>
-                    <Input type="password" placeholder="Set password" className="h-9 text-sm rounded-lg" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-                  </div>
+                  <div className="space-y-2"><Label className="text-xs font-medium">Phone</Label><Input placeholder="+91 98765 43210" className="h-9 text-sm rounded-lg" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+                  <div className="space-y-2"><Label className="text-xs font-medium">Password *</Label><Input type="password" placeholder="Set password" className="h-9 text-sm rounded-lg" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">Specialty *</Label>
                     <Select value={form.specialty} onValueChange={(v) => setForm({ ...form, specialty: v })}>
-                      <SelectTrigger className="h-9 text-sm rounded-lg"><SelectValue placeholder="Select specialty" /></SelectTrigger>
-                      <SelectContent>
-                        {specialtyOptions.map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
+                      <SelectTrigger className="h-9 text-sm rounded-lg"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>{specialtyOptions.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Experience (years)</Label>
-                    <Input type="number" placeholder="e.g. 5" className="h-9 text-sm rounded-lg" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} />
-                  </div>
+                  <div className="space-y-2"><Label className="text-xs font-medium">Experience (yrs)</Label><Input type="number" placeholder="e.g. 5" className="h-9 text-sm rounded-lg" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} /></div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Qualifications</Label>
-                  <Input placeholder="MBBS, MD, etc." className="h-9 text-sm rounded-lg" value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Area</Label>
-                  <Input placeholder="City or locality" className="h-9 text-sm rounded-lg" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
-                </div>
+                <div className="space-y-2"><Label className="text-xs font-medium">Qualifications</Label><Input placeholder="MBBS, MD" className="h-9 text-sm rounded-lg" value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} /></div>
+                <div className="space-y-2"><Label className="text-xs font-medium">Area</Label><Input placeholder="City or locality" className="h-9 text-sm rounded-lg" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} /></div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Fee Online</Label>
-                    <Input type="number" placeholder="500" className="h-9 text-sm rounded-lg" value={form.feeOnline} onChange={(e) => setForm({ ...form, feeOnline: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Fee At Home</Label>
-                    <Input type="number" placeholder="800" className="h-9 text-sm rounded-lg" value={form.feeAtHome} onChange={(e) => setForm({ ...form, feeAtHome: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Commission %</Label>
-                    <Input type="number" placeholder="15" className="h-9 text-sm rounded-lg" value={form.commissionRate} onChange={(e) => setForm({ ...form, commissionRate: e.target.value })} />
-                  </div>
+                  <div className="space-y-2"><Label className="text-xs font-medium">Fee Online</Label><Input type="number" placeholder="500" className="h-9 text-sm rounded-lg" value={form.feeOnline} onChange={(e) => setForm({ ...form, feeOnline: e.target.value })} /></div>
+                  <div className="space-y-2"><Label className="text-xs font-medium">Fee At Home</Label><Input type="number" placeholder="800" className="h-9 text-sm rounded-lg" value={form.feeAtHome} onChange={(e) => setForm({ ...form, feeAtHome: e.target.value })} /></div>
+                  <div className="space-y-2"><Label className="text-xs font-medium">Commission %</Label><Input type="number" placeholder="15" className="h-9 text-sm rounded-lg" value={form.commissionRate} onChange={(e) => setForm({ ...form, commissionRate: e.target.value })} /></div>
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setAddOpen(false)} className="rounded-lg">Cancel</Button>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg" onClick={handleCreate} disabled={creating}>
-                  {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Add Doctor
-                </Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg" onClick={handleCreate} disabled={creating}>{creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Add Doctor</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -454,42 +425,24 @@ export function DoctorsSection() {
             <TableBody>
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
-                  <TableRow key={i} className="border-0">
-                    {Array.from({ length: 9 }).map((_, j) => (
-                      <TableCell key={j} className={j === 0 ? 'pl-5' : j === 8 ? 'pr-5' : ''}><Skeleton className="h-4 w-20" /></TableCell>
-                    ))}
-                  </TableRow>
+                  <TableRow key={i} className="border-0">{Array.from({ length: 9 }).map((_, j) => (<TableCell key={j} className={j === 0 ? 'pl-5' : j === 8 ? 'pr-5' : ''}><Skeleton className="h-4 w-20" /></TableCell>))}</TableRow>
                 ))
               ) : doctors.length > 0 ? (
                 doctors.map((d) => {
                   const status = getDoctorStatus(d)
                   return (
-                    <TableRow key={d.id} className="hover:bg-gray-50/50 border-0 border-b border-gray-100 last:border-0">
-                      {/* Name & Specialization */}
+                    <TableRow key={d.id} className="hover:bg-gray-50/50 border-0 border-b border-gray-100 last:border-0 cursor-pointer" onClick={() => handleViewDoctor(d)}>
                       <TableCell className="pl-5 py-3">
                         <p className="text-sm font-semibold text-gray-900">{d.name}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{d.specialty}</p>
                       </TableCell>
-                      {/* Phone */}
-                      <TableCell className="py-3">
-                        <p className="text-sm text-gray-700">{d.phone}</p>
-                      </TableCell>
-                      {/* Status */}
+                      <TableCell className="py-3"><p className="text-sm text-gray-700">{d.phone}</p></TableCell>
                       <TableCell className="py-3">
                         <div className="flex items-center gap-1.5">
-                          <span className={cn(
-                            'w-2 h-2 rounded-full inline-block',
-                            status === 'online' ? 'bg-green-500' : status === 'blocked' ? 'bg-red-500' : 'bg-gray-400'
-                          )} />
-                          <span className={cn(
-                            'text-xs font-medium capitalize',
-                            status === 'online' ? 'text-green-700' : status === 'blocked' ? 'text-red-700' : 'text-gray-600'
-                          )}>
-                            {status}
-                          </span>
+                          <span className={cn('w-2 h-2 rounded-full', status === 'online' ? 'bg-green-500' : status === 'blocked' ? 'bg-red-500' : 'bg-gray-400')} />
+                          <span className={cn('text-xs font-medium capitalize', status === 'online' ? 'text-green-700' : status === 'blocked' ? 'text-red-700' : 'text-gray-600')}>{status}</span>
                         </div>
                       </TableCell>
-                      {/* Fee */}
                       <TableCell className="py-3">
                         <p className="text-sm text-gray-700">
                           <span className="font-medium">{d.feeOnline > 0 ? `₹${d.feeOnline.toLocaleString()}` : '₹0'}</span>
@@ -497,57 +450,24 @@ export function DoctorsSection() {
                           <span>{d.feeAtHome > 0 ? `₹${d.feeAtHome.toLocaleString()}` : '₹0'}</span>
                         </p>
                       </TableCell>
-                      {/* Commission */}
+                      <TableCell className="py-3"><p className="text-sm font-medium text-gray-700">{d.commissionRate}%</p></TableCell>
+                      <TableCell className="py-3"><p className="text-sm text-gray-700">{d.bookingCount || 0}</p></TableCell>
+                      <TableCell className="py-3"><p className="text-sm font-medium text-gray-900">{d.totalEarnings > 0 ? `₹${d.totalEarnings.toLocaleString()}` : '₹0'}</p></TableCell>
                       <TableCell className="py-3">
-                        <p className="text-sm font-medium text-gray-700">{d.commissionRate}%</p>
+                        {d.verified ? <CheckCircle className="w-4 h-4 text-green-500" /> : <span className="w-4 h-4 rounded-full border-2 border-gray-300 inline-block" />}
                       </TableCell>
-                      {/* Bookings */}
-                      <TableCell className="py-3">
-                        <p className="text-sm text-gray-700">{d.bookingCount || 0}</p>
-                      </TableCell>
-                      {/* Earnings */}
-                      <TableCell className="py-3">
-                        <p className="text-sm font-medium text-gray-900">{d.totalEarnings > 0 ? `₹${d.totalEarnings.toLocaleString()}` : '₹0'}</p>
-                      </TableCell>
-                      {/* Verified */}
-                      <TableCell className="py-3">
-                        {d.verified ? (
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <span className="w-4 h-4 rounded-full border-2 border-gray-300 inline-block" />
-                        )}
-                      </TableCell>
-                      {/* Actions - 3 dot menu */}
                       <TableCell className="py-3 pr-5">
                         <div className="relative">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-8 h-8 p-0 rounded-lg hover:bg-gray-100"
-                            onClick={() => setOpenMenuId(openMenuId === d.id ? null : d.id)}
-                          >
+                          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 rounded-lg hover:bg-gray-100" onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === d.id ? null : d.id) }}>
                             <MoreVertical className="w-4 h-4 text-gray-500" />
                           </Button>
                           {openMenuId === d.id && (
                             <div ref={menuRef} className="absolute right-0 top-full mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                              <button
-                                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                onClick={() => handleViewDoctor(d)}
-                              >
+                              <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); handleViewDoctor(d) }}>
                                 <Eye className="w-3.5 h-3.5 text-gray-400" /> View Details
                               </button>
-                              <button
-                                className={cn(
-                                  'w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2',
-                                  d.isBlocked ? 'text-green-600' : 'text-red-600'
-                                )}
-                                onClick={() => openBlockDialog(d)}
-                              >
-                                {d.isBlocked ? (
-                                  <><CheckCircle className="w-3.5 h-3.5" /> Unblock</>
-                                ) : (
-                                  <><Ban className="w-3.5 h-3.5" /> Block</>
-                                )}
+                              <button className={cn('w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2', d.isBlocked ? 'text-green-600' : 'text-red-600')} onClick={(e) => { e.stopPropagation(); openBlockDialog(d) }}>
+                                {d.isBlocked ? <><CheckCircle className="w-3.5 h-3.5" /> Unblock</> : <><Ban className="w-3.5 h-3.5" /> Block</>}
                               </button>
                             </div>
                           )}
@@ -557,164 +477,237 @@ export function DoctorsSection() {
                   )
                 })
               ) : (
-                <TableRow className="border-0">
-                  <TableCell colSpan={9} className="text-center py-12 text-gray-400 text-sm">
-                    No doctors found
-                  </TableCell>
-                </TableRow>
+                <TableRow className="border-0"><TableCell colSpan={9} className="text-center py-12 text-gray-400 text-sm">No doctors found</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </div>
       </Card>
 
-      {/* View Doctor Dialog */}
+      {/* ═══════════════════════════════════════════════════════════
+          DOCTOR DETAIL DIALOG — Large Profile Management View
+         ═══════════════════════════════════════════════════════════ */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          {selectedDoctor && (
+        <DialogContent className="sm:max-w-4xl max-h-[92vh] overflow-hidden p-0 flex flex-col">
+          {docLoading && !doctor ? (
+            <div className="flex-1 flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+          ) : doctor ? (
             <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                    <Stethoscope className="w-5 h-5 text-blue-600" />
-                  </div>
+              {/* ── Header ── */}
+              <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+                <div className="flex items-start justify-between">
                   <div>
-                    <p>{selectedDoctor.name}</p>
-                    <p className="text-sm font-normal text-gray-500">{selectedDoctor.specialty}</p>
+                    <h2 className="text-xl font-bold text-gray-900">Doctor Details</h2>
+                    <p className="text-sm text-gray-500 mt-0.5">Full profile and management controls</p>
                   </div>
-                </DialogTitle>
-              </DialogHeader>
-
-              {/* Doctor Info Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 py-3">
-                <InfoItem label="Email" value={selectedDoctor.email} />
-                <InfoItem label="Phone" value={selectedDoctor.phone || '—'} />
-                <InfoItem label="Area" value={selectedDoctor.area || '—'} />
-                <InfoItem label="Experience" value={`${selectedDoctor.experience || 0} years`} />
-                <InfoItem label="Qualifications" value={selectedDoctor.qualifications || '—'} />
-                <InfoItem label="Status" value={
-                  <span className={cn(
-                    'inline-flex items-center gap-1.5 text-xs font-medium capitalize px-2 py-0.5 rounded-full',
-                    getDoctorStatus(selectedDoctor) === 'online' ? 'bg-green-100 text-green-700' :
-                    getDoctorStatus(selectedDoctor) === 'blocked' ? 'bg-red-100 text-red-700' :
-                    'bg-gray-100 text-gray-600'
-                  )}>
-                    <span className={cn(
-                      'w-1.5 h-1.5 rounded-full',
-                      getDoctorStatus(selectedDoctor) === 'online' ? 'bg-green-500' :
-                      getDoctorStatus(selectedDoctor) === 'blocked' ? 'bg-red-500' : 'bg-gray-400'
-                    )} />
-                    {getDoctorStatus(selectedDoctor)}
-                  </span>
-                } />
-                <InfoItem label="Fee Online" value={`₹${selectedDoctor.feeOnline || 0}`} />
-                <InfoItem label="Fee At Home" value={`₹${selectedDoctor.feeAtHome || 0}`} />
-                <InfoItem label="Commission" value={`${selectedDoctor.commissionRate || 15}%`} />
+                  <Button variant="ghost" size="sm" className="w-8 h-8 p-0 rounded-full hover:bg-gray-100" onClick={() => setViewOpen(false)}>
+                    <X className="w-4 h-4 text-gray-400" />
+                  </Button>
+                </div>
               </div>
 
-              {/* Tabs */}
-              <Tabs defaultValue="bookings" className="w-full">
-                <TabsList className="w-full">
-                  <TabsTrigger value="bookings" className="flex-1 gap-1.5">
-                    <Stethoscope className="w-3.5 h-3.5" /> Bookings
-                  </TabsTrigger>
-                  <TabsTrigger value="prescriptions" className="flex-1 gap-1.5">
-                    <FileText className="w-3.5 h-3.5" /> Prescriptions
-                  </TabsTrigger>
-                  <TabsTrigger value="revenue" className="flex-1 gap-1.5">
-                    <DollarSign className="w-3.5 h-3.5" /> Revenue
-                  </TabsTrigger>
-                </TabsList>
+              {/* ── Scrollable Content ── */}
+              <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+                <div className="px-6 py-5 space-y-6">
 
-                <TabsContent value="bookings" className="mt-4">
-                  {viewLoading ? (
-                    <div className="space-y-2">
-                      {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                  {/* ── Profile Summary ── */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-lg font-bold text-blue-700">{doctor.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
                     </div>
-                  ) : doctorBookings.length > 0 ? (
-                    <div className="max-h-[300px] overflow-y-auto rounded-lg border" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
-                            <TableHead className="text-xs font-semibold uppercase text-gray-500">UHID</TableHead>
-                            <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient</TableHead>
-                            <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
-                            <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {doctorBookings.map((b) => (
-                            <TableRow key={b.id} className="hover:bg-gray-50/50">
-                              <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.patientUhid || '—'}</TableCell>
-                              <TableCell className="text-sm text-gray-900">{b.patientName}</TableCell>
-                              <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
-                              <TableCell>
-                                <Badge variant="secondary" className={cn('text-[11px] capitalize', bookingStatusColor[b.status] || 'bg-gray-100 text-gray-800')}>
-                                  {b.status.replace('_', ' ')}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-gray-900">{doctor.name}</h3>
+                      <p className="text-sm text-gray-500">{doctor.specialty}{doctor.qualifications ? ` · ${doctor.qualifications}` : ''}</p>
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+                        <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{doctor.phone}</span>
+                        <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{doctor.email}</span>
+                      </div>
                     </div>
-                  ) : (
-                    <p className="text-center text-gray-400 text-sm py-6">No bookings found for this doctor</p>
-                  )}
-                </TabsContent>
+                  </div>
 
-                <TabsContent value="prescriptions" className="mt-4">
-                  {viewLoading ? (
-                    <div className="space-y-2">
-                      {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                  {/* ── Status Toggles ── */}
+                  <div className="flex items-center gap-8 bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-center gap-3">
+                      <Wifi className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-600 w-16">Online</span>
+                      <Toggle checked={doctor.isOnline} onChange={toggleOnline} disabled={doctor.isBlocked} />
                     </div>
-                  ) : doctorPrescriptions.length > 0 ? (
-                    <div className="max-h-[300px] overflow-y-auto space-y-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
-                      {doctorPrescriptions.map((p) => (
-                        <div key={p.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
-                          <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{p.patientName}</p>
-                            {p.diagnosis && <p className="text-xs text-gray-500 truncate">{p.diagnosis}</p>}
+                    <div className="flex items-center gap-3">
+                      <ShieldOff className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-600 w-16">Blocked</span>
+                      <Toggle checked={doctor.isBlocked} onChange={toggleBlocked} />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-600 w-16">Verified</span>
+                      <Toggle checked={doctor.verified} onChange={toggleVerified} />
+                    </div>
+                  </div>
+
+                  {/* ── 2x2 Info Cards Grid ── */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                    {/* Commission Rate */}
+                    <div className="bg-gray-50 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-600">Commission Rate</h4>
+                        {editingCommission ? (
+                          <div className="flex items-center gap-1.5">
+                            <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-500 hover:text-gray-700 px-2" onClick={() => { setEditingCommission(false); setCommissionValue(String(doctor.commissionRate)) }}>
+                              <X className="w-3 h-3" />
+                            </Button>
+                            <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 gap-1" onClick={saveCommission} disabled={savingCommission}>
+                              {savingCommission ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
+                            </Button>
                           </div>
-                          <p className="text-xs text-gray-400 flex-shrink-0">{p.date}</p>
+                        ) : (
+                          <Button size="sm" variant="outline" className="h-7 text-xs border-gray-300 text-gray-600 hover:bg-white px-2 gap-1" onClick={() => setEditingCommission(true)}>
+                            <Pencil className="w-3 h-3" /> Edit
+                          </Button>
+                        )}
+                      </div>
+                      {editingCommission ? (
+                        <div className="flex items-center gap-2">
+                          <Input type="number" value={commissionValue} onChange={(e) => setCommissionValue(e.target.value)} className="h-10 w-24 text-center text-lg font-bold rounded-lg border-gray-300" />
+                          <span className="text-lg text-gray-400">%</span>
                         </div>
-                      ))}
+                      ) : (
+                        <p className="text-3xl font-bold text-blue-600">{doctor.commissionRate}%</p>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-center text-gray-400 text-sm py-6">No prescriptions found for this doctor</p>
-                  )}
-                </TabsContent>
 
-                <TabsContent value="revenue" className="mt-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-blue-50 rounded-xl p-4 text-center">
-                      <p className="text-xs text-gray-500 mb-1">Total Bookings</p>
-                      <p className="text-2xl font-bold text-blue-700">{doctorBookings.length}</p>
+                    {/* Earnings & Due */}
+                    <div className="bg-gray-50 rounded-xl p-5">
+                      <h4 className="text-sm font-semibold text-gray-600 mb-3">Earnings & Due</h4>
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500">Total Earnings</span>
+                          <span className="text-sm font-semibold text-gray-900">₹{(doctor.totalEarnings || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500">Platform Fee Paid</span>
+                          <span className="text-sm font-semibold text-green-600">₹{(doctor.totalCommissionPaid || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500">Platform Fee Due</span>
+                          <span className="text-sm font-semibold text-red-600">₹{(doctor.commissionDue || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-blue-50 rounded-xl p-4 text-center">
-                      <p className="text-xs text-gray-500 mb-1">Total Earnings</p>
-                      <p className="text-2xl font-bold text-blue-700">₹{(selectedDoctor.totalEarnings || 0).toLocaleString()}</p>
+
+                    {/* Consultation Fees */}
+                    <div className="bg-gray-50 rounded-xl p-5">
+                      <h4 className="text-sm font-semibold text-gray-600 mb-3">Consultation Fees</h4>
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500">Online Fee</span>
+                          <span className="text-sm font-semibold text-gray-900">₹{(doctor.feeOnline || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500">Home Visit Fee</span>
+                          <span className="text-sm font-semibold text-gray-900">₹{(doctor.feeAtHome || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-blue-50 rounded-xl p-4 text-center">
-                      <p className="text-xs text-gray-500 mb-1">Commission ({selectedDoctor.commissionRate || 15}%)</p>
-                      <p className="text-2xl font-bold text-blue-700">₹{selectedDoctor.commissionDue || 0}</p>
+
+                    {/* Availability & Info */}
+                    <div className="bg-gray-50 rounded-xl p-5">
+                      <h4 className="text-sm font-semibold text-gray-600 mb-3">Availability</h4>
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />Experience</span>
+                          <span className="text-sm font-semibold text-gray-900">{doctor.experience || 0} yrs</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" />Area</span>
+                          <span className="text-sm font-semibold text-gray-900">{doctor.area || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500 flex items-center gap-1.5"><Languages className="w-3.5 h-3.5" />Languages</span>
+                          <span className="text-sm font-semibold text-gray-900">{parsedLanguages.length > 0 ? parsedLanguages.join(', ') : 'N/A'}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-4 bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Completed Bookings</span>
-                      <span className="font-medium text-gray-900">{completedBookings}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm mt-2">
-                      <span className="text-gray-500">Commission Due</span>
-                      <span className="font-medium text-blue-700">₹{selectedDoctor.commissionDue || 0}</span>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
+
+                  {/* ── Tabs: Bookings & Prescriptions ── */}
+                  <Tabs defaultValue="bookings" className="w-full">
+                    <TabsList className="w-full">
+                      <TabsTrigger value="bookings" className="flex-1 gap-1.5 text-sm"><CalendarDays className="w-3.5 h-3.5" /> Bookings ({doctorBookings.length})</TabsTrigger>
+                      <TabsTrigger value="prescriptions" className="flex-1 gap-1.5 text-sm"><FileText className="w-3.5 h-3.5" /> Prescriptions ({doctorPrescriptions.length})</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="bookings" className="mt-4">
+                      <div className="max-h-[280px] overflow-y-auto rounded-lg border border-gray-200" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Booking ID</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Service</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Amount</TableHead>
+                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {doctorBookings.length > 0 ? doctorBookings.map((b) => (
+                              <TableRow key={b.id} className="hover:bg-gray-50/50">
+                                <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.bookingId || '—'}</TableCell>
+                                <TableCell>
+                                  <div>
+                                    <p className="text-sm text-gray-900">{b.patientName}</p>
+                                    {b.patientUhid && <p className="text-[11px] text-gray-400 font-mono">{b.patientUhid}</p>}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
+                                <TableCell className="text-sm text-gray-600">{b.serviceName || '—'}</TableCell>
+                                <TableCell className="text-sm font-medium text-gray-900">{b.totalAmount ? `₹${b.totalAmount.toLocaleString()}` : '—'}</TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary" className={cn('text-[11px] capitalize', bookingStatusColor[b.status] || 'bg-gray-100 text-gray-800')}>
+                                    {b.status.replace('_', ' ')}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            )) : (
+                              <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-400 text-sm">No bookings found</TableCell></TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      {doctorBookings.length > 0 && (
+                        <div className="mt-3 flex items-center gap-6 text-xs text-gray-500">
+                          <span>Total: <strong className="text-gray-900">{doctorBookings.length}</strong></span>
+                          <span>Completed: <strong className="text-green-700">{completedBookings}</strong></span>
+                          <span>Earnings: <strong className="text-blue-700">₹{(doctor.totalEarnings || 0).toLocaleString()}</strong></span>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="prescriptions" className="mt-4">
+                      {doctorPrescriptions.length > 0 ? (
+                        <div className="max-h-[280px] overflow-y-auto space-y-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+                          {doctorPrescriptions.map((p) => (
+                            <div key={p.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+                              <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{p.patientName}</p>
+                                {p.diagnosis && <p className="text-xs text-gray-500 truncate">{p.diagnosis}</p>}
+                              </div>
+                              <p className="text-xs text-gray-400 flex-shrink-0">{p.date}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-center text-gray-400 text-sm py-8">No prescriptions found for this doctor</p>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+
+                </div>
+              </div>
             </>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
 
@@ -722,13 +715,11 @@ export function DoctorsSection() {
       <AlertDialog open={blockOpen} onOpenChange={setBlockOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {selectedDoctor?.isBlocked ? 'Unblock Doctor' : 'Block Doctor'}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{selectedDoctorForBlock?.isBlocked ? 'Unblock Doctor' : 'Block Doctor'}</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedDoctor?.isBlocked
-                ? `Are you sure you want to unblock ${selectedDoctor?.name}? They will regain access to their portal and can accept new bookings.`
-                : `Are you sure you want to block ${selectedDoctor?.name}? They will lose access to their portal and won't be able to accept new bookings. This action can be reversed later.`}
+              {selectedDoctorForBlock?.isBlocked
+                ? `Are you sure you want to unblock ${selectedDoctorForBlock?.name}? They will regain access to their portal and can accept new bookings.`
+                : `Are you sure you want to block ${selectedDoctorForBlock?.name}? They will lose access to their portal and won't be able to accept new bookings. This action can be reversed later.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -736,27 +727,14 @@ export function DoctorsSection() {
             <AlertDialogAction
               onClick={handleBlockToggle}
               disabled={blocking}
-              className={selectedDoctor?.isBlocked
-                ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-600'
-                : 'bg-red-600 hover:bg-red-700 focus:ring-red-600'
-              }
+              className={selectedDoctorForBlock?.isBlocked ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-600' : 'bg-red-600 hover:bg-red-700 focus:ring-red-600'}
             >
               {blocking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {selectedDoctor?.isBlocked ? 'Unblock' : 'Block'} Doctor
+              {selectedDoctorForBlock?.isBlocked ? 'Unblock' : 'Block'} Doctor
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  )
-}
-
-// Small helper component for doctor info display
-function InfoItem({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <p className="text-[11px] uppercase font-medium text-gray-400">{label}</p>
-      <div className="text-sm text-gray-900 truncate">{value || '—'}</div>
     </div>
   )
 }
