@@ -127,7 +127,7 @@ model Service {
 
 model Booking {
   id              String   @id @default(cuid())
-  bookingId       String   @unique // human-readable: NUR-B-2026-00001
+  bookingId       String   @unique // human-readable: RA000007 (random)
   patientId       String
   doctorId        String?
   caregiverId     String?

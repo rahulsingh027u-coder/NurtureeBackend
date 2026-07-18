@@ -8,11 +8,11 @@ function hashPwd(p: string) {
 }
 
 function getUHID(count: number) {
-  return `NUR-2026-${String(count).padStart(5, "0")}`;
+  return `NUR${String(count).padStart(7, "0")}`;
 }
 
-function getBookingId(count: number) {
-  return `NUR-B-2026-${String(count).padStart(5, "0")}`;
+function getBookingId(): string {
+  return `RA${String(Math.floor(100000 + Math.random() * 900000)).padStart(6, "0")}`;
 }
 
 async function main() {
@@ -275,7 +275,7 @@ async function main() {
 
     const booking = await prisma.booking.create({
       data: {
-        bookingId: getBookingId(i + 1),
+        bookingId: getBookingId(),
         patientId: pat.id,
         doctorId: doc.id,
         caregiverId: caregiverId,
@@ -394,7 +394,7 @@ async function main() {
     data: { userId: admin.id, userType: "admin", title: "Commission Overdue", message: "Dr. Arun Gupta has pending commission of Rs. 2,250.", type: "commission" },
   });
   await prisma.notification.create({
-    data: { userId: admin.id, userType: "admin", title: "New Booking Received", message: "Online booking #NUR-B-2026-00015 received from portal.", type: "booking" },
+    data: { userId: admin.id, userType: "admin", title: "New Booking Received", message: "Online booking received from portal.", type: "booking" },
   });
 
   console.log("Seed completed successfully!");
