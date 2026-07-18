@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
 import { LoginPage } from '@/components/admin/sections/LoginPage'
-import { AdminLayout } from '@/components/admin/layout/AdminLayout'
+import { AdminLayout } from '@/components/admin/layout'
 
 export default function Home() {
   const { isAuthenticated, setActiveSection, logout } = useAppStore()
