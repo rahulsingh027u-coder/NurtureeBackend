@@ -489,6 +489,7 @@ export function DoctorsSection() {
          ═══════════════════════════════════════════════════════════ */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[92vh] overflow-hidden p-0 flex flex-col">
+          <DialogTitle className="sr-only">Doctor Details</DialogTitle>
           {docLoading && !doctor ? (
             <div className="flex-1 flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
           ) : doctor ? (
