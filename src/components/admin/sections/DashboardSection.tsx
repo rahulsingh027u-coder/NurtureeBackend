@@ -189,7 +189,7 @@ export function DashboardSection() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-900">Child Care Services</p>
-                <p className="text-xs text-gray-500 mt-0.5">{loading ? <Skeleton className="h-3 w-24 inline-block" /> : `${stats?.childCareActive || 0} active assignments`}</p>
+                <div className="text-xs text-gray-500 mt-0.5">{loading ? <Skeleton className="h-3 w-24 inline-block" /> : `${stats?.childCareActive || 0} active assignments`}</div>
               </div>
             </div>
             <ArrowRight className="w-5 h-5 text-gray-400" />
@@ -204,7 +204,7 @@ export function DashboardSection() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-900">Elder Care Services</p>
-                <p className="text-xs text-gray-500 mt-0.5">{loading ? <Skeleton className="h-3 w-24 inline-block" /> : `${stats?.elderCareActive || 0} active assignments`}</p>
+                <div className="text-xs text-gray-500 mt-0.5">{loading ? <Skeleton className="h-3 w-24 inline-block" /> : `${stats?.elderCareActive || 0} active assignments`}</div>
               </div>
             </div>
             <ArrowRight className="w-5 h-5 text-gray-400" />
@@ -219,7 +219,7 @@ export function DashboardSection() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-900">Doctor Portal Activity</p>
-                <p className="text-xs text-gray-500 mt-0.5">{loading ? <Skeleton className="h-3 w-32 inline-block" /> : `${stats?.doctorsOnline || 0} / ${stats?.doctorsTotal || 0} doctors online`}</p>
+                <div className="text-xs text-gray-500 mt-0.5">{loading ? <Skeleton className="h-3 w-32 inline-block" /> : `${stats?.doctorsOnline || 0} / ${stats?.doctorsTotal || 0} doctors online`}</div>
               </div>
             </div>
             <ArrowRight className="w-5 h-5 text-gray-400" />
