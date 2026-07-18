@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
   Search, Eye, CalendarDays, IndianRupee,
-  Clock, MapPin, FileText, Building2, Phone, User, Stethoscope,
+  Clock, MapPin, FileText, Building2, Phone, User, Stethoscope, X,
 } from 'lucide-react'
 
 interface Booking {
@@ -147,7 +147,7 @@ export function BookingsSection() {
   const onlineCount = bookings.filter(b => b.mode === 'online').length
   const offlineCount = bookings.filter(b => b.mode === 'in_home').length
   const completedCount = bookings.filter(b => b.status === 'completed').length
-  const totalRevenue = bookings.filter(b => b.status === 'completed').reduce((sum, b) => sum + (b.amount || 0), 0)
+  const cancelledCount = bookings.filter(b => b.status === 'cancelled').length
 
   // Unique services for service filter dropdown
   const uniqueServices = Array.from(new Set(bookings.map(b => b.serviceName).filter(Boolean))).sort()
@@ -158,7 +158,7 @@ export function BookingsSection() {
     { label: 'Online', value: onlineCount, icon: Search, bg: 'bg-teal-100', text: 'text-teal-600' },
     { label: 'Offline', value: offlineCount, icon: Stethoscope, bg: 'bg-amber-100', text: 'text-amber-600' },
     { label: 'Completed', value: completedCount, icon: FileText, bg: 'bg-green-100', text: 'text-green-600' },
-    { label: 'Revenue', value: `₹${totalRevenue.toLocaleString('en-IN')}`, icon: IndianRupee, bg: 'bg-teal-100', text: 'text-teal-600', isText: true },
+    { label: 'Cancelled', value: cancelledCount, icon: X, bg: 'bg-red-100', text: 'text-red-600' },
   ]
 
   return (
@@ -175,7 +175,7 @@ export function BookingsSection() {
                 {loading ? (
                   <Skeleton className="h-6 w-10 mb-1" />
                 ) : (
-                  <p className={cn('text-xl font-bold text-gray-900 truncate', s.isText && 'text-lg')}>
+                  <p className="text-xl font-bold text-gray-900 truncate">
                     {s.value}
                   </p>
                 )}
