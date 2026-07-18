@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect, useCallback } from 'react'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,9 +13,15 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
-import { Search, Eye, FileText, Pill, ClipboardList, Calendar, User, Stethoscope, AlertCircle } from 'lucide-react'
+import {
+  Search, Eye, FileText, Pill, ClipboardList, Calendar,
+  User, Stethoscope, RefreshCw,
+} from 'lucide-react'
 
 interface Medication {
   name: string
@@ -29,29 +35,38 @@ interface Prescription {
   patientUhid: string
   patientName: string
   doctorName: string
+  doctorId?: string
   diagnosis: string
   medications: string | Medication[]
   notes?: string
+  status?: string
   createdAt: string
+}
+
+const statusColor: Record<string, string> = {
+  sent: 'bg-green-100 text-green-800',
+  draft: 'bg-gray-100 text-gray-800',
+  active: 'bg-blue-100 text-blue-800',
 }
 
 export function PrescriptionsSection() {
   const { toast } = useToast()
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [doctorFilter, setDoctorFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [detailOpen, setDetailOpen] = useState(false)
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null)
 
-  useEffect(() => {
-    fetchPrescriptions()
-  }, [])
-
-  const fetchPrescriptions = async (query?: string) => {
+  const fetchPrescriptions = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (query) params.set('search', query)
+      if (search) params.set('search', search)
       const res = await fetch(`/api/prescriptions?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
@@ -64,15 +79,42 @@ export function PrescriptionsSection() {
     } finally {
       setLoading(false)
     }
+  }, [search, toast])
+
+  useEffect(() => {
+    fetchPrescriptions()
+  }, [fetchPrescriptions])
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    setSearch(searchInput)
   }
 
-  const handleSearch = () => {
-    fetchPrescriptions(search)
+  const clearFilters = () => {
+    setSearchInput('')
+    setSearch('')
+    setDateFrom('')
+    setDateTo('')
+    setDoctorFilter('all')
+    setStatusFilter('all')
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSearch()
-  }
+  const hasActiveFilters = search || dateFrom || dateTo || doctorFilter !== 'all' || statusFilter !== 'all'
+
+  // Unique doctors for filter dropdown
+  const uniqueDoctors = Array.from(new Set(prescriptions.map(p => p.doctorName).filter(Boolean))).sort()
+
+  // Client-side filters
+  const filtered = prescriptions.filter((p) => {
+    if (doctorFilter !== 'all' && p.doctorName !== doctorFilter) return false
+    if (statusFilter !== 'all') {
+      const s = (p.status || 'sent').toLowerCase()
+      if (s !== statusFilter) return false
+    }
+    if (dateFrom && p.createdAt < dateFrom) return false
+    if (dateTo && p.createdAt > dateTo) return false
+    return true
+  })
 
   const parseMedications = (meds: string | Medication[]): Medication[] => {
     if (Array.isArray(meds)) return meds
@@ -82,13 +124,6 @@ export function PrescriptionsSection() {
     } catch {
       return []
     }
-  }
-
-  const getMedicationPreview = (meds: string | Medication[]): string => {
-    const list = parseMedications(meds)
-    if (list.length === 0) return '-'
-    if (list.length <= 2) return list.map(m => m.name).join(', ')
-    return `${list[0].name}, ${list[1].name}...`
   }
 
   const formatDate = (dateStr: string) => {
@@ -108,81 +143,168 @@ export function PrescriptionsSection() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      {/* Prescriptions Table */}
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Prescription Management</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Track and manage all prescriptions across doctors</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 gap-2 text-gray-600 hover:text-gray-800 border-gray-200"
+          onClick={() => fetchPrescriptions()}
+        >
+          <RefreshCw className="w-3.5 h-3.5" /> Refresh
+        </Button>
+      </div>
+
+      {/* Table Card */}
       <Card className="bg-white rounded-xl shadow-sm border-0">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between flex-wrap gap-3">
-          <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-blue-600" />
-            Prescriptions
-          </CardTitle>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <CardContent className="p-4 space-y-4">
+          {/* Search Bar */}
+          <form onSubmit={handleSearch} className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search by patient, doctor, or UHID..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-10 h-10 text-sm w-full"
+            />
+          </form>
+
+          {/* Filter Row: Date Range + 2 Dropdowns */}
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <label className="text-[11px] uppercase font-semibold text-gray-400">Date From</label>
               <Input
-                placeholder="Search by patient, UHID, or doctor..."
-                className="pl-9 h-9 text-sm"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={handleKeyDown}
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-9 text-sm w-36"
               />
             </div>
-            <Button
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
-              onClick={handleSearch}
-            >
-              <Search className="w-3.5 h-3.5" /> Search
-            </Button>
+            <div className="pb-1.5">
+              <span className="text-xs text-gray-400">to</span>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] uppercase font-semibold text-gray-400">Date To</label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-9 text-sm w-36"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] uppercase font-semibold text-gray-400">Doctor</label>
+              <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+                <SelectTrigger className="h-9 text-sm w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Doctors</SelectItem>
+                  {uniqueDoctors.map((d) => (
+                    <SelectItem key={d} value={d!}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] uppercase font-semibold text-gray-400">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-9 text-sm w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" className="h-9 text-gray-500 hover:text-gray-700" onClick={clearFilters}>
+                Clear
+              </Button>
+            )}
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
+
+          {/* Table */}
           <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
-                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient UHID</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500 w-10">#</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient Name</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">UHID</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Doctor</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Diagnosis</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Medications</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Actions</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Medicines</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Sent At</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
-                        <TableCell key={j}><Skeleton className="h-4 w-20" /></TableCell>
+                      {Array.from({ length: 8 }).map((_, j) => (
+                        <TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>
                       ))}
                     </TableRow>
                   ))
-                ) : prescriptions.length > 0 ? (
-                  prescriptions.map((p) => (
-                    <TableRow key={p.id} className="hover:bg-gray-50/50">
-                      <TableCell className="font-mono text-xs text-blue-700 font-medium">{p.patientUhid}</TableCell>
-                      <TableCell className="text-sm font-medium text-gray-900">{p.patientName}</TableCell>
-                      <TableCell className="text-sm text-gray-700">{p.doctorName}</TableCell>
-                      <TableCell className="text-sm text-gray-600 max-w-[160px] truncate">{p.diagnosis}</TableCell>
-                      <TableCell className="text-sm text-gray-600 max-w-[180px] truncate">{getMedicationPreview(p.medications)}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{formatDate(p.createdAt)}</TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
-                          onClick={() => handleView(p)}
-                        >
-                          <Eye className="w-3 h-3 mr-1" /> View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                ) : filtered.length > 0 ? (
+                  filtered.map((p, idx) => {
+                    const medCount = parseMedications(p.medications).length
+                    return (
+                      <TableRow
+                        key={p.id}
+                        className="hover:bg-gray-50/50 cursor-pointer"
+                        onClick={() => handleView(p)}
+                      >
+                        <TableCell className="text-xs text-gray-500">{idx + 1}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                              <User className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">{p.patientName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs font-mono text-blue-600 font-medium">{p.patientUhid}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center shrink-0">
+                              <Stethoscope className="w-3 h-3" />
+                            </div>
+                            <span className="text-sm text-gray-700">{p.doctorName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600 max-w-[180px] truncate">{p.diagnosis}</TableCell>
+                        <TableCell>
+                          <span className="text-sm text-blue-600 font-medium">{medCount} medicine{medCount !== 1 ? 's' : ''}</span>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600 whitespace-nowrap">{formatDate(p.createdAt)}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              'text-[11px] capitalize',
+                              statusColor[(p.status || 'sent').toLowerCase()] || 'bg-gray-100 text-gray-800'
+                            )}
+                          >
+                            {p.status || 'Sent'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-400 text-sm">
-                      No prescriptions found
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-400 text-sm">
+                      {hasActiveFilters ? 'No prescriptions found matching your filters' : 'No prescriptions found'}
                     </TableCell>
                   </TableRow>
                 )}
