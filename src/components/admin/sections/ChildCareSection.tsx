@@ -48,7 +48,7 @@ const statusColor: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue-100 text-blue-800',
   in_progress: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
+  completed: 'bg-blue-100 text-blue-800',
   cancelled: 'bg-red-100 text-red-800',
 }
 
@@ -181,7 +181,7 @@ export function ChildCareSection() {
         </Card>
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <Users className="w-5 h-5" />
             </div>
             <div>
@@ -198,7 +198,7 @@ export function ChildCareSection() {
           <CardTitle className="text-base font-semibold text-gray-900">Child Care Bookings</CardTitle>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
                 <Plus className="w-4 h-4" /> Create Booking
               </Button>
             </DialogTrigger>
@@ -256,7 +256,7 @@ export function ChildCareSection() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleCreate} disabled={creating}>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>
                   {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Create Booking
                 </Button>
@@ -289,7 +289,7 @@ export function ChildCareSection() {
                 ) : bookings.length > 0 ? (
                   bookings.map((b) => (
                     <TableRow key={b.id} className="hover:bg-gray-50/50">
-                      <TableCell className="font-mono text-xs text-emerald-700 font-medium">{b.bookingId}</TableCell>
+                      <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.bookingId}</TableCell>
                       <TableCell>
                         <p className="text-sm font-medium text-gray-900">{b.patientName}</p>
                         {b.patientUhid && <p className="text-xs text-gray-400">{b.patientUhid}</p>}
@@ -306,7 +306,7 @@ export function ChildCareSection() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
                             onClick={() => { setSelectedBooking(b); setAssignOpen(true) }}
                           >
                             <UserCheck className="w-3 h-3 mr-1" /> Assign
@@ -344,12 +344,12 @@ export function ChildCareSection() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {caregivers.map((c) => (
                 <div key={c.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
-                  <div className={cn('w-2 h-2 rounded-full', c.isAvailable ? 'bg-green-500' : 'bg-gray-400')} />
+                  <div className={cn('w-2 h-2 rounded-full', c.isAvailable ? 'bg-blue-500' : 'bg-gray-400')} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
                     <p className="text-xs text-gray-500">{c.experience} yrs exp · {c.phone}</p>
                   </div>
-                  <Badge variant="secondary" className={cn('text-[11px]', c.isAvailable ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600')}>
+                  <Badge variant="secondary" className={cn('text-[11px]', c.isAvailable ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')}>
                     {c.isAvailable ? 'Available' : 'Unavailable'}
                   </Badge>
                 </div>
@@ -368,7 +368,7 @@ export function ChildCareSection() {
             <DialogTitle>Assign Caregiver</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-600">
-            Assign a caregiver to booking <span className="font-mono text-emerald-700">{selectedBooking?.bookingId}</span> for <span className="font-medium">{selectedBooking?.patientName}</span>
+            Assign a caregiver to booking <span className="font-mono text-blue-700">{selectedBooking?.bookingId}</span> for <span className="font-medium">{selectedBooking?.patientName}</span>
           </p>
           <Select value={selectedCaregiver} onValueChange={setSelectedCaregiver}>
             <SelectTrigger>
@@ -385,7 +385,7 @@ export function ChildCareSection() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignOpen(false)}>Cancel</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleAssign} disabled={assigning || !selectedCaregiver}>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleAssign} disabled={assigning || !selectedCaregiver}>
               {assigning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Assign Caregiver
             </Button>

@@ -44,10 +44,10 @@ interface DashboardStats {
 
 const statCards = [
   { key: 'totalDoctors', label: 'Total Doctors', icon: Stethoscope, iconBg: 'bg-blue-500', iconColor: 'text-white' },
-  { key: 'onlineDoctors', label: 'Online Doctors', icon: Wifi, iconBg: 'bg-green-500', iconColor: 'text-white' },
+  { key: 'onlineDoctors', label: 'Online Doctors', icon: Wifi, iconBg: 'bg-blue-500', iconColor: 'text-white' },
   { key: 'todayBookings', label: "Today's Bookings", icon: CalendarDays, iconBg: 'bg-amber-500', iconColor: 'text-white' },
   { key: 'totalPatients', label: 'Total Patients', icon: Users, iconBg: 'bg-purple-500', iconColor: 'text-white' },
-  { key: 'platformRevenue', label: 'Platform Revenue', icon: IndianRupee, iconBg: 'bg-teal-500', iconColor: 'text-white', format: 'currency' },
+  { key: 'platformRevenue', label: 'Platform Revenue', icon: IndianRupee, iconBg: 'bg-blue-500', iconColor: 'text-white', format: 'currency' },
   { key: 'pendingVerifications', label: 'Pending Verifications', icon: ShieldCheck, iconBg: 'bg-yellow-400', iconColor: 'text-white' },
 ] as const
 
@@ -55,7 +55,7 @@ const statusColor: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
   confirmed: 'bg-blue-100 text-blue-700',
   in_progress: 'bg-purple-100 text-purple-700',
-  completed: 'bg-green-100 text-green-700',
+  completed: 'bg-blue-100 text-blue-700',
   cancelled: 'bg-red-100 text-red-700',
 }
 
@@ -211,10 +211,10 @@ export function DashboardSection() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg shadow-sm border-0 bg-green-50 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveSection('doctors')}>
+        <Card className="rounded-lg shadow-sm border-0 bg-blue-50 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveSection('doctors')}>
           <CardContent className="p-5 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center">
                 <HeartPulse className="w-6 h-6" />
               </div>
               <div>

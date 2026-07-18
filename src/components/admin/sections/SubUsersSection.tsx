@@ -39,7 +39,7 @@ interface SubUser {
 }
 
 const roleBadge: Record<string, string> = {
-  admin: 'bg-emerald-100 text-emerald-700',
+  admin: 'bg-blue-100 text-blue-700',
   manager: 'bg-blue-100 text-blue-700',
   staff: 'bg-gray-100 text-gray-700',
   viewer: 'bg-purple-100 text-purple-700',
@@ -187,7 +187,7 @@ export function SubUsersSection() {
     return (
       <div className="flex flex-wrap gap-1">
         {visible.map(p => (
-          <Badge key={p} variant="secondary" className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 border border-emerald-100">
+          <Badge key={p} variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border border-blue-100">
             {p}
           </Badge>
         ))}
@@ -229,7 +229,7 @@ export function SubUsersSection() {
           <Checkbox
             checked={form.permissions.includes(perm)}
             onCheckedChange={() => togglePermission(form, setForm, perm)}
-            className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+            className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
           />
           <span className="text-sm text-gray-700 select-none">{perm}</span>
         </label>
@@ -253,7 +253,7 @@ export function SubUsersSection() {
           <Checkbox
             checked={form.branches.includes(branch)}
             onCheckedChange={() => toggleBranch(form, setForm, branch)}
-            className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+            className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
           />
           <span className="text-sm text-gray-700 select-none">{branch}</span>
         </label>
@@ -267,12 +267,12 @@ export function SubUsersSection() {
       <Card className="bg-white rounded-xl shadow-sm border-0">
         <CardHeader className="pb-3 flex flex-row items-center justify-between flex-wrap gap-3">
           <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <ShieldCheck className="w-4 h-4 text-blue-600" />
             Sub Users
           </CardTitle>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
                 <Plus className="w-4 h-4" /> Create Sub User
               </Button>
             </DialogTrigger>
@@ -314,7 +314,7 @@ export function SubUsersSection() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleCreate} disabled={creating}>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>
                   {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Create User
                 </Button>
@@ -360,7 +360,7 @@ export function SubUsersSection() {
                       <TableCell>
                         <Badge variant="secondary" className={cn(
                           'text-[11px] capitalize',
-                          u.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          u.status === 'active' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
                         )}>
                           {u.status}
                         </Badge>
@@ -370,7 +370,7 @@ export function SubUsersSection() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
                             onClick={() => handleEdit(u)}
                           >
                             <Pencil className="w-3 h-3 mr-1" /> Edit
@@ -382,7 +382,7 @@ export function SubUsersSection() {
                               'text-xs',
                               u.status === 'active'
                                 ? 'border-red-200 text-red-600 hover:bg-red-50'
-                                : 'border-green-200 text-green-600 hover:bg-green-50'
+                                : 'border-blue-200 text-blue-600 hover:bg-blue-50'
                             )}
                             onClick={() => handleDeactivate(u)}
                           >
@@ -446,7 +446,7 @@ export function SubUsersSection() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleEditSave}>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleEditSave}>
               Save Changes
             </Button>
           </DialogFooter>

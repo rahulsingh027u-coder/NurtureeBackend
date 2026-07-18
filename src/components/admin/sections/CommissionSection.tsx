@@ -31,7 +31,7 @@ interface CommissionSummary {
 }
 
 const statusColor: Record<string, string> = {
-  paid: 'bg-green-100 text-green-700',
+  paid: 'bg-blue-100 text-blue-700',
   pending: 'bg-yellow-100 text-yellow-700',
   overdue: 'bg-red-100 text-red-700',
 }
@@ -75,7 +75,7 @@ export function CommissionSection() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <IndianRupee className="w-5 h-5" />
             </div>
             <div>
@@ -86,7 +86,7 @@ export function CommissionSection() {
         </Card>
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
@@ -97,7 +97,7 @@ export function CommissionSection() {
         </Card>
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <Wallet className="w-5 h-5" />
             </div>
             <div>
@@ -126,7 +126,7 @@ export function CommissionSection() {
           <Button
             size="sm"
             variant="outline"
-            className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-1.5"
+            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50 gap-1.5"
             onClick={fetchCommissions}
             disabled={loading}
           >
@@ -164,7 +164,7 @@ export function CommissionSection() {
                       <TableCell className="text-sm text-gray-700 text-right">{c.bookingCount}</TableCell>
                       <TableCell className="text-sm text-gray-700 text-right font-mono">{formatCurrency(c.totalRevenue)}</TableCell>
                       <TableCell className="text-sm text-gray-700 text-right">{c.commissionRate}%</TableCell>
-                      <TableCell className="text-sm text-emerald-700 text-right font-medium font-mono">{formatCurrency(c.commissionAmount)}</TableCell>
+                      <TableCell className="text-sm text-blue-700 text-right font-medium font-mono">{formatCurrency(c.commissionAmount)}</TableCell>
                       <TableCell className="text-sm text-gray-700 text-right font-mono">{formatCurrency(c.doctorEarnings)}</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={cn('text-[11px] capitalize', statusColor[c.paymentStatus] || 'bg-gray-100 text-gray-800')}>

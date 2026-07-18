@@ -28,14 +28,14 @@ interface Verification {
 }
 
 const entityTypeColor: Record<string, string> = {
-  doctor: 'bg-teal-100 text-teal-700',
+  doctor: 'bg-blue-100 text-blue-700',
   caregiver: 'bg-orange-100 text-orange-700',
 }
 
 const statusColor: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
   in_progress: 'bg-blue-100 text-blue-700',
-  approved: 'bg-green-100 text-green-700',
+  approved: 'bg-blue-100 text-blue-700',
   rejected: 'bg-red-100 text-red-700',
 }
 
@@ -155,7 +155,7 @@ export function VerificationSection() {
                     <div className="flex items-center gap-1.5">
                       <Button
                         size="sm"
-                        className="text-[11px] bg-green-600 hover:bg-green-700 text-white h-7 px-2.5"
+                        className="text-[11px] bg-blue-600 hover:bg-blue-700 text-white h-7 px-2.5"
                         onClick={() => openDialog(v, 'approved')}
                       >
                         Approve
@@ -202,7 +202,7 @@ export function VerificationSection() {
         </Card>
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
@@ -234,7 +234,7 @@ export function VerificationSection() {
           <Button
             size="sm"
             variant="outline"
-            className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-1.5"
+            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50 gap-1.5"
             onClick={fetchVerifications}
             disabled={loading}
           >
@@ -272,7 +272,7 @@ export function VerificationSection() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {action === 'approved' ? (
-                <ShieldCheck className="w-5 h-5 text-green-600" />
+                <ShieldCheck className="w-5 h-5 text-blue-600" />
               ) : (
                 <AlertCircle className="w-5 h-5 text-red-600" />
               )}
@@ -313,7 +313,7 @@ export function VerificationSection() {
             <Button
               className={cn(
                 'text-white',
-                action === 'approved' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                action === 'approved' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'
               )}
               onClick={handleSubmitReview}
               disabled={submitting}

@@ -59,7 +59,7 @@ const statusColor: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue-100 text-blue-800',
   in_progress: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
+  completed: 'bg-blue-100 text-blue-800',
   cancelled: 'bg-red-100 text-red-800',
 }
 
@@ -148,7 +148,7 @@ export function PatientsSection() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <User className="w-5 h-5" />
             </div>
             <div>
@@ -203,7 +203,7 @@ export function PatientsSection() {
                 className="pl-9 h-9 text-sm"
               />
             </div>
-            <Button type="submit" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
+            <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white h-9">
               Search
             </Button>
             {search && (
@@ -240,7 +240,7 @@ export function PatientsSection() {
                 ) : patients.length > 0 ? (
                   patients.map((p) => (
                     <TableRow key={p.id} className="hover:bg-gray-50/50">
-                      <TableCell className="font-mono text-xs text-emerald-700 font-medium">{p.uhid}</TableCell>
+                      <TableCell className="font-mono text-xs text-blue-700 font-medium">{p.uhid}</TableCell>
                       <TableCell className="text-sm font-medium text-gray-900">{p.name}</TableCell>
                       <TableCell className="text-sm text-gray-600">{p.phone}</TableCell>
                       <TableCell className="text-sm text-gray-600">{p.age ?? '-'}</TableCell>
@@ -251,7 +251,7 @@ export function PatientsSection() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                          className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
                           onClick={() => handleViewPatient(p)}
                         >
                           <Eye className="w-3 h-3 mr-1" /> View
@@ -277,7 +277,7 @@ export function PatientsSection() {
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-emerald-600" />
+              <User className="w-5 h-5 text-blue-600" />
               Patient Details
             </DialogTitle>
           </DialogHeader>
@@ -290,7 +290,7 @@ export function PatientsSection() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <p className="text-[11px] uppercase font-semibold text-gray-400">UHID</p>
-                    <p className="text-sm font-mono text-emerald-700 font-medium">{selectedPatient.uhid}</p>
+                    <p className="text-sm font-mono text-blue-700 font-medium">{selectedPatient.uhid}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[11px] uppercase font-semibold text-gray-400">Full Name</p>
@@ -367,7 +367,7 @@ export function PatientsSection() {
                         <TableBody>
                           {patientBookings.map((b) => (
                             <TableRow key={b.id} className="hover:bg-gray-50/50">
-                              <TableCell className="font-mono text-xs text-emerald-700 font-medium">{b.bookingId}</TableCell>
+                              <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.bookingId}</TableCell>
                               <TableCell className="text-sm text-gray-700">{b.doctorName || '-'}</TableCell>
                               <TableCell className="text-sm text-gray-700">{b.serviceName || '-'}</TableCell>
                               <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
@@ -415,7 +415,7 @@ export function PatientsSection() {
                               <p className="text-[11px] uppercase font-semibold text-gray-400 mb-1.5">Medications</p>
                               <div className="flex flex-wrap gap-1.5">
                                 {rx.medications.slice(0, 3).map((med, idx) => (
-                                  <Badge key={idx} variant="secondary" className="text-[11px] bg-emerald-50 text-emerald-700">
+                                  <Badge key={idx} variant="secondary" className="text-[11px] bg-blue-50 text-blue-700">
                                     {med.name} — {med.dosage} {med.frequency}
                                   </Badge>
                                 ))}

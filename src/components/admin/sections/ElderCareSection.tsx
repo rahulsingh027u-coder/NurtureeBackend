@@ -17,7 +17,7 @@ import { Plus, UserCheck, CalendarDays, Users, Loader2 } from 'lucide-react'
 
 const statusColor: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800', confirmed: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-purple-100 text-purple-800', completed: 'bg-green-100 text-green-800',
+  in_progress: 'bg-purple-100 text-purple-800', completed: 'bg-blue-100 text-blue-800',
   cancelled: 'bg-red-100 text-red-800',
 }
 
@@ -79,7 +79,7 @@ export function ElderCareSection() {
         {[
           { label: 'Total Bookings', count: bookings.length, icon: CalendarDays, color: 'bg-orange-100 text-orange-600' },
           { label: 'Active Assignments', count: activeAssignments, icon: UserCheck, color: 'bg-blue-100 text-blue-600' },
-          { label: 'Available Caregivers', count: availableCaregivers.length, icon: Users, color: 'bg-emerald-100 text-emerald-600' },
+          { label: 'Available Caregivers', count: availableCaregivers.length, icon: Users, color: 'bg-blue-100 text-blue-600' },
         ].map(c => (
           <Card key={c.label} className="bg-white rounded-xl shadow-sm border-0">
             <CardContent className="p-4 flex items-center gap-3">
@@ -97,7 +97,7 @@ export function ElderCareSection() {
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-base font-semibold text-gray-900">Elder Care Bookings</CardTitle>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild><Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"><Plus className="w-4 h-4" /> Create Booking</Button></DialogTrigger>
+            <DialogTrigger asChild><Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2"><Plus className="w-4 h-4" /> Create Booking</Button></DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader><DialogTitle>Create Elder Care Booking</DialogTitle></DialogHeader>
               <div className="space-y-4 py-2">
@@ -130,7 +130,7 @@ export function ElderCareSection() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleCreate} disabled={creating}>{creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Create</Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>{creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Create</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -152,14 +152,14 @@ export function ElderCareSection() {
                 {loading ? Array.from({ length: 4 }).map((_, i) => <TableRow key={i}>{Array.from({ length: 6 }).map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-20" /></TableCell>)}</TableRow>)
                 : bookings.length > 0 ? bookings.map(b => (
                   <TableRow key={b.id} className="hover:bg-gray-50/50">
-                    <TableCell className="font-mono text-xs text-emerald-700 font-medium">{b.bookingId}</TableCell>
+                    <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.bookingId}</TableCell>
                     <TableCell><p className="text-sm font-medium">{b.patientName}</p>{b.patientUhid && <p className="text-xs text-gray-400">{b.patientUhid}</p>}</TableCell>
                     <TableCell className="text-sm text-gray-700">{b.caregiverName || <span className="text-gray-400">Unassigned</span>}</TableCell>
                     <TableCell><Badge variant="secondary" className={cn('text-[11px] capitalize', statusColor[b.status] || '')}>{b.status.replace('_',' ')}</Badge></TableCell>
                     <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
                     <TableCell>
                       {!b.caregiverId && !['cancelled','completed'].includes(b.status) && (
-                        <Button size="sm" variant="outline" className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => { setSelectedBooking(b); setAssignOpen(true) }}>
+                        <Button size="sm" variant="outline" className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => { setSelectedBooking(b); setAssignOpen(true) }}>
                           <UserCheck className="w-3 h-3 mr-1" /> Assign
                         </Button>
                       )}
@@ -180,9 +180,9 @@ export function ElderCareSection() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {caregivers.map(c => (
                 <div key={c.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
-                  <div className={cn('w-2 h-2 rounded-full', c.isAvailable ? 'bg-green-500' : 'bg-gray-400')} />
+                  <div className={cn('w-2 h-2 rounded-full', c.isAvailable ? 'bg-blue-500' : 'bg-gray-400')} />
                   <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{c.name}</p><p className="text-xs text-gray-500">{c.experience} yrs exp · {c.phone}</p></div>
-                  <Badge variant="secondary" className={cn('text-[11px]', c.isAvailable ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600')}>{c.isAvailable ? 'Available' : 'Unavailable'}</Badge>
+                  <Badge variant="secondary" className={cn('text-[11px]', c.isAvailable ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')}>{c.isAvailable ? 'Available' : 'Unavailable'}</Badge>
                 </div>
               ))}
             </div>
@@ -193,14 +193,14 @@ export function ElderCareSection() {
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Assign Caregiver</DialogTitle></DialogHeader>
-          <p className="text-sm text-gray-600">Assign to <span className="font-mono text-emerald-700">{selectedBooking?.bookingId}</span> — <span className="font-medium">{selectedBooking?.patientName}</span></p>
+          <p className="text-sm text-gray-600">Assign to <span className="font-mono text-blue-700">{selectedBooking?.bookingId}</span> — <span className="font-medium">{selectedBooking?.patientName}</span></p>
           <Select value={selectedCaregiver} onValueChange={setSelectedCaregiver}>
             <SelectTrigger><SelectValue placeholder="Select caregiver" /></SelectTrigger>
             <SelectContent>{availableCaregivers.map(c => <SelectItem key={c.id} value={c.id}>{c.name} — {c.experience} yrs</SelectItem>)}</SelectContent>
           </Select>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignOpen(false)}>Cancel</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleAssign} disabled={assigning || !selectedCaregiver}>{assigning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Assign</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleAssign} disabled={assigning || !selectedCaregiver}>{assigning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Assign</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

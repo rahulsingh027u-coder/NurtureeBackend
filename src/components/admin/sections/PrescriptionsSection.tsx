@@ -112,7 +112,7 @@ export function PrescriptionsSection() {
       <Card className="bg-white rounded-xl shadow-sm border-0">
         <CardHeader className="pb-3 flex flex-row items-center justify-between flex-wrap gap-3">
           <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-emerald-600" />
+            <FileText className="w-4 h-4 text-blue-600" />
             Prescriptions
           </CardTitle>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -128,7 +128,7 @@ export function PrescriptionsSection() {
             </div>
             <Button
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-9"
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
               onClick={handleSearch}
             >
               <Search className="w-3.5 h-3.5" /> Search
@@ -161,7 +161,7 @@ export function PrescriptionsSection() {
                 ) : prescriptions.length > 0 ? (
                   prescriptions.map((p) => (
                     <TableRow key={p.id} className="hover:bg-gray-50/50">
-                      <TableCell className="font-mono text-xs text-emerald-700 font-medium">{p.patientUhid}</TableCell>
+                      <TableCell className="font-mono text-xs text-blue-700 font-medium">{p.patientUhid}</TableCell>
                       <TableCell className="text-sm font-medium text-gray-900">{p.patientName}</TableCell>
                       <TableCell className="text-sm text-gray-700">{p.doctorName}</TableCell>
                       <TableCell className="text-sm text-gray-600 max-w-[160px] truncate">{p.diagnosis}</TableCell>
@@ -171,7 +171,7 @@ export function PrescriptionsSection() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                          className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
                           onClick={() => handleView(p)}
                         >
                           <Eye className="w-3 h-3 mr-1" /> View
@@ -197,7 +197,7 @@ export function PrescriptionsSection() {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-emerald-600" />
+              <FileText className="w-5 h-5 text-blue-600" />
               Prescription Details
             </DialogTitle>
           </DialogHeader>
@@ -207,7 +207,7 @@ export function PrescriptionsSection() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-xs text-gray-500 uppercase font-semibold">Patient UHID</Label>
-                  <p className="text-sm font-mono text-emerald-700 font-medium">{selectedPrescription.patientUhid}</p>
+                  <p className="text-sm font-mono text-blue-700 font-medium">{selectedPrescription.patientUhid}</p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-gray-500 uppercase font-semibold">Patient Name</Label>
@@ -283,7 +283,7 @@ export function PrescriptionsSection() {
                     <ClipboardList className="w-3.5 h-3.5" />
                     Notes
                   </Label>
-                  <p className="text-sm text-gray-700 bg-emerald-50 rounded-lg p-3 border border-emerald-100">
+                  <p className="text-sm text-gray-700 bg-blue-50 rounded-lg p-3 border border-blue-100">
                     {selectedPrescription.notes}
                   </p>
                 </div>

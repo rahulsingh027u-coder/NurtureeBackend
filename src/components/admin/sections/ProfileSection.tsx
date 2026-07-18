@@ -65,13 +65,13 @@ export function ProfileSection() {
       dashboard: 'bg-gray-100 text-gray-700',
       child_care: 'bg-pink-100 text-pink-700',
       elder_care: 'bg-purple-100 text-purple-700',
-      doctors: 'bg-teal-100 text-teal-700',
+      doctors: 'bg-blue-100 text-blue-700',
       patients: 'bg-blue-100 text-blue-700',
       bookings: 'bg-indigo-100 text-indigo-700',
       prescriptions: 'bg-cyan-100 text-cyan-700',
       caregivers: 'bg-amber-100 text-amber-700',
       subusers: 'bg-orange-100 text-orange-700',
-      commission: 'bg-emerald-100 text-emerald-700',
+      commission: 'bg-blue-100 text-blue-700',
       analytics: 'bg-lime-100 text-lime-700',
       verification: 'bg-yellow-100 text-yellow-700',
       services: 'bg-rose-100 text-rose-700',
@@ -90,7 +90,7 @@ export function ProfileSection() {
         <CardContent>
           <div className="flex items-center gap-4">
             <Avatar className="h-14 w-14">
-              <AvatarFallback className="bg-emerald-100 text-emerald-700 text-lg font-semibold">
+              <AvatarFallback className="bg-blue-100 text-blue-700 text-lg font-semibold">
                 {user ? initials(user.name) : 'AD'}
               </AvatarFallback>
             </Avatar>
@@ -101,7 +101,7 @@ export function ProfileSection() {
                   variant="secondary"
                   className={cn(
                     'text-[11px] capitalize',
-                    user?.role === 'super_admin' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                    user?.role === 'super_admin' ? 'bg-blue-100 text-blue-700' : 'bg-blue-100 text-blue-700'
                   )}
                 >
                   {user?.role === 'super_admin' ? 'Super Admin' : 'Sub User'}
@@ -127,7 +127,7 @@ export function ProfileSection() {
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <div className="space-y-1">
             <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-600" />
+              <Users className="w-4 h-4 text-blue-600" />
               Sub Users Under Your Branch
             </CardTitle>
             <p className="text-xs text-gray-400">
@@ -137,7 +137,7 @@ export function ProfileSection() {
           <Button
             size="sm"
             variant="outline"
-            className="text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-1.5"
+            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50 gap-1.5"
             onClick={fetchSubUsers}
             disabled={loading}
           >
@@ -172,7 +172,7 @@ export function ProfileSection() {
                       <TableCell>
                         <div className="flex items-center gap-2.5">
                           <Avatar className="h-7 w-7">
-                            <AvatarFallback className="bg-emerald-50 text-emerald-700 text-[10px] font-semibold">
+                            <AvatarFallback className="bg-blue-50 text-blue-700 text-[10px] font-semibold">
                               {initials(su.name)}
                             </AvatarFallback>
                           </Avatar>
@@ -197,7 +197,7 @@ export function ProfileSection() {
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-1">
                           {su.activeBranches.map((b) => (
-                            <Badge key={b} variant="secondary" className="text-[10px] bg-emerald-50 text-emerald-700">
+                            <Badge key={b} variant="secondary" className="text-[10px] bg-blue-50 text-blue-700">
                               {b}
                             </Badge>
                           ))}
@@ -205,8 +205,8 @@ export function ProfileSection() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
-                          <div className={cn('w-2 h-2 rounded-full', su.status === 'active' ? 'bg-green-500' : 'bg-red-500')} />
-                          <span className={cn('text-sm capitalize', su.status === 'active' ? 'text-green-700' : 'text-red-700')}>
+                          <div className={cn('w-2 h-2 rounded-full', su.status === 'active' ? 'bg-blue-500' : 'bg-red-500')} />
+                          <span className={cn('text-sm capitalize', su.status === 'active' ? 'text-blue-700' : 'text-red-700')}>
                             {su.status}
                           </span>
                         </div>
