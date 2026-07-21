@@ -5,9 +5,6 @@ export async function GET() {
   try {
     const verifications = await db.verification.findMany({
       orderBy: { createdAt: "desc" },
-      include: {
-        // We need to look up the entity name based on entityType and entityId
-      },
     });
 
     // Fetch entity names in batches

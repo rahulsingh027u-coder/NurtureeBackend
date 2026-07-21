@@ -59,7 +59,7 @@ export function VerificationSection() {
       const res = await fetch('/api/verification')
       if (res.ok) {
         const data = await res.json()
-        setAllVerifications(Array.isArray(data) ? data : data.verifications || [])
+        setAllVerifications(Array.isArray(data) ? data : data.data || [])
       } else {
         toast({ title: 'Error', description: 'Failed to fetch verifications', variant: 'destructive' })
       }

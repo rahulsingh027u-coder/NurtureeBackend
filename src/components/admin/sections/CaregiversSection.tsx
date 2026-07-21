@@ -83,7 +83,7 @@ export function CaregiversSection() {
       const res = await fetch(`/api/caregivers?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
-        setCaregivers(Array.isArray(data) ? data : data.caregivers || [])
+        setCaregivers(Array.isArray(data) ? data : data.data || [])
       } else {
         toast({ title: 'Error', description: 'Failed to fetch caregivers', variant: 'destructive' })
       }

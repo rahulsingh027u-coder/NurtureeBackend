@@ -89,7 +89,7 @@ export function ChildCareSection() {
       }
       if (caregiversRes.ok) {
         const data = await caregiversRes.json()
-        setCaregivers(Array.isArray(data) ? data : data.caregivers || [])
+        setCaregivers(Array.isArray(data) ? data : data.data || [])
       }
     } catch {
       toast({ title: 'Error', description: 'Failed to fetch data', variant: 'destructive' })
