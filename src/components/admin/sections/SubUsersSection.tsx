@@ -19,13 +19,13 @@ import { cn } from '@/lib/utils'
 import { Plus, Pencil, Ban, Loader2, ShieldCheck, Users } from 'lucide-react'
 
 const PERMISSION_MODULES = [
-  'Dashboard', 'Child Care', 'Elder Care', 'Doctors', 'Patients',
-  'Bookings', 'Prescriptions', 'Caregivers', 'SubUsers', 'Commission',
-  'Analytics', 'Verification', 'Services', 'Profile',
+  'Dashboard', 'Child Care', 'Elder Care', 'Doctors', 'Doctor Analytics',
+  'Patients', 'Bookings', 'Prescriptions', 'Caregivers', 'SubUsers',
+  'Commission', 'Revenue', 'Analytics', 'Verification', 'Services', 'Profile',
 ] as const
 
 const BRANCH_OPTIONS = [
-  'Child Care', 'Elder Care', 'Doctors', 'Bookings', 'Patients', 'Analytics', 'Commission',
+  'Child Care', 'Elder Care', 'Doctors', 'Doctor Analytics', 'Bookings', 'Patients', 'Revenue', 'Analytics', 'Commission',
 ] as const
 
 interface SubUser {
