@@ -64,7 +64,7 @@ export function AnalyticsSection() {
       }
       if (bpdRes.ok) {
         const data = await bpdRes.json()
-        setBookingsPerDay(Array.isArray(data) ? data : data.bookings || [])
+        setBookingsPerDay(Array.isArray(data) ? data : data.data || [])
       }
       if (ooRes.ok) {
         setOnlineOffline(await ooRes.json())

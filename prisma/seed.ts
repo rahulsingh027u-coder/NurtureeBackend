@@ -180,7 +180,7 @@ async function main() {
   const bloodGroups = ["B+", "O+", "A+", "AB+", "O-", "A-", "B-", "AB-", "A+", "O+", "B+", "A-", "AB+", "O+", "B+"];
   const allergiesList = [null, "Penicillin", null, "Aspirin", null, null, "Sulfa", null, null, "Latex", null, null, "Codeine", null, null];
 
-  const patients = [];
+  const patients: Array<Awaited<ReturnType<typeof prisma.patient.create>>> = [];
   for (let i = 0; i < patientNames.length; i++) {
     const p = patientNames[i];
     patients.push(await prisma.patient.create({
@@ -244,7 +244,7 @@ async function main() {
   const bookingStatuses = ["completed", "completed", "completed", "confirmed", "pending", "in_progress", "completed", "cancelled", "confirmed", "completed", "pending", "completed", "completed", "confirmed", "in_progress"];
   const bookingModes = ["online", "in_home", "online", "in_home", "online", "in_home", "online", "in_home", "online", "in_home", "online", "in_home", "online", "in_home", "online"];
 
-  const bookings = [];
+  const bookings: Array<Awaited<ReturnType<typeof prisma.booking.create>>> = [];
   for (let i = 0; i < 15; i++) {
     const dateOffset = Math.floor(i / 2);
     const bDate = new Date(today);

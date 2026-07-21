@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
         _sum: { doctorEarnings: true },
       });
       for (const row of earningsRows) {
-        earningsMap[row.doctorId] = row._sum.doctorEarnings || 0;
+        earningsMap[row.doctorId!] = row._sum.doctorEarnings || 0;
       }
     }
 

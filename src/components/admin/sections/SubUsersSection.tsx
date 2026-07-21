@@ -75,7 +75,7 @@ export function SubUsersSection() {
       const res = await fetch('/api/subusers')
       if (res.ok) {
         const data = await res.json()
-        setSubUsers(Array.isArray(data) ? data : data.subUsers || [])
+        setSubUsers(Array.isArray(data) ? data : data.data || [])
       } else {
         toast({ title: 'Error', description: 'Failed to fetch sub users', variant: 'destructive' })
       }

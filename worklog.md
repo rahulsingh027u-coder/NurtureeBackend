@@ -37,3 +37,31 @@ Stage Summary:
 - Mode displayed as "online"/"offline" (in_home mapped to "offline")
 - UHID shown as clickable blue monospace link in its own column
 - DoctorsSection accessibility warning was already resolved
+
+---
+Task ID: 2
+Agent: Main
+Task: Full code audit - fix all TypeScript errors and API response parsing mismatches
+
+Work Log:
+- Ran `next build` — 0 build errors
+- Ran `tsc --noEmit` — found 12 errors (4 in project, 8 in examples/skills)
+- Fixed seed.ts: typed `patients[]` and `bookings[]` with `Awaited<ReturnType<typeof prisma.*.create>>`
+- Fixed doctors/route.ts: added non-null assertion `row.doctorId!` on groupBy result
+- Fixed verification/route.ts: removed empty `include: {}` block
+- Audited all 15 API response shapes vs frontend parsing
+- Fixed 5 response parsing mismatches across 5 files:
+  - SubUsersSection: `data.subUsers` → `data.data`
+  - VerificationSection: `data.verifications` → `data.data`
+  - AnalyticsSection: `data.bookings` → `data.data`
+  - ChildCareSection: `data.caregivers` → `data.data`
+  - PrescriptionsSection: already fixed earlier
+- Final tsc: 0 project-level errors (only examples/skills remain)
+- Final next build: clean success
+- Reseeded DB with bloodGroup/allergies fields
+
+Stage Summary:
+- All TypeScript errors in src/ and prisma/ resolved
+- All API response parsing matches actual API return shapes
+- Production build passes cleanly
+- DB reseeded with complete data
