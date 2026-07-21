@@ -11,16 +11,34 @@ export async function GET() {
       },
     });
 
-    const data = subusers.map((s) => ({
-      id: s.id,
-      name: s.name,
-      email: s.email,
-      permissions: typeof s.permissions === 'string' ? JSON.parse(s.permissions) : s.permissions,
-      activeBranches: typeof s.activeBranches === 'string' ? JSON.parse(s.activeBranches) : s.activeBranches,
-      isActive: s.isActive,
-      assignerName: s.assigner.name,
-      createdAt: s.createdAt,
-    }));
+    const data = subusers.map((s) => {
+      let perms: string[] = [];
+      try {
+        const parsed = typeof s.permissions === 'string' ? JSON.parse(s.permissions) : s.permissions;
+        perms = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        perms = [];
+      }
+
+      let branches: string[] = [];
+      try {
+        const parsed = typeof s.activeBranches === 'string' ? JSON.parse(s.activeBranches) : s.activeBranches;
+        branches = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        branches = [];
+      }
+
+      return {
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        role: 'staff',
+        permissions: perms,
+        branches: branches,
+        status: s.isActive ? 'active' : 'inactive',
+        createdAt: s.createdAt,
+      };
+    });
 
     return NextResponse.json({ data });
   } catch (error) {
