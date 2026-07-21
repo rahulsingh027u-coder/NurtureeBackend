@@ -179,11 +179,12 @@ export function SubUsersSection() {
     setForm({ ...form, branches })
   }
 
-  const renderPermissionBadges = (permissions: string[]) => {
-    if (permissions.length === 0) return <span className="text-gray-400 text-xs">None</span>
+  const renderPermissionBadges = (permissions: unknown) => {
+    const perms = Array.isArray(permissions) ? permissions : []
+    if (perms.length === 0) return <span className="text-gray-400 text-xs">None</span>
     const maxVisible = 4
-    const visible = permissions.slice(0, maxVisible)
-    const remaining = permissions.length - maxVisible
+    const visible = perms.slice(0, maxVisible)
+    const remaining = perms.length - maxVisible
     return (
       <div className="flex flex-wrap gap-1">
         {visible.map(p => (
@@ -200,11 +201,12 @@ export function SubUsersSection() {
     )
   }
 
-  const renderBranchBadges = (branches: string[]) => {
-    if (branches.length === 0) return <span className="text-gray-400 text-xs">None</span>
+  const renderBranchBadges = (branches: unknown) => {
+    const br = Array.isArray(branches) ? branches : []
+    if (br.length === 0) return <span className="text-gray-400 text-xs">None</span>
     return (
       <div className="flex flex-wrap gap-1">
-        {branches.map(b => (
+        {br.map(b => (
           <Badge key={b} variant="secondary" className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-600">
             {b}
           </Badge>
