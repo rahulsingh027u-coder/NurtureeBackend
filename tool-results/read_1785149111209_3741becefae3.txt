@@ -1,0 +1,781 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback } from 'react'
+     4→     4→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+     5→     5→import { Badge } from '@/components/ui/badge'
+     6→     6→import { Button } from '@/components/ui/button'
+     7→     7→import { Input } from '@/components/ui/input'
+     8→     8→import { Label } from '@/components/ui/label'
+     9→     9→import { Textarea } from '@/components/ui/textarea'
+    10→    10→import { Skeleton } from '@/components/ui/skeleton'
+    11→    11→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    12→    12→import {
+    13→    13→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    14→    14→} from '@/components/ui/table'
+    15→    15→import {
+    16→    16→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+    17→    17→} from '@/components/ui/dialog'
+    18→    18→import {
+    19→    19→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    20→    20→} from '@/components/ui/select'
+    21→    21→import { useToast } from '@/hooks/use-toast'
+    22→    22→import { cn } from '@/lib/utils'
+    23→    23→import {
+    24→    24→  Plus, Check, X, Star, Loader2, UserCog, Phone, Mail, Award,
+    25→    25→  Eye, Upload, FileText, Shield, BarChart3, IndianRupee, Clock, CalendarDays, AlertCircle, CheckCircle2,
+    26→    26→} from 'lucide-react'
+    27→    27→
+    28→    28→interface Caregiver {
+    29→    29→  id: string
+    30→    30→  caregiverId: string
+    31→    31→  name: string
+    32→    32→  phone: string
+    33→    33→  email?: string
+    34→    34→  specialty: string
+    35→    35→  experience: number
+    36→    36→  rating?: number
+    37→    37→  isAvailable: boolean
+    38→    38→  isAadhaarVerified?: boolean
+    39→    39→  isPoliceVerified?: boolean
+    40→    40→  isMedicalVerified?: boolean
+    41→    41→  isVideoVerified?: boolean
+    42→    42→  qualifications?: string
+    43→    43→}
+    44→    44→
+    45→    45→interface CaregiverDetail {
+    46→    46→  caregiver: {
+    47→    47→    id: string; caregiverId: string; name: string; phone: string; email: string | null;
+    48→    48→    specialty: string; experience: number; qualifications: string | null;
+    49→    49→    isAvailable: boolean; isVerified: boolean; rating: number; createdAt: string;
+    50→    50→  }
+    51→    51→  verificationStatus: { aadhaar: boolean; police: boolean; medical: boolean; video: boolean }
+    52→    52→  verificationRecord: {
+    53→    53→    id: string; status: string; package: string | null;
+    54→    54→    documents: { type: string; url: string; verified: boolean }[];
+    55→    55→    reviewNotes: string | null; reviewedAt: string | null; createdAt: string;
+    56→    56→  } | null
+    57→    57→  pendingVerifications: string[]
+    58→    58→  bookings: {
+    59→    59→    id: string; bookingId: string; patientName: string; patientUhid: string;
+    60→    60→    patientPhone: string; serviceName: string; serviceCategory: string;
+    61→    61→    type: string; mode: string; status: string; source: string;
+    62→    62→    date: string; startTime: string; endTime: string | null;
+    63→    63→    totalAmount: number; commissionAmount: number;
+    64→    64→  }[]
+    65→    65→  earnings: {
+    66→    66→    totalEarnings: number; totalCommission: number; netEarnings: number;
+    67→    67→    completedBookings: number; totalBookings: number;
+    68→    68→    monthlyEarnings: Record<string, number>;
+    69→    69→  }
+    70→    70→  analytics: {
+    71→    71→    statusBreakdown: Record<string, number>;
+    72→    72→    dayBreakdown: Record<string, number>;
+    73→    73→    averageRating: number; totalReviews: number;
+    74→    74→  }
+    75→    75→}
+    76→    76→
+    77→    77→const specialtyBadge: Record<string, string> = {
+    78→    78→  child_care: 'bg-pink-100 text-pink-700',
+    79→    79→  elder_care: 'bg-orange-100 text-orange-700',
+    80→    80→}
+    81→    81→
+    82→    82→const specialtyLabel: Record<string, string> = {
+    83→    83→  child_care: 'Child Care',
+    84→    84→  elder_care: 'Elder Care',
+    85→    85→}
+    86→    86→
+    87→    87→const statusColor: Record<string, string> = {
+    88→    88→  completed: 'bg-green-100 text-green-700',
+    89→    89→  confirmed: 'bg-blue-100 text-blue-700',
+    90→    90→  in_progress: 'bg-yellow-100 text-yellow-700',
+    91→    91→  pending: 'bg-gray-100 text-gray-600',
+    92→    92→  cancelled: 'bg-red-100 text-red-600',
+    93→    93→}
+    94→    94→
+    95→    95→export function CaregiversSection() {
+    96→    96→  const { toast } = useToast()
+    97→    97→  const [caregivers, setCaregivers] = useState<Caregiver[]>([])
+    98→    98→  const [loading, setLoading] = useState(true)
+    99→    99→  const [addOpen, setAddOpen] = useState(false)
+   100→   100→  const [creating, setCreating] = useState(false)
+   101→   101→  const [profileOpen, setProfileOpen] = useState(false)
+   102→   102→  const [selectedId, setSelectedId] = useState<string | null>(null)
+   103→   103→  const [detail, setDetail] = useState<CaregiverDetail | null>(null)
+   104→   104→  const [detailLoading, setDetailLoading] = useState(false)
+   105→   105→  const [uploading, setUploading] = useState(false)
+   106→   106→
+   107→   107→  const [specialtyFilter, setSpecialtyFilter] = useState('all')
+   108→   108→  const [statusFilter, setStatusFilter] = useState('all')
+   109→   109→  const [verifiedFilter, setVerifiedFilter] = useState('all')
+   110→   110→
+   111→   111→  const [form, setForm] = useState({
+   112→   112→    name: '', phone: '', email: '', specialty: '', experience: '', qualifications: '',
+   113→   113→  })
+   114→   114→
+   115→   115→  const fetchCaregivers = useCallback(async (specialty?: string, available?: string, verified?: string) => {
+   116→   116→    setLoading(true)
+   117→   117→    try {
+   118→   118→      const params = new URLSearchParams()
+   119→   119→      if (specialty && specialty !== 'all') params.set('specialty', specialty)
+   120→   120→      if (available && available !== 'all') params.set('available', available === 'available' ? 'true' : 'false')
+   121→   121→      if (verified && verified !== 'all') params.set('verified', verified === 'verified' ? 'true' : 'false')
+   122→   122→      const res = await fetch(`/api/caregivers?${params.toString()}`)
+   123→   123→      if (res.ok) {
+   124→   124→        const data = await res.json()
+   125→   125→        setCaregivers(Array.isArray(data) ? data : data.data || [])
+   126→   126→      } else {
+   127→   127→        toast({ title: 'Error', description: 'Failed to fetch caregivers', variant: 'destructive' })
+   128→   128→      }
+   129→   129→    } catch {
+   130→   130→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   131→   131→    } finally {
+   132→   132→      setLoading(false)
+   133→   133→    }
+   134→   134→  }, [toast])
+   135→   135→
+   136→   136→  useEffect(() => { fetchCaregivers() }, [fetchCaregivers])
+   137→   137→
+   138→   138→  useEffect(() => {
+   139→   139→    fetchCaregivers(specialtyFilter, statusFilter, verifiedFilter)
+   140→   140→  }, [specialtyFilter, statusFilter, verifiedFilter, fetchCaregivers])
+   141→   141→
+   142→   142→  const openProfile = async (id: string) => {
+   143→   143→    setSelectedId(id)
+   144→   144→    setProfileOpen(true)
+   145→   145→    setDetailLoading(true)
+   146→   146→    setDetail(null)
+   147→   147→    try {
+   148→   148→      const res = await fetch(`/api/caregivers/${id}`)
+   149→   149→      if (res.ok) {
+   150→   150→        const data = await res.json()
+   151→   151→        setDetail(data)
+   152→   152→      } else {
+   153→   153→        toast({ title: 'Error', description: 'Failed to load caregiver details', variant: 'destructive' })
+   154→   154→        setProfileOpen(false)
+   155→   155→      }
+   156→   156→    } catch {
+   157→   157→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   158→   158→      setProfileOpen(false)
+   159→   159→    } finally {
+   160→   160→      setDetailLoading(false)
+   161→   161→    }
+   162→   162→  }
+   163→   163→
+   164→   164→  const handleUpload = async (fileType: string) => {
+   165→   165→    if (!selectedId) return
+   166→   166→    setUploading(true)
+   167→   167→    try {
+   168→   168→      const res = await fetch(`/api/caregivers/${selectedId}`, {
+   169→   169→        method: 'PATCH',
+   170→   170→        headers: { 'Content-Type': 'application/json' },
+   171→   171→        body: JSON.stringify({ documentType: fileType }),
+   172→   172→      })
+   173→   173→      if (res.ok) {
+   174→   174→        toast({ title: 'Updated', description: `${fileType} document marked as uploaded` })
+   175→   175→        openProfile(selectedId)
+   176→   176→      } else {
+   177→   177→        toast({ title: 'Error', description: 'Failed to update document', variant: 'destructive' })
+   178→   178→      }
+   179→   179→    } catch {
+   180→   180→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   181→   181→    } finally {
+   182→   182→      setUploading(false)
+   183→   183→    }
+   184→   184→  }
+   185→   185→
+   186→   186→  const handleCreate = async () => {
+   187→   187→    if (!form.name || !form.phone || !form.specialty) {
+   188→   188→      toast({ title: 'Error', description: 'Please fill required fields (Name, Phone, Specialty)', variant: 'destructive' })
+   189→   189→      return
+   190→   190→    }
+   191→   191→    setCreating(true)
+   192→   192→    try {
+   193→   193→      const res = await fetch('/api/caregivers', {
+   194→   194→        method: 'POST',
+   195→   195→        headers: { 'Content-Type': 'application/json' },
+   196→   196→        body: JSON.stringify({ ...form, experience: form.experience ? Number(form.experience) : 0 }),
+   197→   197→      })
+   198→   198→      if (res.ok) {
+   199→   199→        toast({ title: 'Caregiver Added', description: 'New caregiver has been added successfully' })
+   200→   200→        setAddOpen(false)
+   201→   201→        setForm({ name: '', phone: '', email: '', specialty: '', experience: '', qualifications: '' })
+   202→   202→        fetchCaregivers(specialtyFilter, statusFilter, verifiedFilter)
+   203→   203→      } else {
+   204→   204→        const data = await res.json()
+   205→   205→        toast({ title: 'Error', description: data.error || 'Failed to add caregiver', variant: 'destructive' })
+   206→   206→      }
+   207→   207→    } catch {
+   208→   208→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   209→   209→    } finally {
+   210→   210→      setCreating(false)
+   211→   211→    }
+   212→   212→  }
+   213→   213→
+   214→   214→  const renderStarRating = (rating?: number) => {
+   215→   215→    if (!rating) return <span className="text-gray-400 text-sm">-</span>
+   216→   216→    return (
+   217→   217→      <div className="flex items-center gap-0.5">
+   218→   218→        {Array.from({ length: 5 }).map((_, i) => (
+   219→   219→          <Star key={i} className={cn('w-3.5 h-3.5', i < Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200')} />
+   220→   220→        ))}
+   221→   221→        <span className="text-xs text-gray-500 ml-1">{rating.toFixed(1)}</span>
+   222→   222→      </div>
+   223→   223→    )
+   224→   224→  }
+   225→   225→
+   226→   226→  const VerificationIcon = ({ verified }: { verified: boolean | undefined }) => {
+   227→   227→    if (verified) return <Check className="w-4 h-4 text-blue-600" />
+   228→   228→    return <X className="w-4 h-4 text-red-400" />
+   229→   229→  }
+   230→   230→
+   231→   231→  const formatCurrency = (val: number) =>
+   232→   232→    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val)
+   233→   233→
+   234→   234→  // ---- PROFILE DIALOG CONTENT ----
+   235→   235→  const ProfileTab = () => {
+   236→   236→    if (!detail) return null
+   237→   237→    const c = detail.caregiver
+   238→   238→    return (
+   239→   239→      <div className="space-y-5">
+   240→   240→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   241→   241→          <div className="rounded-xl bg-gray-50 p-4 space-y-3">
+   242→   242→            <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider">Personal Info</h4>
+   243→   243→            <div className="space-y-2">
+   244→   244→              <InfoRow label="Profile ID" value={c.caregiverId} />
+   245→   245→              <InfoRow label="Full Name" value={c.name} />
+   246→   246→              <InfoRow label="Phone" value={c.phone} icon={<Phone className="w-3.5 h-3.5 text-gray-400" />} />
+   247→   247→              <InfoRow label="Email" value={c.email || 'N/A'} icon={<Mail className="w-3.5 h-3.5 text-gray-400" />} />
+   248→   248→              <InfoRow label="Specialty" value={specialtyLabel[c.specialty] || c.specialty} />
+   249→   249→            </div>
+   250→   250→          </div>
+   251→   251→          <div className="rounded-xl bg-gray-50 p-4 space-y-3">
+   252→   252→            <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider">Professional Info</h4>
+   253→   253→            <div className="space-y-2">
+   254→   254→              <InfoRow label="Experience" value={`${c.experience} years`} icon={<Award className="w-3.5 h-3.5 text-gray-400" />} />
+   255→   255→              <InfoRow label="Qualifications" value={c.qualifications || 'N/A'} />
+   256→   256→              <InfoRow label="Rating" value={c.rating > 0 ? `${c.rating.toFixed(1)} / 5.0` : 'No ratings yet'} />
+   257→   257→              <InfoRow label="Joined" value={new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} />
+   258→   258→            </div>
+   259→   259→          </div>
+   260→   260→        </div>
+   261→   261→        <div className="flex items-center gap-3">
+   262→   262→          <Badge variant="secondary" className={cn('text-xs px-3 py-1', c.isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600')}>
+   263→   263→            {c.isAvailable ? 'Available' : 'Unavailable'}
+   264→   264→          </Badge>
+   265→   265→          <Badge variant="secondary" className={cn('text-xs px-3 py-1', c.isVerified ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-600')}>
+   266→   266→            {c.isVerified ? 'Verified' : 'Not Verified'}
+   267→   267→          </Badge>
+   268→   268→          <Badge variant="secondary" className="text-xs px-3 py-1 bg-gray-100 text-gray-600">
+   269→   269→            {detail.bookings.length} Total Bookings
+   270→   270→          </Badge>
+   271→   271→        </div>
+   272→   272→      </div>
+   273→   273→    )
+   274→   274→  }
+   275→   275→
+   276→   276→  const DocumentsTab = () => {
+   277→   277→    if (!detail) return null
+   278→   278→    const docs = detail.verificationRecord?.documents || []
+   279→   279→    const docTypes = ['Aadhaar Card', 'Police Certificate', 'Medical Fitness Certificate', 'Video Verification']
+   280→   280→    return (
+   281→   281→      <div className="space-y-5">
+   282→   282→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   283→   283→          {docTypes.map((dt) => {
+   284→   284→            const found = docs.find((d) => d.type.toLowerCase().includes(dt.toLowerCase().split(' ')[0].toLowerCase()))
+   285→   285→            return (
+   286→   286→              <div key={dt} className="rounded-xl border border-gray-200 p-4">
+   287→   287→                <div className="flex items-center justify-between mb-3">
+   288→   288→                  <div className="flex items-center gap-2">
+   289→   289→                    <FileText className="w-4 h-4 text-gray-400" />
+   290→   290→                    <span className="text-sm font-medium text-gray-800">{dt}</span>
+   291→   291→                  </div>
+   292→   292→                  {found ? (
+   293→   293→                    <Badge variant="secondary" className="text-[10px] bg-green-50 text-green-600 border border-green-100">Uploaded</Badge>
+   294→   294→                  ) : (
+   295→   295→                    <Badge variant="secondary" className="text-[10px] bg-orange-50 text-orange-600 border border-orange-100">Pending</Badge>
+   296→   296→                  )}
+   297→   297→                </div>
+   298→   298→                {found ? (
+   299→   299→                  <div className="space-y-1">
+   300→   300→                    <p className="text-xs text-gray-500">File: {found.type}</p>
+   301→   301→                    <div className="flex gap-2 mt-2">
+   302→   302→                      <Button size="sm" variant="outline" className="text-xs h-7 border-blue-200 text-blue-600">
+   303→   303→                        <Eye className="w-3 h-3 mr-1" /> View
+   304→   304→                      </Button>
+   305→   305→                      <Button size="sm" variant="outline" className="text-xs h-7">
+   306→   306→                        Download
+   307→   307→                      </Button>
+   308→   308→                    </div>
+   309→   309→                  </div>
+   310→   310→                ) : (
+   311→   311→                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
+   312→   312→                    <Upload className="w-5 h-5 text-gray-300 mx-auto mb-1" />
+   313→   313→                    <p className="text-xs text-gray-400 mb-2">No document uploaded</p>
+   314→   314→                    <Button
+   315→   315→                      size="sm" variant="outline" className="text-xs h-7 border-blue-200 text-blue-600"
+   316→   316→                      disabled={uploading}
+   317→   317→                      onClick={() => handleUpload(dt)}
+   318→   318→                    >
+   319→   319→                      {uploading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+   320→   320→                      Upload
+   321→   321→                    </Button>
+   322→   322→                  </div>
+   323→   323→                )}
+   324→   324→              </div>
+   325→   325→            )
+   326→   326→          })}
+   327→   327→        </div>
+   328→   328→      </div>
+   329→   329→    )
+   330→   330→  }
+   331→   331→
+   332→   332→  const VerificationTab = () => {
+   333→   333→    if (!detail) return null
+   334→   334→    const vs = detail.verificationStatus
+   335→   335→    const pending = detail.pendingVerifications
+   336→   336→    const verifications = [
+   337→   337→      { label: 'Aadhaar Verification', key: 'aadhaar', desc: 'Government ID verification via Aadhaar card' },
+   338→   338→      { label: 'Police Verification', key: 'police', desc: 'Background check through police records' },
+   339→   339→      { label: 'Medical Fitness', key: 'medical', desc: 'Medical fitness certificate from registered practitioner' },
+   340→   340→      { label: 'Video Verification', key: 'video', desc: 'Live video call verification of identity and credentials' },
+   341→   341→    ] as const
+   342→   342→    return (
+   343→   343→      <div className="space-y-4">
+   344→   344→        {pending.length === 0 ? (
+   345→   345→          <div className="rounded-xl bg-green-50 border border-green-100 p-5 text-center">
+   346→   346→            <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-2" />
+   347→   347→            <p className="text-sm font-medium text-green-700">All Verifications Complete</p>
+   348→   348→            <p className="text-xs text-green-600 mt-1">This caregiver has passed all verification checks</p>
+   349→   349→          </div>
+   350→   350→        ) : (
+   351→   351→          <div className="rounded-xl bg-orange-50 border border-orange-100 p-4">
+   352→   352→            <div className="flex items-center gap-2 mb-1">
+   353→   353→              <AlertCircle className="w-4 h-4 text-orange-500" />
+   354→   354→              <p className="text-sm font-medium text-orange-700">{pending.length} Pending Verification{pending.length > 1 ? 's' : ''}</p>
+   355→   355→            </div>
+   356→   356→            <p className="text-xs text-orange-600">{pending.join(', ')} — action required</p>
+   357→   357→          </div>
+   358→   358→        )}
+   359→   359→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   360→   360→          {verifications.map((v) => {
+   361→   361→            const done = vs[v.key]
+   362→   362→            return (
+   363→   363→              <div key={v.key} className="rounded-xl border border-gray-200 p-4">
+   364→   364→                <div className="flex items-center justify-between mb-1">
+   365→   365→                  <span className="text-sm font-medium text-gray-800">{v.label}</span>
+   366→   366→                  {done ? (
+   367→   367→                    <Badge variant="secondary" className="text-[10px] bg-green-50 text-green-600 border border-green-100 flex items-center gap-1">
+   368→   368→                      <Check className="w-3 h-3" /> Verified
+   369→   369→                    </Badge>
+   370→   370→                  ) : (
+   371→   371→                    <Badge variant="secondary" className="text-[10px] bg-red-50 text-red-500 border border-red-100 flex items-center gap-1">
+   372→   372→                      <X className="w-3 h-3" /> Pending
+   373→   373→                    </Badge>
+   374→   374→                  )}
+   375→   375→                </div>
+   376→   376→                <p className="text-xs text-gray-400">{v.desc}</p>
+   377→   377→              </div>
+   378→   378→            )
+   379→   379→          })}
+   380→   380→        </div>
+   381→   381→        {detail.verificationRecord && (
+   382→   382→          <div className="rounded-xl bg-gray-50 p-4 space-y-2">
+   383→   383→            <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider">Verification Record</h4>
+   384→   384→            <InfoRow label="Package" value={detail.verificationRecord.package || 'N/A'} />
+   385→   385→            <InfoRow label="Status" value={detail.verificationRecord.status} />
+   386→   386→            <InfoRow label="Applied On" value={new Date(detail.verificationRecord.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} />
+   387→   387→            {detail.verificationRecord.reviewNotes && <InfoRow label="Review Notes" value={detail.verificationRecord.reviewNotes} />}
+   388→   388→          </div>
+   389→   389→        )}
+   390→   390→      </div>
+   391→   391→    )
+   392→   392→  }
+   393→   393→
+   394→   394→  const EarningsTab = () => {
+   395→   395→    if (!detail) return null
+   396→   396→    const e = detail.earnings
+   397→   397→    const months = Object.entries(e.monthlyEarnings).sort().slice(-6)
+   398→   398→    return (
+   399→   399→      <div className="space-y-5">
+   400→   400→        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   401→   401→          <StatCard label="Total Revenue" value={formatCurrency(e.totalEarnings)} icon={<IndianRupee className="w-4 h-4" />} color="blue" />
+   402→   402→          <StatCard label="Platform Commission" value={formatCurrency(e.totalCommission)} icon={<BarChart3 className="w-4 h-4" />} color="orange" />
+   403→   403→          <StatCard label="Net Earnings" value={formatCurrency(e.netEarnings)} icon={<IndianRupee className="w-4 h-4" />} color="green" />
+   404→   404→          <StatCard label="Completed" value={`${e.completedBookings}/${e.totalBookings}`} icon={<CheckCircle2 className="w-4 h-4" />} color="purple" />
+   405→   405→        </div>
+   406→   406→        {months.length > 0 && (
+   407→   407→          <div className="rounded-xl border border-gray-200 p-4">
+   408→   408→            <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-3">Monthly Revenue Trend</h4>
+   409→   409→            <div className="space-y-2">
+   410→   410→              {months.map(([month, amount]) => {
+   411→   411→                const maxAmt = Math.max(...months.map(([, a]) => a), 1)
+   412→   412→                const pct = (amount / maxAmt) * 100
+   413→   413→                return (
+   414→   414→                  <div key={month} className="flex items-center gap-3">
+   415→   415→                    <span className="text-xs text-gray-500 w-16 shrink-0">{month}</span>
+   416→   416→                    <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+   417→   417→                      <div className="h-full bg-blue-500 rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max(pct, 8)}%` }}>
+   418→   418→                        <span className="text-[10px] text-white font-medium whitespace-nowrap">{formatCurrency(amount)}</span>
+   419→   419→                      </div>
+   420→   420→                    </div>
+   421→   421→                  </div>
+   422→   422→                )
+   423→   423→              })}
+   424→   424→            </div>
+   425→   425→          </div>
+   426→   426→        )}
+   427→   427→      </div>
+   428→   428→    )
+   429→   429→  }
+   430→   430→
+   431→   431→  const AnalyticsTab = () => {
+   432→   432→    if (!detail) return null
+   433→   433→    const a = detail.analytics
+   434→   434→    const statusEntries = Object.entries(a.statusBreakdown)
+   435→   435→    const dayEntries = Object.entries(a.dayBreakdown)
+   436→   436→    const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+   437→   437→    const sortedDays = dayEntries.sort((a, b) => dayOrder.indexOf(a[0]) - dayOrder.indexOf(b[0]))
+   438→   438→    const maxDay = Math.max(...sortedDays.map(([, v]) => v), 1)
+   439→   439→    return (
+   440→   440→      <div className="space-y-5">
+   441→   441→        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+   442→   442→          <StatCard label="Total Bookings" value={String(detail.bookings.length)} icon={<CalendarDays className="w-4 h-4" />} color="blue" />
+   443→   443→          <StatCard label="Avg Rating" value={`${a.averageRating.toFixed(1)}/5`} icon={<Star className="w-4 h-4" />} color="amber" />
+   444→   444→          <StatCard label="Completion Rate" value={detail.bookings.length > 0 ? `${Math.round(((a.statusBreakdown.completed || 0) / detail.bookings.length) * 100)}%` : 'N/A'} icon={<CheckCircle2 className="w-4 h-4" />} color="green" />
+   445→   445→        </div>
+   446→   446→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   447→   447→          {statusEntries.length > 0 && (
+   448→   448→            <div className="rounded-xl border border-gray-200 p-4">
+   449→   449→              <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-3">Booking Status</h4>
+   450→   450→              <div className="space-y-2">
+   451→   451→                {statusEntries.map(([status, count]) => (
+   452→   452→                  <div key={status} className="flex items-center justify-between">
+   453→   453→                    <div className="flex items-center gap-2">
+   454→   454→                      <Badge variant="secondary" className={cn('text-[10px]', statusColor[status] || 'bg-gray-100 text-gray-600')}>
+   455→   455→                        {status}
+   456→   456→                      </Badge>
+   457→   457→                    </div>
+   458→   458→                    <div className="flex items-center gap-2">
+   459→   459→                      <div className="w-24 bg-gray-100 rounded-full h-2 overflow-hidden">
+   460→   460→                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(count / detail.bookings.length) * 100}%` }} />
+   461→   461→                      </div>
+   462→   462→                      <span className="text-xs font-medium text-gray-700 w-6 text-right">{count}</span>
+   463→   463→                    </div>
+   464→   464→                  </div>
+   465→   465→                ))}
+   466→   466→              </div>
+   467→   467→            </div>
+   468→   468→          )}
+   469→   469→          {sortedDays.length > 0 && (
+   470→   470→            <div className="rounded-xl border border-gray-200 p-4">
+   471→   471→              <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-3">Bookings by Day</h4>
+   472→   472→              <div className="space-y-2">
+   473→   473→                {sortedDays.map(([day, count]) => (
+   474→   474→                  <div key={day} className="flex items-center gap-3">
+   475→   475→                    <span className="text-xs text-gray-500 w-8 shrink-0">{day}</span>
+   476→   476→                    <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+   477→   477→                      <div className="h-full bg-indigo-500 rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max((count / maxDay) * 100, 10)}%` }}>
+   478→   478→                        <span className="text-[10px] text-white font-medium">{count}</span>
+   479→   479→                      </div>
+   480→   480→                    </div>
+   481→   481→                  </div>
+   482→   482→                ))}
+   483→   483→              </div>
+   484→   484→            </div>
+   485→   485→          )}
+   486→   486→        </div>
+   487→   487→      </div>
+   488→   488→    )
+   489→   489→  }
+   490→   490→
+   491→   491→  const BookingsTab = () => {
+   492→   492→    if (!detail) return null
+   493→   493→    if (detail.bookings.length === 0) {
+   494→   494→      return <div className="text-center py-8 text-gray-400 text-sm">No bookings found for this caregiver</div>
+   495→   495→    }
+   496→   496→    return (
+   497→   497→      <div className="overflow-x-auto rounded-xl border border-gray-200">
+   498→   498→        <Table>
+   499→   499→          <TableHeader>
+   500→   500→            <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   501→   501→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Booking ID</TableHead>
+   502→   502→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient</TableHead>
+   503→   503→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Service</TableHead>
+   504→   504→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
+   505→   505→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Mode</TableHead>
+   506→   506→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   507→   507→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Amount</TableHead>
+   508→   508→            </TableRow>
+   509→   509→          </TableHeader>
+   510→   510→          <TableBody>
+   511→   511→            {detail.bookings.map((b) => (
+   512→   512→              <TableRow key={b.id} className="hover:bg-gray-50/50">
+   513→   513→                <TableCell className="text-xs font-mono text-blue-600">{b.bookingId}</TableCell>
+   514→   514→                <TableCell>
+   515→   515→                  <p className="text-sm text-gray-800">{b.patientName}</p>
+   516→   516→                  <p className="text-[10px] text-gray-400">{b.patientUhid}</p>
+   517→   517→                </TableCell>
+   518→   518→                <TableCell className="text-sm text-gray-600">{b.serviceName}</TableCell>
+   519→   519→                <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
+   520→   520→                <TableCell>
+   521→   521→                  <Badge variant="secondary" className={cn('text-[10px]', b.mode === 'online' ? 'bg-purple-50 text-purple-600' : 'bg-teal-50 text-teal-600')}>
+   522→   522→                    {b.mode === 'online' ? 'Online' : 'In-Home'}
+   523→   523→                  </Badge>
+   524→   524→                </TableCell>
+   525→   525→                <TableCell>
+   526→   526→                  <Badge variant="secondary" className={cn('text-[10px] capitalize', statusColor[b.status] || 'bg-gray-100 text-gray-600')}>
+   527→   527→                    {b.status}
+   528→   528→                  </Badge>
+   529→   529→                </TableCell>
+   530→   530→                <TableCell className="text-sm font-medium text-gray-800">{formatCurrency(b.totalAmount)}</TableCell>
+   531→   531→              </TableRow>
+   532→   532→            ))}
+   533→   533→          </TableBody>
+   534→   534→        </Table>
+   535→   535→      </div>
+   536→   536→    )
+   537→   537→  }
+   538→   538→
+   539→   539→  return (
+   540→   540→    <div className="space-y-6 p-4 md:p-6">
+   541→   541→      <Card className="bg-white rounded-xl shadow-sm border-0">
+   542→   542→        <CardHeader className="pb-3 flex flex-row items-center justify-between flex-wrap gap-3">
+   543→   543→          <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
+   544→   544→            <UserCog className="w-4 h-4 text-blue-600" />
+   545→   545→            Caregivers
+   546→   546→          </CardTitle>
+   547→   547→          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+   548→   548→            <DialogTrigger asChild>
+   549→   549→              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+   550→   550→                <Plus className="w-4 h-4" /> Add Caregiver
+   551→   551→              </Button>
+   552→   552→            </DialogTrigger>
+   553→   553→            <DialogContent className="sm:max-w-md">
+   554→   554→              <DialogHeader><DialogTitle>Add New Caregiver</DialogTitle></DialogHeader>
+   555→   555→              <div className="space-y-4 py-2">
+   556→   556→                <div className="space-y-2">
+   557→   557→                  <Label>Name *</Label>
+   558→   558→                  <Input placeholder="Enter full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+   559→   559→                </div>
+   560→   560→                <div className="grid grid-cols-2 gap-3">
+   561→   561→                  <div className="space-y-2">
+   562→   562→                    <Label>Phone *</Label>
+   563→   563→                    <Input placeholder="Phone number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+   564→   564→                  </div>
+   565→   565→                  <div className="space-y-2">
+   566→   566→                    <Label>Email</Label>
+   567→   567→                    <Input placeholder="Email address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+   568→   568→                  </div>
+   569→   569→                </div>
+   570→   570→                <div className="space-y-2">
+   571→   571→                  <Label>Specialty *</Label>
+   572→   572→                  <Select value={form.specialty} onValueChange={(v) => setForm({ ...form, specialty: v })}>
+   573→   573→                    <SelectTrigger><SelectValue placeholder="Select specialty" /></SelectTrigger>
+   574→   574→                    <SelectContent>
+   575→   575→                      <SelectItem value="child_care">Child Care</SelectItem>
+   576→   576→                      <SelectItem value="elder_care">Elder Care</SelectItem>
+   577→   577→                    </SelectContent>
+   578→   578→                  </Select>
+   579→   579→                </div>
+   580→   580→                <div className="space-y-2">
+   581→   581→                  <Label>Experience (years)</Label>
+   582→   582→                  <Input type="number" min="0" placeholder="Years of experience" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} />
+   583→   583→                </div>
+   584→   584→                <div className="space-y-2">
+   585→   585→                  <Label>Qualifications</Label>
+   586→   586→                  <Textarea placeholder="Certifications, training, etc." value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} rows={3} />
+   587→   587→                </div>
+   588→   588→              </div>
+   589→   589→              <DialogFooter>
+   590→   590→                <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+   591→   591→                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>
+   592→   592→                  {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Add Caregiver
+   593→   593→                </Button>
+   594→   594→              </DialogFooter>
+   595→   595→            </DialogContent>
+   596→   596→          </Dialog>
+   597→   597→        </CardHeader>
+   598→   598→        <CardContent className="p-0">
+   599→   599→          <div className="px-4 pb-3 pt-1 flex flex-wrap items-center gap-3 border-b border-gray-100">
+   600→   600→            <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
+   601→   601→              <SelectTrigger className="w-[150px] h-8 text-sm"><SelectValue placeholder="Specialty" /></SelectTrigger>
+   602→   602→              <SelectContent>
+   603→   603→                <SelectItem value="all">All Specialties</SelectItem>
+   604→   604→                <SelectItem value="child_care">Child Care</SelectItem>
+   605→   605→                <SelectItem value="elder_care">Elder Care</SelectItem>
+   606→   606→              </SelectContent>
+   607→   607→            </Select>
+   608→   608→            <Select value={statusFilter} onValueChange={setStatusFilter}>
+   609→   609→              <SelectTrigger className="w-[140px] h-8 text-sm"><SelectValue placeholder="Status" /></SelectTrigger>
+   610→   610→              <SelectContent>
+   611→   611→                <SelectItem value="all">All Status</SelectItem>
+   612→   612→                <SelectItem value="available">Available</SelectItem>
+   613→   613→                <SelectItem value="unavailable">Unavailable</SelectItem>
+   614→   614→              </SelectContent>
+   615→   615→            </Select>
+   616→   616→            <Select value={verifiedFilter} onValueChange={setVerifiedFilter}>
+   617→   617→              <SelectTrigger className="w-[140px] h-8 text-sm"><SelectValue placeholder="Verified" /></SelectTrigger>
+   618→   618→              <SelectContent>
+   619→   619→                <SelectItem value="all">All Verified</SelectItem>
+   620→   620→                <SelectItem value="verified">Verified</SelectItem>
+   621→   621→                <SelectItem value="unverified">Unverified</SelectItem>
+   622→   622→              </SelectContent>
+   623→   623→            </Select>
+   624→   624→          </div>
+   625→   625→          <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   626→   626→            <Table>
+   627→   627→              <TableHeader>
+   628→   628→                <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   629→   629→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Profile ID</TableHead>
+   630→   630→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Name</TableHead>
+   631→   631→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Phone</TableHead>
+   632→   632→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Specialty</TableHead>
+   633→   633→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Experience</TableHead>
+   634→   634→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Rating</TableHead>
+   635→   635→                  <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Aadhaar</TableHead>
+   636→   636→                  <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Police</TableHead>
+   637→   637→                  <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Medical</TableHead>
+   638→   638→                  <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Video</TableHead>
+   639→   639→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   640→   640→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Actions</TableHead>
+   641→   641→                </TableRow>
+   642→   642→              </TableHeader>
+   643→   643→              <TableBody>
+   644→   644→                {loading ? (
+   645→   645→                  Array.from({ length: 5 }).map((_, i) => (
+   646→   646→                    <TableRow key={i}>{Array.from({ length: 12 }).map((_, j) => (<TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>))}</TableRow>
+   647→   647→                  ))
+   648→   648→                ) : caregivers.length > 0 ? (
+   649→   649→                  caregivers.map((c) => (
+   650→   650→                    <TableRow key={c.id} className="hover:bg-gray-50/50">
+   651→   651→                      <TableCell className="text-xs font-mono text-blue-600 font-medium">{c.caregiverId}</TableCell>
+   652→   652→                      <TableCell>
+   653→   653→                        <p className="text-sm font-medium text-gray-900">{c.name}</p>
+   654→   654→                        {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
+   655→   655→                      </TableCell>
+   656→   656→                      <TableCell className="text-sm text-gray-600">{c.phone}</TableCell>
+   657→   657→                      <TableCell>
+   658→   658→                        <Badge variant="secondary" className={cn('text-[11px] capitalize', specialtyBadge[c.specialty] || 'bg-gray-100 text-gray-700')}>
+   659→   659→                          {specialtyLabel[c.specialty] || c.specialty}
+   660→   660→                        </Badge>
+   661→   661→                      </TableCell>
+   662→   662→                      <TableCell className="text-sm text-gray-600">{c.experience} yrs</TableCell>
+   663→   663→                      <TableCell>{renderStarRating(c.rating)}</TableCell>
+   664→   664→                      <TableCell className="text-center"><VerificationIcon verified={c.isAadhaarVerified} /></TableCell>
+   665→   665→                      <TableCell className="text-center"><VerificationIcon verified={c.isPoliceVerified} /></TableCell>
+   666→   666→                      <TableCell className="text-center"><VerificationIcon verified={c.isMedicalVerified} /></TableCell>
+   667→   667→                      <TableCell className="text-center"><VerificationIcon verified={c.isVideoVerified} /></TableCell>
+   668→   668→                      <TableCell>
+   669→   669→                        <Badge variant="secondary" className={cn('text-[11px]', c.isAvailable ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700')}>
+   670→   670→                          {c.isAvailable ? 'Available' : 'Unavailable'}
+   671→   671→                        </Badge>
+   672→   672→                      </TableCell>
+   673→   673→                      <TableCell>
+   674→   674→                        <Button size="sm" variant="outline" className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => openProfile(c.id)}>
+   675→   675→                          <Eye className="w-3 h-3 mr-1" /> View Profile
+   676→   676→                        </Button>
+   677→   677→                      </TableCell>
+   678→   678→                    </TableRow>
+   679→   679→                  ))
+   680→   680→                ) : (
+   681→   681→                  <TableRow>
+   682→   682→                    <TableCell colSpan={12} className="text-center py-8 text-gray-400 text-sm">No caregivers found</TableCell>
+   683→   683→                  </TableRow>
+   684→   684→                )}
+   685→   685→              </TableBody>
+   686→   686→            </Table>
+   687→   687→          </div>
+   688→   688→        </CardContent>
+   689→   689→      </Card>
+   690→   690→
+   691→   691→      {/* ===== CAREGIVER DETAIL DIALOG ===== */}
+   692→   692→      <Dialog open={profileOpen} onOpenChange={(open) => { setProfileOpen(open); if (!open) { setDetail(null); setSelectedId(null) } }}>
+   693→   693→        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+   694→   694→          <DialogHeader>
+   695→   695→            <DialogTitle className="flex items-center gap-2">
+   696→   696→              <UserCog className="w-5 h-5 text-blue-600" />
+   697→   697→              {detail ? detail.caregiver.name : 'Caregiver Profile'}
+   698→   698→              {detail && <span className="text-sm font-mono font-normal text-blue-600 ml-1">{detail.caregiver.caregiverId}</span>}
+   699→   699→            </DialogTitle>
+   700→   700→          </DialogHeader>
+   701→   701→          {detailLoading ? (
+   702→   702→            <div className="space-y-4 py-6">
+   703→   703→              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+   704→   704→            </div>
+   705→   705→          ) : detail ? (
+   706→   706→            <Tabs defaultValue="profile" className="w-full">
+   707→   707→              <TabsList className="w-full justify-start bg-gray-100 rounded-lg p-1 h-auto flex-wrap gap-1">
+   708→   708→                <TabsTrigger value="profile" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8">
+   709→   709→                  <UserCog className="w-3.5 h-3.5 mr-1" /> Profile
+   710→   710→                </TabsTrigger>
+   711→   711→                <TabsTrigger value="documents" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8">
+   712→   712→                  <FileText className="w-3.5 h-3.5 mr-1" /> Documents
+   713→   713→                </TabsTrigger>
+   714→   714→                <TabsTrigger value="verification" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8 relative">
+   715→   715→                  <Shield className="w-3.5 h-3.5 mr-1" /> Verification
+   716→   716→                  {detail.pendingVerifications.length > 0 && (
+   717→   717→                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold">
+   718→   718→                      {detail.pendingVerifications.length}
+   719→   719→                    </span>
+   720→   720→                  )}
+   721→   721→                </TabsTrigger>
+   722→   722→                <TabsTrigger value="earnings" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8">
+   723→   723→                  <IndianRupee className="w-3.5 h-3.5 mr-1" /> Earnings
+   724→   724→                </TabsTrigger>
+   725→   725→                <TabsTrigger value="analytics" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8">
+   726→   726→                  <BarChart3 className="w-3.5 h-3.5 mr-1" /> Analytics
+   727→   727→                </TabsTrigger>
+   728→   728→                <TabsTrigger value="bookings" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8">
+   729→   729→                  <CalendarDays className="w-3.5 h-3.5 mr-1" /> Bookings
+   730→   730→                </TabsTrigger>
+   731→   731→              </TabsList>
+   732→   732→              <TabsContent value="profile" className="mt-4"><ProfileTab /></TabsContent>
+   733→   733→              <TabsContent value="documents" className="mt-4"><DocumentsTab /></TabsContent>
+   734→   734→              <TabsContent value="verification" className="mt-4"><VerificationTab /></TabsContent>
+   735→   735→              <TabsContent value="earnings" className="mt-4"><EarningsTab /></TabsContent>
+   736→   736→              <TabsContent value="analytics" className="mt-4"><AnalyticsTab /></TabsContent>
+   737→   737→              <TabsContent value="bookings" className="mt-4"><BookingsTab /></TabsContent>
+   738→   738→            </Tabs>
+   739→   739→          ) : null}
+   740→   740→        </DialogContent>
+   741→   741→      </Dialog>
+   742→   742→    </div>
+   743→   743→  )
+   744→   744→}
+   745→   745→
+   746→   746→// ---- Reusable Components ----
+   747→   747→
+   748→   748→function InfoRow({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
+   749→   749→  return (
+   750→   750→    <div className="flex items-start gap-2">
+   751→   751→      {icon && <div className="mt-0.5 shrink-0">{icon}</div>}
+   752→   752→      <div className="min-w-0">
+   753→   753→        <p className="text-[11px] text-gray-400">{label}</p>
+   754→   754→        <p className="text-sm text-gray-800 break-words">{value}</p>
+   755→   755→      </div>
+   756→   756→    </div>
+   757→   757→  )
+   758→   758→}
+   759→   759→
+   760→   760→function StatCard({ label, value, icon, color }: { label: string; value: string; icon: React.ReactNode; color: string }) {
+   761→   761→  const colorMap: Record<string, string> = {
+   762→   762→    blue: 'bg-blue-50 text-blue-600',
+   763→   763→    green: 'bg-green-50 text-green-600',
+   764→   764→    orange: 'bg-orange-50 text-orange-600',
+   765→   765→    purple: 'bg-purple-50 text-purple-600',
+   766→   766→    amber: 'bg-amber-50 text-amber-600',
+   767→   767→    red: 'bg-red-50 text-red-600',
+   768→   768→  }
+   769→   769→  return (
+   770→   770→    <div className="rounded-xl bg-gray-50 p-4">
+   771→   771→      <div className="flex items-center gap-2 mb-1">
+   772→   772→        <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center', colorMap[color] || 'bg-gray-100 text-gray-500')}>
+   773→   773→          {icon}
+   774→   774→        </div>
+   775→   775→        <span className="text-[11px] text-gray-400">{label}</span>
+   776→   776→      </div>
+   777→   777→      <p className="text-lg font-bold text-gray-900">{value}</p>
+   778→   778→    </div>
+   779→   779→  )
+   780→   780→}
+   781→   781→
