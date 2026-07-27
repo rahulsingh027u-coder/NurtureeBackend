@@ -54,9 +54,7 @@ export function Sidebar() {
       >
         {/* Logo */}
         <div className="h-16 flex items-center gap-3 px-5 border-b border-gray-100 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center">
-            <Stethoscope className="w-4 h-4" />
-          </div>
+          <img src="/logo.png" alt="Nurturee" className="w-8 h-8 rounded-lg" />
           <div>
             <h1 className="font-bold text-gray-900 text-base leading-tight">Nurturee</h1>
             <p className="text-[11px] text-gray-400 leading-tight">Admin Panel</p>

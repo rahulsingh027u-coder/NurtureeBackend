@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { Heart, Shield, Loader2 } from 'lucide-react'
+import { Shield, Loader2 } from 'lucide-react'
 
 export function LoginPage() {
   const { login } = useAppStore()
@@ -47,9 +47,7 @@ export function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo & Branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white mb-4">
-            <Heart className="w-8 h-8" />
-          </div>
+          <img src="/logo.png" alt="Nurturee" className="w-20 h-20 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-gray-900">Nurturee</h1>
           <p className="text-gray-500 mt-1">Admin Portal</p>
         </div>
