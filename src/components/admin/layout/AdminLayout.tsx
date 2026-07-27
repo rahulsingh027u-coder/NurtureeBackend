@@ -9,7 +9,7 @@ import { Bell } from 'lucide-react'
 import {
   LayoutDashboard, Baby, Users, Stethoscope, FileText, CalendarDays,
   UserCog, DollarSign, BarChart3, ShieldCheck, Package, LogOut, ChevronLeft,
-  ClipboardList, UserCircle, ChevronRight
+  ClipboardList, UserCircle, ChevronRight, Settings
 } from 'lucide-react'
 
 interface NavItem {
@@ -33,6 +33,7 @@ const navItems: NavItem[] = [
   { id: 'caregivers', label: 'Caregivers', icon: UserCircle, permission: 'caregivers' },
   { id: 'services', label: 'Services', icon: Package, permission: 'services' },
   { id: 'child_care', label: 'Child & Elder Care', icon: Baby, permission: 'child_care' },
+  { id: 'profile', label: 'My Profile', icon: Settings, permission: 'profile' },
 ]
 
 export function Sidebar() {
@@ -67,24 +68,27 @@ export function Sidebar() {
         {/* Nav */}
         <ScrollArea className="flex-1 py-3">
           <div className="px-3 space-y-0.5">
-            {visibleItems.map((item) => {
+            {visibleItems.map((item, idx) => {
               const Icon = item.icon
               const isActive = activeSection === item.id
+              const showSeparator = item.id === 'profile' && idx > 0
               return (
-                <Button
-                  key={item.id}
-                  variant="ghost"
-                  className={cn(
-                    'w-full justify-start gap-3 h-10 px-3 font-normal text-sm rounded-lg',
-                    isActive
-                      ? 'bg-blue-50 text-blue-700 font-medium hover:bg-blue-50 hover:text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  )}
-                  onClick={() => { setActiveSection(item.id); setSidebarOpen(false) }}
-                >
-                  <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-blue-600' : 'text-gray-400')} />
-                  {item.label}
-                </Button>
+                <div key={item.id}>
+                  {showSeparator && <Separator className="my-2 bg-gray-100" />}
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      'w-full justify-start gap-3 h-10 px-3 font-normal text-sm rounded-lg',
+                      isActive
+                        ? 'bg-blue-50 text-blue-700 font-medium hover:bg-blue-50 hover:text-blue-700'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    )}
+                    onClick={() => { setActiveSection(item.id); setSidebarOpen(false) }}
+                  >
+                    <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-blue-600' : 'text-gray-400')} />
+                    {item.label}
+                  </Button>
+                </div>
               )
             })}
           </div>
