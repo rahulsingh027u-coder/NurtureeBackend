@@ -2,6 +2,7 @@
 
 import { useAppStore, type Section } from '@/lib/store'
 import { Sidebar, Header } from '@/components/admin/layout/AdminLayout'
+import { SectionErrorBoundary } from '@/components/admin/SectionErrorBoundary'
 import { DashboardSection } from '@/components/admin/sections/DashboardSection'
 import { ChildCareSection } from '@/components/admin/sections/ChildCareSection'
 import { ElderCareSection } from '@/components/admin/sections/ElderCareSection'
@@ -35,6 +36,23 @@ const sectionComponents: Record<Section, React.ComponentType> = {
   profile: ProfileSection,
 }
 
+const sectionLabels: Record<Section, string> = {
+  dashboard: 'Dashboard',
+  child_care: 'Child & Elder Care',
+  elder_care: 'Elder Care',
+  doctors: 'Doctors',
+  patients: 'Patients',
+  bookings: 'Bookings',
+  prescriptions: 'Prescriptions',
+  caregivers: 'Caregivers',
+  subusers: 'Sub-Users',
+  commission: 'Commission',
+  analytics: 'Analytics',
+  verification: 'Verification',
+  services: 'Services',
+  profile: 'Profile',
+}
+
 export function AdminLayout() {
   const { activeSection } = useAppStore()
   const SectionComponent = sectionComponents[activeSection] || DashboardSection
@@ -46,7 +64,9 @@ export function AdminLayout() {
         <Header />
         <main className="flex-1 overflow-hidden">
           <ScrollArea className="h-full">
-            <SectionComponent />
+            <SectionErrorBoundary sectionName={sectionLabels[activeSection] || activeSection}>
+              <SectionComponent />
+            </SectionErrorBoundary>
           </ScrollArea>
         </main>
       </div>
