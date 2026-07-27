@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -12,7 +13,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/lib/store'
-import { Mail, RefreshCw, Users, MapPin } from 'lucide-react'
+import { Mail, RefreshCw, Users, MapPin, ShieldAlert, AlertTriangle, CheckCircle2 } from 'lucide-react'
 
 interface SubUser {
   id: string
@@ -23,16 +24,28 @@ interface SubUser {
   status: 'active' | 'inactive'
 }
 
+interface MaintenanceState {
+  enabled: boolean
+  message: string
+  updatedBy: string
+  updatedAt: string
+}
+
 const MAX_VISIBLE_CHIPS = 4
 
 export function ProfileSection() {
   const { toast } = useToast()
   const user = useAppStore((s) => s.user)
+  const isSuperAdmin = user?.role === 'super_admin'
   const [subUsers, setSubUsers] = useState<SubUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [maintenance, setMaintenance] = useState<MaintenanceState | null>(null)
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false)
+  const [maintenanceMessage, setMaintenanceMessage] = useState('')
 
   useEffect(() => {
     fetchSubUsers()
+    if (isSuperAdmin) fetchMaintenance()
   }, [])
 
   const fetchSubUsers = async () => {
@@ -49,6 +62,76 @@ export function ProfileSection() {
       toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchMaintenance = async () => {
+    try {
+      const res = await fetch('/api/maintenance')
+      if (res.ok) {
+        const data = await res.json()
+        setMaintenance(data)
+        setMaintenanceMessage(data.message)
+      }
+    } catch {
+      // silent
+    }
+  }
+
+  const toggleMaintenance = async (enabled: boolean) => {
+    setMaintenanceLoading(true)
+    try {
+      const res = await fetch('/api/maintenance', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled,
+          message: maintenanceMessage,
+          updatedBy: user?.name || 'admin',
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setMaintenance(data)
+        toast({
+          title: enabled ? 'Maintenance Mode Enabled' : 'Maintenance Mode Disabled',
+          description: enabled
+            ? 'The application is now in maintenance mode. Non-admin users will see the maintenance page.'
+            : 'The application is back online.',
+          variant: enabled ? 'destructive' : 'default',
+        })
+      } else {
+        toast({ title: 'Error', description: 'Failed to update maintenance mode', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setMaintenanceLoading(false)
+    }
+  }
+
+  const updateMaintenanceMessage = async () => {
+    if (!maintenance) return
+    setMaintenanceLoading(true)
+    try {
+      const res = await fetch('/api/maintenance', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: maintenance.enabled,
+          message: maintenanceMessage,
+          updatedBy: user?.name || 'admin',
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setMaintenance(data)
+        toast({ title: 'Message Updated', description: 'Maintenance message saved successfully.' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update message', variant: 'destructive' })
+    } finally {
+      setMaintenanceLoading(false)
     }
   }
 
@@ -78,6 +161,17 @@ export function ProfileSection() {
       profile: 'bg-slate-100 text-slate-700',
     }
     return map[p] || 'bg-gray-100 text-gray-700'
+  }
+
+  const formatDateTime = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
+    } catch {
+      return iso
+    }
   }
 
   return (
@@ -121,6 +215,99 @@ export function ProfileSection() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Maintenance Mode Card — Super Admin Only */}
+      {isSuperAdmin && (
+        <Card className={cn(
+          'rounded-xl shadow-sm border-0 transition-colors',
+          maintenance?.enabled
+            ? 'bg-red-50 border border-red-200'
+            : 'bg-white'
+        )}>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className={cn(
+                  'w-8 h-8 rounded-lg flex items-center justify-center',
+                  maintenance?.enabled ? 'bg-red-100' : 'bg-gray-100'
+                )}>
+                  <ShieldAlert className={cn(
+                    'w-4.5 h-4.5',
+                    maintenance?.enabled ? 'text-red-600' : 'text-gray-500'
+                  )} />
+                </div>
+                <div className="space-y-0.5">
+                  <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                    Maintenance Mode
+                    {maintenance?.enabled && (
+                      <Badge className="bg-red-600 text-white text-[10px] px-1.5 py-0">ACTIVE</Badge>
+                    )}
+                  </CardTitle>
+                  <p className="text-xs text-gray-400">
+                    When enabled, non-admin visitors will see a maintenance page
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={maintenance?.enabled || false}
+                onCheckedChange={toggleMaintenance}
+                disabled={maintenanceLoading}
+                className={cn(
+                  maintenance?.enabled && 'data-[state=checked]:bg-red-600'
+                )}
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {maintenance?.enabled && (
+              <div className="flex items-start gap-2 p-3 bg-red-100/50 rounded-lg">
+                <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-800">Application is in Maintenance Mode</p>
+                  <p className="text-xs text-red-600 mt-0.5">
+                    All non-admin visitors currently see the maintenance page. Disable the toggle to restore access.
+                  </p>
+                </div>
+              </div>
+            )}
+            {!maintenance?.enabled && (
+              <div className="flex items-start gap-2 p-3 bg-emerald-50 rounded-lg">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                <p className="text-sm text-emerald-700">
+                  Application is running normally. All visitors have full access.
+                </p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-600">Maintenance Message (shown to visitors)</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={maintenanceMessage}
+                  onChange={(e) => setMaintenanceMessage(e.target.value)}
+                  placeholder="We are performing scheduled maintenance..."
+                  className="flex-1 h-9 px-3 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs border-gray-200 hover:bg-gray-50"
+                  onClick={updateMaintenanceMessage}
+                  disabled={maintenanceLoading || maintenanceMessage === maintenance?.message}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+            {maintenance?.updatedAt && (
+              <p className="text-[11px] text-gray-400">
+                Last updated: {formatDateTime(maintenance.updatedAt)}
+                {maintenance.updatedBy && maintenance.updatedBy !== 'system' && ` by ${maintenance.updatedBy}`}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Sub Users Under Branch */}
       <Card className="bg-white rounded-xl shadow-sm border-0">
