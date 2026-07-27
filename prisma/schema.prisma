@@ -186,6 +186,7 @@ model Prescription {
 
 model Caregiver {
   id              String   @id @default(cuid())
+  caregiverId    String   @unique // human-readable: NR12002120
   name            String
   phone           String
   email           String?

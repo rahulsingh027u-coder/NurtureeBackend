@@ -201,14 +201,21 @@ async function main() {
   }
 
   // ============ CAREGIVERS ============
-  const caregivers = await Promise.all([
-    prisma.caregiver.create({ data: { name: "Geeta Devi", phone: "8877665501", specialty: "child_care", experience: 8, qualifications: "GNM Nursing", isAvailable: true, isVerified: true, rating: 4.7, aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: true } }),
-    prisma.caregiver.create({ data: { name: "Saroj Kumari", phone: "8877665502", specialty: "child_care", experience: 5, qualifications: "ANM", isAvailable: true, isVerified: true, rating: 4.5, aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: false } }),
-    prisma.caregiver.create({ data: { name: "Kamlesh Rani", phone: "8877665503", specialty: "child_care", experience: 12, qualifications: "BSc Nursing", isAvailable: false, isVerified: true, rating: 4.9, aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: true } }),
-    prisma.caregiver.create({ data: { name: "Rameshwar Prasad", phone: "8877665504", specialty: "elder_care", experience: 10, qualifications: "GNM Nursing", isAvailable: true, isVerified: true, rating: 4.6, aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: true } }),
-    prisma.caregiver.create({ data: { name: "Shanti Devi", phone: "8877665505", specialty: "elder_care", experience: 7, qualifications: "ANM, Dementia Care Certified", isAvailable: true, isVerified: true, rating: 4.8, aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: true } }),
-    prisma.caregiver.create({ data: { name: "Meena Kumari", phone: "8877665506", specialty: "elder_care", experience: 4, qualifications: "GNM Nursing", isAvailable: true, isVerified: false, rating: 0, aadhaarVerified: false, policeVerified: false, medicalFitness: false, videoVerified: false } }),
-  ]);
+  let cgIdNum = 12002116;
+  const caregivers: Awaited<ReturnType<typeof prisma.caregiver.create>>[] = [];
+  const caregiverData = [
+    { name: "Geeta Devi", phone: "8877665501", specialty: "child_care", experience: 8, qualifications: "GNM Nursing", isAvailable: true, isVerified: true, rating: 4.7, aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: true },
+    { name: "Saroj Kumari", phone: "8877665502", specialty: "child_care", experience: 5, qualifications: "ANM", isAvailable: true, isVerified: true, rating: 4.5, aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: false },
+    { name: "Kamlesh Rani", phone: "8877665503", specialty: "child_care", experience: 12, qualifications: "BSc Nursing", isAvailable: false, isVerified: true, rating: 4.9, aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: true },
+    { name: "Rameshwar Prasad", phone: "8877665504", specialty: "elder_care", experience: 10, qualifications: "GNM Nursing", isAvailable: true, isVerified: true, rating: 4.6, aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: true },
+    { name: "Shanti Devi", phone: "8877665505", specialty: "elder_care", experience: 7, qualifications: "ANM, Dementia Care Certified", isAvailable: true, isVerified: true, rating: 4.8, aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: true },
+    { name: "Meena Kumari", phone: "8877665506", specialty: "elder_care", experience: 4, qualifications: "GNM Nursing", isAvailable: true, isVerified: false, rating: 0, aadhaarVerified: false, policeVerified: false, medicalFitness: false, videoVerified: false },
+  ];
+  for (const cd of caregiverData) {
+    cgIdNum = cgIdNum + Math.floor(Math.random() * 2) + 1;
+    const c = await prisma.caregiver.create({ data: { caregiverId: `NR${cgIdNum}`, ...cd } });
+    caregivers.push(c);
+  }
 
   // ============ DOCTOR SCHEDULES ============
   for (const doc of doctors.slice(0, 4)) {

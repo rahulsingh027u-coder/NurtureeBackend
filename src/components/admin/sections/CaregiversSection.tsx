@@ -27,6 +27,7 @@ import {
 
 interface Caregiver {
   id: string
+  caregiverId: string
   name: string
   phone: string
   email?: string
@@ -43,7 +44,7 @@ interface Caregiver {
 
 interface CaregiverDetail {
   caregiver: {
-    id: string; name: string; phone: string; email: string | null;
+    id: string; caregiverId: string; name: string; phone: string; email: string | null;
     specialty: string; experience: number; qualifications: string | null;
     isAvailable: boolean; isVerified: boolean; rating: number; createdAt: string;
   }
@@ -240,6 +241,7 @@ export function CaregiversSection() {
           <div className="rounded-xl bg-gray-50 p-4 space-y-3">
             <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider">Personal Info</h4>
             <div className="space-y-2">
+              <InfoRow label="Profile ID" value={c.caregiverId} />
               <InfoRow label="Full Name" value={c.name} />
               <InfoRow label="Phone" value={c.phone} icon={<Phone className="w-3.5 h-3.5 text-gray-400" />} />
               <InfoRow label="Email" value={c.email || 'N/A'} icon={<Mail className="w-3.5 h-3.5 text-gray-400" />} />
@@ -624,6 +626,7 @@ export function CaregiversSection() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Profile ID</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Name</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Phone</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Specialty</TableHead>
@@ -640,11 +643,12 @@ export function CaregiversSection() {
               <TableBody>
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>{Array.from({ length: 11 }).map((_, j) => (<TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>))}</TableRow>
+                    <TableRow key={i}>{Array.from({ length: 12 }).map((_, j) => (<TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>))}</TableRow>
                   ))
                 ) : caregivers.length > 0 ? (
                   caregivers.map((c) => (
                     <TableRow key={c.id} className="hover:bg-gray-50/50">
+                      <TableCell className="text-xs font-mono text-blue-600 font-medium">{c.caregiverId}</TableCell>
                       <TableCell>
                         <p className="text-sm font-medium text-gray-900">{c.name}</p>
                         {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
@@ -675,7 +679,7 @@ export function CaregiversSection() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-gray-400 text-sm">No caregivers found</TableCell>
+                    <TableCell colSpan={12} className="text-center py-8 text-gray-400 text-sm">No caregivers found</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -691,6 +695,7 @@ export function CaregiversSection() {
             <DialogTitle className="flex items-center gap-2">
               <UserCog className="w-5 h-5 text-blue-600" />
               {detail ? detail.caregiver.name : 'Caregiver Profile'}
+              {detail && <span className="text-sm font-mono font-normal text-blue-600 ml-1">{detail.caregiver.caregiverId}</span>}
             </DialogTitle>
           </DialogHeader>
           {detailLoading ? (

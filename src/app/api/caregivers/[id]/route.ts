@@ -90,6 +90,7 @@ export async function GET(
     return NextResponse.json({
       caregiver: {
         id: caregiver.id,
+        caregiverId: caregiver.caregiverId,
         name: caregiver.name,
         phone: caregiver.phone,
         email: caregiver.email,
