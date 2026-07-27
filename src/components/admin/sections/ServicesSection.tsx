@@ -127,11 +127,12 @@ export function ServicesSection() {
       const res = await fetch('/api/services')
       if (res.ok) {
         const data = await res.json()
+        const d = data ?? {}
         setServices({
-          child_care: Array.isArray(data.child_care) ? data.child_care : [],
-          elder_care: Array.isArray(data.elder_care) ? data.elder_care : [],
-          doctor_consultation: Array.isArray(data.doctor_consultation) ? data.doctor_consultation : [],
-          caregiver_verification: Array.isArray(data.caregiver_verification) ? data.caregiver_verification : [],
+          child_care: Array.isArray(d.child_care) ? d.child_care : [],
+          elder_care: Array.isArray(d.elder_care) ? d.elder_care : [],
+          doctor_consultation: Array.isArray(d.doctor_consultation) ? d.doctor_consultation : [],
+          caregiver_verification: Array.isArray(d.caregiver_verification) ? d.caregiver_verification : [],
         })
       } else {
         toast({ title: 'Error', description: 'Failed to fetch services', variant: 'destructive' })

@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
   Plus, Check, X, Star, Loader2, UserCog, Phone, Mail, Award,
-  Eye, Upload, FileText, Shield, BarChart3, IndianRupee, Clock, CalendarDays, AlertCircle, CheckCircle2,
+  Eye, Upload, FileText, Shield, BarChart3, IndianRupee, CalendarDays, AlertCircle, CheckCircle2,
 } from 'lucide-react'
 
 interface Caregiver {
@@ -266,7 +266,7 @@ export function CaregiversSection() {
             {c.isVerified ? 'Verified' : 'Not Verified'}
           </Badge>
           <Badge variant="secondary" className="text-xs px-3 py-1 bg-gray-100 text-gray-600">
-            {detail.bookings.length} Total Bookings
+            {detail.bookings?.length || 0} Total Bookings
           </Badge>
         </div>
       </div>
@@ -394,7 +394,8 @@ export function CaregiversSection() {
   const EarningsTab = () => {
     if (!detail) return null
     const e = detail.earnings
-    const months = Object.entries(e.monthlyEarnings).sort().slice(-6)
+    if (!e) return <p className='text-sm text-gray-400'>No earnings data</p>
+    const months = Object.entries(e.monthlyEarnings || {}).sort().slice(-6)
     return (
       <div className="space-y-5">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -431,17 +432,18 @@ export function CaregiversSection() {
   const AnalyticsTab = () => {
     if (!detail) return null
     const a = detail.analytics
-    const statusEntries = Object.entries(a.statusBreakdown)
-    const dayEntries = Object.entries(a.dayBreakdown)
+    if (!a) return <p className='text-sm text-gray-400'>No analytics data</p>
+    const statusEntries = Object.entries(a.statusBreakdown || {})
+    const dayEntries = Object.entries(a.dayBreakdown || {})
     const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     const sortedDays = dayEntries.sort((a, b) => dayOrder.indexOf(a[0]) - dayOrder.indexOf(b[0]))
     const maxDay = Math.max(...sortedDays.map(([, v]) => v), 1)
     return (
       <div className="space-y-5">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <StatCard label="Total Bookings" value={String(detail.bookings.length)} icon={<CalendarDays className="w-4 h-4" />} color="blue" />
-          <StatCard label="Avg Rating" value={`${a.averageRating.toFixed(1)}/5`} icon={<Star className="w-4 h-4" />} color="amber" />
-          <StatCard label="Completion Rate" value={detail.bookings.length > 0 ? `${Math.round(((a.statusBreakdown.completed || 0) / detail.bookings.length) * 100)}%` : 'N/A'} icon={<CheckCircle2 className="w-4 h-4" />} color="green" />
+          <StatCard label="Total Bookings" value={String(detail.bookings?.length || 0)} icon={<CalendarDays className="w-4 h-4" />} color="blue" />
+          <StatCard label="Avg Rating" value={`${(a.averageRating || 0).toFixed(1)}/5`} icon={<Star className="w-4 h-4" />} color="amber" />
+          <StatCard label="Completion Rate" value={detail.bookings?.length > 0 ? `${Math.round(((a.statusBreakdown?.completed || 0) / detail.bookings.length) * 100)}%` : 'N/A'} icon={<CheckCircle2 className="w-4 h-4" />} color="green" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {statusEntries.length > 0 && (
@@ -457,7 +459,7 @@ export function CaregiversSection() {
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(count / detail.bookings.length) * 100}%` }} />
+                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${detail.bookings?.length ? (count / detail.bookings.length) * 100 : 0}%` }} />
                       </div>
                       <span className="text-xs font-medium text-gray-700 w-6 text-right">{count}</span>
                     </div>

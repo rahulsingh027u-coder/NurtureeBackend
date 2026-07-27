@@ -19,7 +19,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
-  Search, Eye, FileText, Pill, ClipboardList, Calendar,
+  Search, FileText, Pill, ClipboardList, Calendar,
   User, Stethoscope, RefreshCw,
 } from 'lucide-react'
 
@@ -70,7 +70,7 @@ export function PrescriptionsSection() {
       const res = await fetch(`/api/prescriptions?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
-        const list = Array.isArray(data) ? data : data.data || data.prescriptions || []
+        const list = Array.isArray(data) ? data : data?.data || data?.prescriptions || []
         setPrescriptions(list)
       } else {
         toast({ title: 'Error', description: 'Failed to fetch prescriptions', variant: 'destructive' })

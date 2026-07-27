@@ -38,8 +38,8 @@ export async function GET(
             ? JSON.parse(verification.documents)
             : verification.documents;
         if (Array.isArray(parsed)) verificationDocs = parsed;
-      } catch {
-        /* ignore */
+      } catch (e) {
+        console.warn("Failed to parse verification documents:", e);
       }
     }
 
@@ -129,10 +129,10 @@ export async function GET(
         id: b.id,
         bookingId: b.bookingId,
         patientName: b.patientName,
-        patientUhid: b.patient.uhid,
-        patientPhone: b.patient.phone,
-        serviceName: b.service.name,
-        serviceCategory: b.service.category,
+        patientUhid: b.patient?.uhid ?? null,
+        patientPhone: b.patient?.phone ?? null,
+        serviceName: b.service?.name ?? null,
+        serviceCategory: b.service?.category ?? null,
         type: b.bookingType,
         mode: b.consultationMode,
         status: b.status,

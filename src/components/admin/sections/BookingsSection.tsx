@@ -18,8 +18,8 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
-  Search, Eye, CalendarDays, IndianRupee,
-  Clock, MapPin, FileText, Building2, Phone, User, Stethoscope, X,
+  Search, Eye, CalendarDays, IndianRupee, X as XIcon,
+  MapPin, FileText, Building2, Phone, User, Stethoscope,
 } from 'lucide-react'
 
 interface Booking {
@@ -158,7 +158,7 @@ export function BookingsSection() {
     { label: 'Online', value: onlineCount, icon: Search, bg: 'bg-teal-100', text: 'text-teal-600' },
     { label: 'Offline', value: offlineCount, icon: Stethoscope, bg: 'bg-amber-100', text: 'text-amber-600' },
     { label: 'Completed', value: completedCount, icon: FileText, bg: 'bg-green-100', text: 'text-green-600' },
-    { label: 'Cancelled', value: cancelledCount, icon: X, bg: 'bg-red-100', text: 'text-red-600' },
+    { label: 'Cancelled', value: cancelledCount, icon: XIcon, bg: 'bg-red-100', text: 'text-red-600' },
   ]
 
   return (

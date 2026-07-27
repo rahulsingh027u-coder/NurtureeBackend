@@ -1,0 +1,1149 @@
+     1	===== /home/z/my-project/src/components/admin/sections/ChildCareSection.tsx =====
+     2	     1	'use client'
+     3	     2	
+     4	     3	import { useState, useEffect } from 'react'
+     5	     4	import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+     6	     5	import { Badge } from '@/components/ui/badge'
+     7	     6	import { Button } from '@/components/ui/button'
+     8	     7	import { Input } from '@/components/ui/input'
+     9	     8	import { Label } from '@/components/ui/label'
+    10	     9	import { Textarea } from '@/components/ui/textarea'
+    11	    10	import { Skeleton } from '@/components/ui/skeleton'
+    12	    11	import {
+    13	    12	  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    14	    13	} from '@/components/ui/table'
+    15	    14	import {
+    16	    15	  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+    17	    16	} from '@/components/ui/dialog'
+    18	    17	import {
+    19	    18	  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    20	    19	} from '@/components/ui/select'
+    21	    20	import { useToast } from '@/hooks/use-toast'
+    22	    21	import { cn } from '@/lib/utils'
+    23	    22	import { Plus, UserCheck, CalendarDays, Users, Loader2 } from 'lucide-react'
+    24	    23	
+    25	    24	interface CareBooking {
+    26	    25	  id: string
+    27	    26	  bookingId: string
+    28	    27	  patientId: string
+    29	    28	  patientName: string
+    30	    29	  patientUhid?: string
+    31	    30	  caregiverId?: string
+    32	    31	  caregiverName?: string
+    33	    32	  status: string
+    34	    33	  date: string
+    35	    34	  startTime: string
+    36	    35	  notes?: string
+    37	    36	}
+    38	    37	
+    39	    38	interface Caregiver {
+    40	    39	  id: string
+    41	    40	  name: string
+    42	    41	  phone: string
+    43	    42	  specialty: string
+    44	    43	  isAvailable: boolean
+    45	    44	  experience: number
+    46	    45	}
+    47	    46	
+    48	    47	const statusColor: Record<string, string> = {
+    49	    48	  pending: 'bg-yellow-100 text-yellow-800',
+    50	    49	  confirmed: 'bg-blue-100 text-blue-800',
+    51	    50	  in_progress: 'bg-purple-100 text-purple-800',
+    52	    51	  completed: 'bg-blue-100 text-blue-800',
+    53	    52	  cancelled: 'bg-red-100 text-red-800',
+    54	    53	}
+    55	    54	
+    56	    55	export function ChildCareSection() {
+    57	    56	  const { toast } = useToast()
+    58	    57	  const [bookings, setBookings] = useState<CareBooking[]>([])
+    59	    58	  const [caregivers, setCaregivers] = useState<Caregiver[]>([])
+    60	    59	  const [loading, setLoading] = useState(true)
+    61	    60	  const [createOpen, setCreateOpen] = useState(false)
+    62	    61	  const [assignOpen, setAssignOpen] = useState(false)
+    63	    62	  const [selectedBooking, setSelectedBooking] = useState<CareBooking | null>(null)
+    64	    63	  const [creating, setCreating] = useState(false)
+    65	    64	  const [assigning, setAssigning] = useState(false)
+    66	    65	  const [selectedCaregiver, setSelectedCaregiver] = useState('')
+    67	    66	
+    68	    67	  const [form, setForm] = useState({
+    69	    68	    patientName: '',
+    70	    69	    phone: '',
+    71	    70	    service: '',
+    72	    71	    date: '',
+    73	    72	    time: '',
+    74	    73	    notes: '',
+    75	    74	  })
+    76	    75	
+    77	    76	  useEffect(() => {
+    78	    77	    fetchData()
+    79	    78	  }, [])
+    80	    79	
+    81	    80	  const fetchData = async () => {
+    82	    81	    try {
+    83	    82	      const [bookingsRes, caregiversRes] = await Promise.all([
+    84	    83	        fetch('/api/bookings?type=child_care'),
+    85	    84	        fetch('/api/caregivers?specialty=child_care'),
+    86	    85	      ])
+    87	    86	      if (bookingsRes.ok) {
+    88	    87	        const data = await bookingsRes.json()
+    89	    88	        setBookings(Array.isArray(data) ? data : data.bookings || [])
+    90	    89	      }
+    91	    90	      if (caregiversRes.ok) {
+    92	    91	        const data = await caregiversRes.json()
+    93	    92	        setCaregivers(Array.isArray(data) ? data : data.data || [])
+    94	    93	      }
+    95	    94	    } catch {
+    96	    95	      toast({ title: 'Error', description: 'Failed to fetch data', variant: 'destructive' })
+    97	    96	    } finally {
+    98	    97	      setLoading(false)
+    99	    98	    }
+   100	    99	  }
+   101	   100	
+   102	   101	  const handleCreate = async () => {
+   103	   102	    if (!form.patientName || !form.phone || !form.date) {
+   104	   103	      toast({ title: 'Error', description: 'Please fill required fields', variant: 'destructive' })
+   105	   104	      return
+   106	   105	    }
+   107	   106	    setCreating(true)
+   108	   107	    try {
+   109	   108	      const res = await fetch('/api/bookings', {
+   110	   109	        method: 'POST',
+   111	   110	        headers: { 'Content-Type': 'application/json' },
+   112	   111	        body: JSON.stringify({ ...form, bookingType: 'child_care' }),
+   113	   112	      })
+   114	   113	      if (res.ok) {
+   115	   114	        toast({ title: 'Booking Created', description: 'Child care booking has been created' })
+   116	   115	        setCreateOpen(false)
+   117	   116	        setForm({ patientName: '', phone: '', service: '', date: '', time: '', notes: '' })
+   118	   117	        fetchData()
+   119	   118	      } else {
+   120	   119	        const data = await res.json()
+   121	   120	        toast({ title: 'Error', description: data.error || 'Failed to create booking', variant: 'destructive' })
+   122	   121	      }
+   123	   122	    } catch {
+   124	   123	      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   125	   124	    } finally {
+   126	   125	      setCreating(false)
+   127	   126	    }
+   128	   127	  }
+   129	   128	
+   130	   129	  const handleAssign = async () => {
+   131	   130	    if (!selectedBooking || !selectedCaregiver) return
+   132	   131	    setAssigning(true)
+   133	   132	    try {
+   134	   133	      const res = await fetch(`/api/bookings/${selectedBooking.id}`, {
+   135	   134	        method: 'PATCH',
+   136	   135	        headers: { 'Content-Type': 'application/json' },
+   137	   136	        body: JSON.stringify({ caregiverId: selectedCaregiver }),
+   138	   137	      })
+   139	   138	      if (res.ok) {
+   140	   139	        toast({ title: 'Caregiver Assigned', description: 'Caregiver has been assigned to the booking' })
+   141	   140	        setAssignOpen(false)
+   142	   141	        setSelectedCaregiver('')
+   143	   142	        fetchData()
+   144	   143	      } else {
+   145	   144	        toast({ title: 'Error', description: 'Failed to assign caregiver', variant: 'destructive' })
+   146	   145	      }
+   147	   146	    } catch {
+   148	   147	      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   149	   148	    } finally {
+   150	   149	      setAssigning(false)
+   151	   150	    }
+   152	   151	  }
+   153	   152	
+   154	   153	  const availableCaregivers = caregivers.filter(c => c.isAvailable)
+   155	   154	  const activeAssignments = bookings.filter(b => ['confirmed', 'in_progress'].includes(b.status)).length
+   156	   155	
+   157	   156	  return (
+   158	   157	    <div className="space-y-6 p-4 md:p-6">
+   159	   158	      {/* Overview Cards */}
+   160	   159	      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+   161	   160	        <Card className="bg-white rounded-xl shadow-sm border-0">
+   162	   161	          <CardContent className="p-4 flex items-center gap-3">
+   163	   162	            <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center">
+   164	   163	              <CalendarDays className="w-5 h-5" />
+   165	   164	            </div>
+   166	   165	            <div>
+   167	   166	              {loading ? <Skeleton className="h-7 w-12" /> : <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>}
+   168	   167	              <p className="text-xs text-gray-500">Total Bookings</p>
+   169	   168	            </div>
+   170	   169	          </CardContent>
+   171	   170	        </Card>
+   172	   171	        <Card className="bg-white rounded-xl shadow-sm border-0">
+   173	   172	          <CardContent className="p-4 flex items-center gap-3">
+   174	   173	            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+   175	   174	              <UserCheck className="w-5 h-5" />
+   176	   175	            </div>
+   177	   176	            <div>
+   178	   177	              {loading ? <Skeleton className="h-7 w-12" /> : <p className="text-2xl font-bold text-gray-900">{activeAssignments}</p>}
+   179	   178	              <p className="text-xs text-gray-500">Active Assignments</p>
+   180	   179	            </div>
+   181	   180	          </CardContent>
+   182	   181	        </Card>
+   183	   182	        <Card className="bg-white rounded-xl shadow-sm border-0">
+   184	   183	          <CardContent className="p-4 flex items-center gap-3">
+   185	   184	            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+   186	   185	              <Users className="w-5 h-5" />
+   187	   186	            </div>
+   188	   187	            <div>
+   189	   188	              {loading ? <Skeleton className="h-7 w-12" /> : <p className="text-2xl font-bold text-gray-900">{availableCaregivers.length}</p>}
+   190	   189	              <p className="text-xs text-gray-500">Available Caregivers</p>
+   191	   190	            </div>
+   192	   191	          </CardContent>
+   193	   192	        </Card>
+   194	   193	      </div>
+   195	   194	
+   196	   195	      {/* Bookings Table */}
+   197	   196	      <Card className="bg-white rounded-xl shadow-sm border-0">
+   198	   197	        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+   199	   198	          <CardTitle className="text-base font-semibold text-gray-900">Child Care Bookings</CardTitle>
+   200	   199	          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+   201	   200	            <DialogTrigger asChild>
+   202	   201	              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+   203	   202	                <Plus className="w-4 h-4" /> Create Booking
+   204	   203	              </Button>
+   205	   204	            </DialogTrigger>
+   206	   205	            <DialogContent className="sm:max-w-md">
+   207	   206	              <DialogHeader>
+   208	   207	                <DialogTitle>Create Child Care Booking</DialogTitle>
+   209	   208	              </DialogHeader>
+   210	   209	              <div className="space-y-4 py-2">
+   211	   210	                <div className="space-y-2">
+   212	   211	                  <Label>Patient Name *</Label>
+   213	   212	                  <Input placeholder="Enter patient name" value={form.patientName} onChange={(e) => setForm({ ...form, patientName: e.target.value })} />
+   214	   213	                </div>
+   215	   214	                <div className="space-y-2">
+   216	   215	                  <Label>Phone *</Label>
+   217	   216	                  <Input placeholder="Enter phone number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+   218	   217	                </div>
+   219	   218	                <div className="space-y-2">
+   220	   219	                  <Label>Service</Label>
+   221	   220	                  <Select value={form.service} onValueChange={(v) => setForm({ ...form, service: v })}>
+   222	   221	                    <SelectTrigger><SelectValue placeholder="Select service" /></SelectTrigger>
+   223	   222	                    <SelectContent>
+   224	   223	                      <SelectItem value="nanny">Nanny Service</SelectItem>
+   225	   224	                      <SelectItem value="babysitter">Baby Sitter</SelectItem>
+   226	   225	                      <SelectItem value="post_natal">Post-Natal Care</SelectItem>
+   227	   226	                      <SelectItem value="child_development">Child Development</SelectItem>
+   228	   227	                    </SelectContent>
+   229	   228	                  </Select>
+   230	   229	                </div>
+   231	   230	                <div className="grid grid-cols-2 gap-3">
+   232	   231	                  <div className="space-y-2">
+   233	   232	                    <Label>Date *</Label>
+   234	   233	                    <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+   235	   234	                  </div>
+   236	   235	                  <div className="space-y-2">
+   237	   236	                    <Label>Time</Label>
+   238	   237	                    <Select value={form.time} onValueChange={(v) => setForm({ ...form, time: v })}>
+   239	   238	                      <SelectTrigger><SelectValue placeholder="Select time" /></SelectTrigger>
+   240	   239	                      <SelectContent>
+   241	   240	                        <SelectItem value="08:00">08:00 AM</SelectItem>
+   242	   241	                        <SelectItem value="09:00">09:00 AM</SelectItem>
+   243	   242	                        <SelectItem value="10:00">10:00 AM</SelectItem>
+   244	   243	                        <SelectItem value="11:00">11:00 AM</SelectItem>
+   245	   244	                        <SelectItem value="12:00">12:00 PM</SelectItem>
+   246	   245	                        <SelectItem value="14:00">02:00 PM</SelectItem>
+   247	   246	                        <SelectItem value="16:00">04:00 PM</SelectItem>
+   248	   247	                        <SelectItem value="18:00">06:00 PM</SelectItem>
+   249	   248	                      </SelectContent>
+   250	   249	                    </Select>
+   251	   250	                  </div>
+   252	   251	                </div>
+   253	   252	                <div className="space-y-2">
+   254	   253	                  <Label>Notes</Label>
+   255	   254	                  <Textarea placeholder="Any special requirements..." value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} />
+   256	   255	                </div>
+   257	   256	              </div>
+   258	   257	              <DialogFooter>
+   259	   258	                <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+   260	   259	                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>
+   261	   260	                  {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+   262	   261	                  Create Booking
+   263	   262	                </Button>
+   264	   263	              </DialogFooter>
+   265	   264	            </DialogContent>
+   266	   265	          </Dialog>
+   267	   266	        </CardHeader>
+   268	   267	        <CardContent className="p-0">
+   269	   268	          <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   270	   269	            <Table>
+   271	   270	              <TableHeader>
+   272	   271	                <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   273	   272	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Booking ID</TableHead>
+   274	   273	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient</TableHead>
+   275	   274	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Caregiver</TableHead>
+   276	   275	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   277	   276	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
+   278	   277	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Actions</TableHead>
+   279	   278	                </TableRow>
+   280	   279	              </TableHeader>
+   281	   280	              <TableBody>
+   282	   281	                {loading ? (
+   283	   282	                  Array.from({ length: 5 }).map((_, i) => (
+   284	   283	                    <TableRow key={i}>
+   285	   284	                      {Array.from({ length: 6 }).map((_, j) => (
+   286	   285	                        <TableCell key={j}><Skeleton className="h-4 w-20" /></TableCell>
+   287	   286	                      ))}
+   288	   287	                    </TableRow>
+   289	   288	                  ))
+   290	   289	                ) : bookings.length > 0 ? (
+   291	   290	                  bookings.map((b) => (
+   292	   291	                    <TableRow key={b.id} className="hover:bg-gray-50/50">
+   293	   292	                      <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.bookingId}</TableCell>
+   294	   293	                      <TableCell>
+   295	   294	                        <p className="text-sm font-medium text-gray-900">{b.patientName}</p>
+   296	   295	                        {b.patientUhid && <p className="text-xs text-gray-400">{b.patientUhid}</p>}
+   297	   296	                      </TableCell>
+   298	   297	                      <TableCell className="text-sm text-gray-700">{b.caregiverName || <span className="text-gray-400">Unassigned</span>}</TableCell>
+   299	   298	                      <TableCell>
+   300	   299	                        <Badge variant="secondary" className={cn('text-[11px] capitalize', statusColor[b.status] || 'bg-gray-100 text-gray-800')}>
+   301	   300	                          {b.status.replace('_', ' ')}
+   302	   301	                        </Badge>
+   303	   302	                      </TableCell>
+   304	   303	                      <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
+   305	   304	                      <TableCell>
+   306	   305	                        {!b.caregiverId && b.status !== 'cancelled' && b.status !== 'completed' && (
+   307	   306	                          <Button
+   308	   307	                            size="sm"
+   309	   308	                            variant="outline"
+   310	   309	                            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+   311	   310	                            onClick={() => { setSelectedBooking(b); setAssignOpen(true) }}
+   312	   311	                          >
+   313	   312	                            <UserCheck className="w-3 h-3 mr-1" /> Assign
+   314	   313	                          </Button>
+   315	   314	                        )}
+   316	   315	                      </TableCell>
+   317	   316	                    </TableRow>
+   318	   317	                  ))
+   319	   318	                ) : (
+   320	   319	                  <TableRow>
+   321	   320	                    <TableCell colSpan={6} className="text-center py-8 text-gray-400 text-sm">
+   322	   321	                      No child care bookings found
+   323	   322	                    </TableCell>
+   324	   323	                  </TableRow>
+   325	   324	                )}
+   326	   325	              </TableBody>
+   327	   326	            </Table>
+   328	   327	          </div>
+   329	   328	        </CardContent>
+   330	   329	      </Card>
+   331	   330	
+   332	   331	      {/* Caregivers Panel */}
+   333	   332	      <Card className="bg-white rounded-xl shadow-sm border-0">
+   334	   333	        <CardHeader className="pb-3">
+   335	   334	          <CardTitle className="text-base font-semibold text-gray-900">Child Care Caregivers</CardTitle>
+   336	   335	        </CardHeader>
+   337	   336	        <CardContent>
+   338	   337	          {loading ? (
+   339	   338	            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+   340	   339	              {Array.from({ length: 3 }).map((_, i) => (
+   341	   340	                <Skeleton key={i} className="h-20 w-full" />
+   342	   341	              ))}
+   343	   342	            </div>
+   344	   343	          ) : caregivers.length > 0 ? (
+   345	   344	            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+   346	   345	              {caregivers.map((c) => (
+   347	   346	                <div key={c.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+   348	   347	                  <div className={cn('w-2 h-2 rounded-full', c.isAvailable ? 'bg-blue-500' : 'bg-gray-400')} />
+   349	   348	                  <div className="flex-1 min-w-0">
+   350	   349	                    <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
+   351	   350	                    <p className="text-xs text-gray-500">{c.experience} yrs exp · {c.phone}</p>
+   352	   351	                  </div>
+   353	   352	                  <Badge variant="secondary" className={cn('text-[11px]', c.isAvailable ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')}>
+   354	   353	                    {c.isAvailable ? 'Available' : 'Unavailable'}
+   355	   354	                  </Badge>
+   356	   355	                </div>
+   357	   356	              ))}
+   358	   357	            </div>
+   359	   358	          ) : (
+   360	   359	            <p className="text-center text-gray-400 text-sm py-6">No child care caregivers available</p>
+   361	   360	          )}
+   362	   361	        </CardContent>
+   363	   362	      </Card>
+   364	   363	
+   365	   364	      {/* Assign Caregiver Dialog */}
+   366	   365	      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+   367	   366	        <DialogContent className="sm:max-w-md">
+   368	   367	          <DialogHeader>
+   369	   368	            <DialogTitle>Assign Caregiver</DialogTitle>
+   370	   369	          </DialogHeader>
+   371	   370	          <p className="text-sm text-gray-600">
+   372	   371	            Assign a caregiver to booking <span className="font-mono text-blue-700">{selectedBooking?.bookingId}</span> for <span className="font-medium">{selectedBooking?.patientName}</span>
+   373	   372	          </p>
+   374	   373	          <Select value={selectedCaregiver} onValueChange={setSelectedCaregiver}>
+   375	   374	            <SelectTrigger>
+   376	   375	              <SelectValue placeholder="Select a caregiver" />
+   377	   376	            </SelectTrigger>
+   378	   377	            <SelectContent>
+   379	   378	              {availableCaregivers.map((c) => (
+   380	   379	                <SelectItem key={c.id} value={c.id}>{c.name} — {c.experience} yrs</SelectItem>
+   381	   380	              ))}
+   382	   381	            </SelectContent>
+   383	   382	          </Select>
+   384	   383	          {availableCaregivers.length === 0 && (
+   385	   384	            <p className="text-xs text-gray-400">No available caregivers at the moment.</p>
+   386	   385	          )}
+   387	   386	          <DialogFooter>
+   388	   387	            <Button variant="outline" onClick={() => setAssignOpen(false)}>Cancel</Button>
+   389	   388	            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleAssign} disabled={assigning || !selectedCaregiver}>
+   390	   389	              {assigning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+   391	   390	              Assign Caregiver
+   392	   391	            </Button>
+   393	   392	          </DialogFooter>
+   394	   393	        </DialogContent>
+   395	   394	      </Dialog>
+   396	   395	    </div>
+   397	   396	  )
+   398	   397	}
+   399	===== /home/z/my-project/src/components/admin/sections/PrescriptionsSection.tsx =====
+   400	     1	'use client'
+   401	     2	
+   402	     3	import { useState, useEffect, useCallback } from 'react'
+   403	     4	import { Card, CardContent } from '@/components/ui/card'
+   404	     5	import { Badge } from '@/components/ui/badge'
+   405	     6	import { Button } from '@/components/ui/button'
+   406	     7	import { Input } from '@/components/ui/input'
+   407	     8	import { Label } from '@/components/ui/label'
+   408	     9	import { Skeleton } from '@/components/ui/skeleton'
+   409	    10	import {
+   410	    11	  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+   411	    12	} from '@/components/ui/table'
+   412	    13	import {
+   413	    14	  Dialog, DialogContent, DialogHeader, DialogTitle,
+   414	    15	} from '@/components/ui/dialog'
+   415	    16	import {
+   416	    17	  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+   417	    18	} from '@/components/ui/select'
+   418	    19	import { useToast } from '@/hooks/use-toast'
+   419	    20	import { cn } from '@/lib/utils'
+   420	    21	import {
+   421	    22	  Search, Eye, FileText, Pill, ClipboardList, Calendar,
+   422	    23	  User, Stethoscope, RefreshCw,
+   423	    24	} from 'lucide-react'
+   424	    25	
+   425	    26	interface Medication {
+   426	    27	  name: string
+   427	    28	  dosage: string
+   428	    29	  frequency: string
+   429	    30	  duration: string
+   430	    31	}
+   431	    32	
+   432	    33	interface Prescription {
+   433	    34	  id: string
+   434	    35	  patientUhid: string
+   435	    36	  patientName: string
+   436	    37	  doctorName: string
+   437	    38	  doctorId?: string
+   438	    39	  diagnosis: string
+   439	    40	  medications: string | Medication[]
+   440	    41	  notes?: string
+   441	    42	  status?: string
+   442	    43	  createdAt: string
+   443	    44	}
+   444	    45	
+   445	    46	const statusColor: Record<string, string> = {
+   446	    47	  sent: 'bg-green-100 text-green-800',
+   447	    48	  draft: 'bg-gray-100 text-gray-800',
+   448	    49	  active: 'bg-blue-100 text-blue-800',
+   449	    50	}
+   450	    51	
+   451	    52	export function PrescriptionsSection() {
+   452	    53	  const { toast } = useToast()
+   453	    54	  const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
+   454	    55	  const [loading, setLoading] = useState(true)
+   455	    56	  const [searchInput, setSearchInput] = useState('')
+   456	    57	  const [search, setSearch] = useState('')
+   457	    58	  const [dateFrom, setDateFrom] = useState('')
+   458	    59	  const [dateTo, setDateTo] = useState('')
+   459	    60	  const [doctorFilter, setDoctorFilter] = useState('all')
+   460	    61	  const [statusFilter, setStatusFilter] = useState('all')
+   461	    62	  const [detailOpen, setDetailOpen] = useState(false)
+   462	    63	  const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null)
+   463	    64	
+   464	    65	  const fetchPrescriptions = useCallback(async () => {
+   465	    66	    setLoading(true)
+   466	    67	    try {
+   467	    68	      const params = new URLSearchParams()
+   468	    69	      if (search) params.set('search', search)
+   469	    70	      const res = await fetch(`/api/prescriptions?${params.toString()}`)
+   470	    71	      if (res.ok) {
+   471	    72	        const data = await res.json()
+   472	    73	        const list = Array.isArray(data) ? data : data.data || data.prescriptions || []
+   473	    74	        setPrescriptions(list)
+   474	    75	      } else {
+   475	    76	        toast({ title: 'Error', description: 'Failed to fetch prescriptions', variant: 'destructive' })
+   476	    77	      }
+   477	    78	    } catch {
+   478	    79	      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   479	    80	    } finally {
+   480	    81	      setLoading(false)
+   481	    82	    }
+   482	    83	  }, [search, toast])
+   483	    84	
+   484	    85	  useEffect(() => {
+   485	    86	    fetchPrescriptions()
+   486	    87	  }, [fetchPrescriptions])
+   487	    88	
+   488	    89	  const handleSearch = (e: React.FormEvent) => {
+   489	    90	    e.preventDefault()
+   490	    91	    setSearch(searchInput)
+   491	    92	  }
+   492	    93	
+   493	    94	  const clearFilters = () => {
+   494	    95	    setSearchInput('')
+   495	    96	    setSearch('')
+   496	    97	    setDateFrom('')
+   497	    98	    setDateTo('')
+   498	    99	    setDoctorFilter('all')
+   499	   100	    setStatusFilter('all')
+   500	   101	  }
+   501	   102	
+   502	   103	  const hasActiveFilters = search || dateFrom || dateTo || doctorFilter !== 'all' || statusFilter !== 'all'
+   503	   104	
+   504	   105	  // Unique doctors for filter dropdown
+   505	   106	  const uniqueDoctors = Array.from(new Set(prescriptions.map(p => p.doctorName).filter(Boolean))).sort()
+   506	   107	
+   507	   108	  // Client-side filters
+   508	   109	  const filtered = prescriptions.filter((p) => {
+   509	   110	    if (doctorFilter !== 'all' && p.doctorName !== doctorFilter) return false
+   510	   111	    if (statusFilter !== 'all') {
+   511	   112	      const s = (p.status || 'sent').toLowerCase()
+   512	   113	      if (s !== statusFilter) return false
+   513	   114	    }
+   514	   115	    if (dateFrom && p.createdAt < dateFrom) return false
+   515	   116	    if (dateTo && p.createdAt > dateTo) return false
+   516	   117	    return true
+   517	   118	  })
+   518	   119	
+   519	   120	  const parseMedications = (meds: string | Medication[]): Medication[] => {
+   520	   121	    if (Array.isArray(meds)) return meds
+   521	   122	    try {
+   522	   123	      const parsed = JSON.parse(meds)
+   523	   124	      return Array.isArray(parsed) ? parsed : []
+   524	   125	    } catch {
+   525	   126	      return []
+   526	   127	    }
+   527	   128	  }
+   528	   129	
+   529	   130	  const formatDate = (dateStr: string) => {
+   530	   131	    try {
+   531	   132	      return new Date(dateStr).toLocaleDateString('en-IN', {
+   532	   133	        day: '2-digit', month: 'short', year: 'numeric',
+   533	   134	      })
+   534	   135	    } catch {
+   535	   136	      return dateStr
+   536	   137	    }
+   537	   138	  }
+   538	   139	
+   539	   140	  const handleView = (prescription: Prescription) => {
+   540	   141	    setSelectedPrescription(prescription)
+   541	   142	    setDetailOpen(true)
+   542	   143	  }
+   543	   144	
+   544	   145	  return (
+   545	   146	    <div className="space-y-6 p-4 md:p-6">
+   546	   147	      {/* Header */}
+   547	   148	      <div className="flex items-center justify-between">
+   548	   149	        <div>
+   549	   150	          <h2 className="text-xl font-bold text-gray-900">Prescription Management</h2>
+   550	   151	          <p className="text-sm text-gray-500 mt-0.5">Track and manage all prescriptions across doctors</p>
+   551	   152	        </div>
+   552	   153	        <Button
+   553	   154	          variant="outline"
+   554	   155	          size="sm"
+   555	   156	          className="h-9 gap-2 text-gray-600 hover:text-gray-800 border-gray-200"
+   556	   157	          onClick={() => fetchPrescriptions()}
+   557	   158	        >
+   558	   159	          <RefreshCw className="w-3.5 h-3.5" /> Refresh
+   559	   160	        </Button>
+   560	   161	      </div>
+   561	   162	
+   562	   163	      {/* Table Card */}
+   563	   164	      <Card className="bg-white rounded-xl shadow-sm border-0">
+   564	   165	        <CardContent className="p-4 space-y-4">
+   565	   166	          {/* Search Bar */}
+   566	   167	          <form onSubmit={handleSearch} className="relative">
+   567	   168	            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+   568	   169	            <Input
+   569	   170	              placeholder="Search by patient, doctor, or UHID..."
+   570	   171	              value={searchInput}
+   571	   172	              onChange={(e) => setSearchInput(e.target.value)}
+   572	   173	              className="pl-10 h-10 text-sm w-full"
+   573	   174	            />
+   574	   175	          </form>
+   575	   176	
+   576	   177	          {/* Filter Row: Date Range + 2 Dropdowns */}
+   577	   178	          <div className="flex flex-wrap items-end gap-3">
+   578	   179	            <div className="space-y-1">
+   579	   180	              <label className="text-[11px] uppercase font-semibold text-gray-400">Date From</label>
+   580	   181	              <Input
+   581	   182	                type="date"
+   582	   183	                value={dateFrom}
+   583	   184	                onChange={(e) => setDateFrom(e.target.value)}
+   584	   185	                className="h-9 text-sm w-36"
+   585	   186	              />
+   586	   187	            </div>
+   587	   188	            <div className="pb-1.5">
+   588	   189	              <span className="text-xs text-gray-400">to</span>
+   589	   190	            </div>
+   590	   191	            <div className="space-y-1">
+   591	   192	              <label className="text-[11px] uppercase font-semibold text-gray-400">Date To</label>
+   592	   193	              <Input
+   593	   194	                type="date"
+   594	   195	                value={dateTo}
+   595	   196	                onChange={(e) => setDateTo(e.target.value)}
+   596	   197	                className="h-9 text-sm w-36"
+   597	   198	              />
+   598	   199	            </div>
+   599	   200	            <div className="space-y-1">
+   600	   201	              <label className="text-[11px] uppercase font-semibold text-gray-400">Doctor</label>
+   601	   202	              <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+   602	   203	                <SelectTrigger className="h-9 text-sm w-40">
+   603	   204	                  <SelectValue />
+   604	   205	                </SelectTrigger>
+   605	   206	                <SelectContent>
+   606	   207	                  <SelectItem value="all">All Doctors</SelectItem>
+   607	   208	                  {uniqueDoctors.map((d) => (
+   608	   209	                    <SelectItem key={d} value={d!}>{d}</SelectItem>
+   609	   210	                  ))}
+   610	   211	                </SelectContent>
+   611	   212	              </Select>
+   612	   213	            </div>
+   613	   214	            <div className="space-y-1">
+   614	   215	              <label className="text-[11px] uppercase font-semibold text-gray-400">Status</label>
+   615	   216	              <Select value={statusFilter} onValueChange={setStatusFilter}>
+   616	   217	                <SelectTrigger className="h-9 text-sm w-36">
+   617	   218	                  <SelectValue />
+   618	   219	                </SelectTrigger>
+   619	   220	                <SelectContent>
+   620	   221	                  <SelectItem value="all">All Status</SelectItem>
+   621	   222	                  <SelectItem value="sent">Sent</SelectItem>
+   622	   223	                  <SelectItem value="draft">Draft</SelectItem>
+   623	   224	                  <SelectItem value="active">Active</SelectItem>
+   624	   225	                </SelectContent>
+   625	   226	              </Select>
+   626	   227	            </div>
+   627	   228	            {hasActiveFilters && (
+   628	   229	              <Button variant="ghost" size="sm" className="h-9 text-gray-500 hover:text-gray-700" onClick={clearFilters}>
+   629	   230	                Clear
+   630	   231	              </Button>
+   631	   232	            )}
+   632	   233	          </div>
+   633	   234	
+   634	   235	          {/* Table */}
+   635	   236	          <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   636	   237	            <Table>
+   637	   238	              <TableHeader>
+   638	   239	                <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   639	   240	                  <TableHead className="text-xs font-semibold uppercase text-gray-500 w-10">#</TableHead>
+   640	   241	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient Name</TableHead>
+   641	   242	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">UHID</TableHead>
+   642	   243	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Doctor</TableHead>
+   643	   244	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Diagnosis</TableHead>
+   644	   245	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Medicines</TableHead>
+   645	   246	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Sent At</TableHead>
+   646	   247	                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   647	   248	                </TableRow>
+   648	   249	              </TableHeader>
+   649	   250	              <TableBody>
+   650	   251	                {loading ? (
+   651	   252	                  Array.from({ length: 6 }).map((_, i) => (
+   652	   253	                    <TableRow key={i}>
+   653	   254	                      {Array.from({ length: 8 }).map((_, j) => (
+   654	   255	                        <TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>
+   655	   256	                      ))}
+   656	   257	                    </TableRow>
+   657	   258	                  ))
+   658	   259	                ) : filtered.length > 0 ? (
+   659	   260	                  filtered.map((p, idx) => {
+   660	   261	                    const medCount = parseMedications(p.medications).length
+   661	   262	                    return (
+   662	   263	                      <TableRow
+   663	   264	                        key={p.id}
+   664	   265	                        className="hover:bg-gray-50/50 cursor-pointer"
+   665	   266	                        onClick={() => handleView(p)}
+   666	   267	                      >
+   667	   268	                        <TableCell className="text-xs text-gray-500">{idx + 1}</TableCell>
+   668	   269	                        <TableCell>
+   669	   270	                          <div className="flex items-center gap-2">
+   670	   271	                            <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+   671	   272	                              <User className="w-3.5 h-3.5" />
+   672	   273	                            </div>
+   673	   274	                            <span className="text-sm font-medium text-gray-900">{p.patientName}</span>
+   674	   275	                          </div>
+   675	   276	                        </TableCell>
+   676	   277	                        <TableCell className="text-xs font-mono text-blue-600 font-medium">{p.patientUhid}</TableCell>
+   677	   278	                        <TableCell>
+   678	   279	                          <div className="flex items-center gap-2">
+   679	   280	                            <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center shrink-0">
+   680	   281	                              <Stethoscope className="w-3 h-3" />
+   681	   282	                            </div>
+   682	   283	                            <span className="text-sm text-gray-700">{p.doctorName}</span>
+   683	   284	                          </div>
+   684	   285	                        </TableCell>
+   685	   286	                        <TableCell className="text-sm text-gray-600 max-w-[180px] truncate">{p.diagnosis}</TableCell>
+   686	   287	                        <TableCell>
+   687	   288	                          <span className="text-sm text-blue-600 font-medium">{medCount} medicine{medCount !== 1 ? 's' : ''}</span>
+   688	   289	                        </TableCell>
+   689	   290	                        <TableCell className="text-sm text-gray-600 whitespace-nowrap">{formatDate(p.createdAt)}</TableCell>
+   690	   291	                        <TableCell>
+   691	   292	                          <Badge
+   692	   293	                            variant="secondary"
+   693	   294	                            className={cn(
+   694	   295	                              'text-[11px] capitalize',
+   695	   296	                              statusColor[(p.status || 'sent').toLowerCase()] || 'bg-gray-100 text-gray-800'
+   696	   297	                            )}
+   697	   298	                          >
+   698	   299	                            {p.status || 'Sent'}
+   699	   300	                          </Badge>
+   700	   301	                        </TableCell>
+   701	   302	                      </TableRow>
+   702	   303	                    )
+   703	   304	                  })
+   704	   305	                ) : (
+   705	   306	                  <TableRow>
+   706	   307	                    <TableCell colSpan={8} className="text-center py-8 text-gray-400 text-sm">
+   707	   308	                      {hasActiveFilters ? 'No prescriptions found matching your filters' : 'No prescriptions found'}
+   708	   309	                    </TableCell>
+   709	   310	                  </TableRow>
+   710	   311	                )}
+   711	   312	              </TableBody>
+   712	   313	            </Table>
+   713	   314	          </div>
+   714	   315	        </CardContent>
+   715	   316	      </Card>
+   716	   317	
+   717	   318	      {/* Prescription Detail Dialog */}
+   718	   319	      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+   719	   320	        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+   720	   321	          <DialogHeader>
+   721	   322	            <DialogTitle className="flex items-center gap-2">
+   722	   323	              <FileText className="w-5 h-5 text-blue-600" />
+   723	   324	              Prescription Details
+   724	   325	            </DialogTitle>
+   725	   326	          </DialogHeader>
+   726	   327	          {selectedPrescription && (
+   727	   328	            <div className="space-y-5">
+   728	   329	              {/* Patient & Doctor Info */}
+   729	   330	              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   730	   331	                <div className="space-y-1">
+   731	   332	                  <Label className="text-xs text-gray-500 uppercase font-semibold">Patient UHID</Label>
+   732	   333	                  <p className="text-sm font-mono text-blue-700 font-medium">{selectedPrescription.patientUhid}</p>
+   733	   334	                </div>
+   734	   335	                <div className="space-y-1">
+   735	   336	                  <Label className="text-xs text-gray-500 uppercase font-semibold">Patient Name</Label>
+   736	   337	                  <p className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+   737	   338	                    <User className="w-3.5 h-3.5 text-gray-400" />
+   738	   339	                    {selectedPrescription.patientName}
+   739	   340	                  </p>
+   740	   341	                </div>
+   741	   342	                <div className="space-y-1">
+   742	   343	                  <Label className="text-xs text-gray-500 uppercase font-semibold">Doctor</Label>
+   743	   344	                  <p className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+   744	   345	                    <Stethoscope className="w-3.5 h-3.5 text-gray-400" />
+   745	   346	                    {selectedPrescription.doctorName}
+   746	   347	                  </p>
+   747	   348	                </div>
+   748	   349	                <div className="space-y-1">
+   749	   350	                  <Label className="text-xs text-gray-500 uppercase font-semibold">Date</Label>
+   750	   351	                  <p className="text-sm text-gray-700 flex items-center gap-1.5">
+   751	   352	                    <Calendar className="w-3.5 h-3.5 text-gray-400" />
+   752	   353	                    {formatDate(selectedPrescription.createdAt)}
+   753	   354	                  </p>
+   754	   355	                </div>
+   755	   356	              </div>
+   756	   357	
+   757	   358	              {/* Diagnosis */}
+   758	   359	              <div className="space-y-1">
+   759	   360	                <Label className="text-xs text-gray-500 uppercase font-semibold">Diagnosis</Label>
+   760	   361	                <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-3">{selectedPrescription.diagnosis}</p>
+   761	   362	              </div>
+   762	   363	
+   763	   364	              {/* Medications Table */}
+   764	   365	              <div className="space-y-2">
+   765	   366	                <Label className="text-xs text-gray-500 uppercase font-semibold flex items-center gap-1.5">
+   766	   367	                  <Pill className="w-3.5 h-3.5" />
+   767	   368	                  Medications
+   768	   369	                </Label>
+   769	   370	                <div className="rounded-lg border border-gray-200 overflow-hidden">
+   770	   371	                  <Table>
+   771	   372	                    <TableHeader>
+   772	   373	                      <TableRow className="bg-gray-50 hover:bg-gray-50">
+   773	   374	                        <TableHead className="text-xs font-semibold text-gray-500">Medicine Name</TableHead>
+   774	   375	                        <TableHead className="text-xs font-semibold text-gray-500">Dosage</TableHead>
+   775	   376	                        <TableHead className="text-xs font-semibold text-gray-500">Frequency</TableHead>
+   776	   377	                        <TableHead className="text-xs font-semibold text-gray-500">Duration</TableHead>
+   777	   378	                      </TableRow>
+   778	   379	                    </TableHeader>
+   779	   380	                    <TableBody>
+   780	   381	                      {parseMedications(selectedPrescription.medications).length > 0 ? (
+   781	   382	                        parseMedications(selectedPrescription.medications).map((med, idx) => (
+   782	   383	                          <TableRow key={idx} className="hover:bg-gray-50/50">
+   783	   384	                            <TableCell className="text-sm font-medium text-gray-900">{med.name}</TableCell>
+   784	   385	                            <TableCell className="text-sm text-gray-600">{med.dosage}</TableCell>
+   785	   386	                            <TableCell className="text-sm text-gray-600">{med.frequency}</TableCell>
+   786	   387	                            <TableCell className="text-sm text-gray-600">{med.duration}</TableCell>
+   787	   388	                          </TableRow>
+   788	   389	                        ))
+   789	   390	                      ) : (
+   790	   391	                        <TableRow>
+   791	   392	                          <TableCell colSpan={4} className="text-center py-4 text-gray-400 text-sm">
+   792	   393	                            No medications listed
+   793	   394	                          </TableCell>
+   794	   395	                        </TableRow>
+   795	   396	                      )}
+   796	   397	                    </TableBody>
+   797	   398	                  </Table>
+   798	   399	                </div>
+   799	   400	              </div>
+   800	   401	
+   801	   402	              {/* Notes */}
+   802	   403	              {selectedPrescription.notes && (
+   803	   404	                <div className="space-y-1">
+   804	   405	                  <Label className="text-xs text-gray-500 uppercase font-semibold flex items-center gap-1.5">
+   805	   406	                    <ClipboardList className="w-3.5 h-3.5" />
+   806	   407	                    Notes
+   807	   408	                  </Label>
+   808	   409	                  <p className="text-sm text-gray-700 bg-blue-50 rounded-lg p-3 border border-blue-100">
+   809	   410	                    {selectedPrescription.notes}
+   810	   411	                  </p>
+   811	   412	                </div>
+   812	   413	              )}
+   813	   414	            </div>
+   814	   415	          )}
+   815	   416	        </DialogContent>
+   816	   417	      </Dialog>
+   817	   418	    </div>
+   818	   419	  )
+   819	   420	}
+   820	===== /home/z/my-project/src/components/admin/sections/VerificationSection.tsx =====
+   821	     1	'use client'
+   822	     2	
+   823	     3	import { useState, useEffect } from 'react'
+   824	     4	import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+   825	     5	import { Badge } from '@/components/ui/badge'
+   826	     6	import { Button } from '@/components/ui/button'
+   827	     7	import { Textarea } from '@/components/ui/textarea'
+   828	     8	import { Label } from '@/components/ui/label'
+   829	     9	import { Skeleton } from '@/components/ui/skeleton'
+   830	    10	import {
+   831	    11	  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+   832	    12	} from '@/components/ui/table'
+   833	    13	import {
+   834	    14	  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+   835	    15	} from '@/components/ui/dialog'
+   836	    16	import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+   837	    17	import { useToast } from '@/hooks/use-toast'
+   838	    18	import { cn } from '@/lib/utils'
+   839	    19	import { ShieldCheck, Loader2, RefreshCw, AlertCircle } from 'lucide-react'
+   840	    20	
+   841	    21	interface Verification {
+   842	    22	  id: string
+   843	    23	  entityType: 'doctor' | 'caregiver'
+   844	    24	  entityName: string
+   845	    25	  package: string
+   846	    26	  status: 'pending' | 'in_progress' | 'approved' | 'rejected'
+   847	    27	  submittedDate: string
+   848	    28	}
+   849	    29	
+   850	    30	const entityTypeColor: Record<string, string> = {
+   851	    31	  doctor: 'bg-blue-100 text-blue-700',
+   852	    32	  caregiver: 'bg-orange-100 text-orange-700',
+   853	    33	}
+   854	    34	
+   855	    35	const statusColor: Record<string, string> = {
+   856	    36	  pending: 'bg-yellow-100 text-yellow-700',
+   857	    37	  in_progress: 'bg-blue-100 text-blue-700',
+   858	    38	  approved: 'bg-blue-100 text-blue-700',
+   859	    39	  rejected: 'bg-red-100 text-red-700',
+   860	    40	}
+   861	    41	
+   862	    42	export function VerificationSection() {
+   863	    43	  const { toast } = useToast()
+   864	    44	  const [allVerifications, setAllVerifications] = useState<Verification[]>([])
+   865	    45	  const [loading, setLoading] = useState(true)
+   866	    46	  const [dialogOpen, setDialogOpen] = useState(false)
+   867	    47	  const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null)
+   868	    48	  const [action, setAction] = useState<'approved' | 'rejected' | null>(null)
+   869	    49	  const [reviewNotes, setReviewNotes] = useState('')
+   870	    50	  const [submitting, setSubmitting] = useState(false)
+   871	    51	
+   872	    52	  useEffect(() => {
+   873	    53	    fetchVerifications()
+   874	    54	  }, [])
+   875	    55	
+   876	    56	  const fetchVerifications = async () => {
+   877	    57	    setLoading(true)
+   878	    58	    try {
+   879	    59	      const res = await fetch('/api/verification')
+   880	    60	      if (res.ok) {
+   881	    61	        const data = await res.json()
+   882	    62	        setAllVerifications(Array.isArray(data) ? data : data.data || [])
+   883	    63	      } else {
+   884	    64	        toast({ title: 'Error', description: 'Failed to fetch verifications', variant: 'destructive' })
+   885	    65	      }
+   886	    66	    } catch {
+   887	    67	      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   888	    68	    } finally {
+   889	    69	      setLoading(false)
+   890	    70	    }
+   891	    71	  }
+   892	    72	
+   893	    73	  const pendingVerifications = allVerifications.filter((v) => v.status === 'pending')
+   894	    74	
+   895	    75	  const openDialog = (verification: Verification, act: 'approved' | 'rejected') => {
+   896	    76	    setSelectedVerification(verification)
+   897	    77	    setAction(act)
+   898	    78	    setReviewNotes('')
+   899	    79	    setDialogOpen(true)
+   900	    80	  }
+   901	    81	
+   902	    82	  const handleSubmitReview = async () => {
+   903	    83	    if (!selectedVerification || !action) return
+   904	    84	    setSubmitting(true)
+   905	    85	    try {
+   906	    86	      const res = await fetch(`/api/verification/${selectedVerification.id}`, {
+   907	    87	        method: 'PATCH',
+   908	    88	        headers: { 'Content-Type': 'application/json' },
+   909	    89	        body: JSON.stringify({
+   910	    90	          status: action,
+   911	    91	          reviewNotes,
+   912	    92	          reviewedBy: 'admin-id',
+   913	    93	        }),
+   914	    94	      })
+   915	    95	      if (res.ok) {
+   916	    96	        toast({
+   917	    97	          title: action === 'approved' ? 'Verification Approved' : 'Verification Rejected',
+   918	    98	          description: `${selectedVerification.entityName} has been ${action}`,
+   919	    99	        })
+   920	   100	        setDialogOpen(false)
+   921	   101	        fetchVerifications()
+   922	   102	      } else {
+   923	   103	        const data = await res.json()
+   924	   104	        toast({ title: 'Error', description: data.error || 'Failed to update verification', variant: 'destructive' })
+   925	   105	      }
+   926	   106	    } catch {
+   927	   107	      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   928	   108	    } finally {
+   929	   109	      setSubmitting(false)
+   930	   110	    }
+   931	   111	  }
+   932	   112	
+   933	   113	  const renderTable = (items: Verification[], showActions: boolean) => (
+   934	   114	    <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   935	   115	      <Table>
+   936	   116	        <TableHeader>
+   937	   117	          <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   938	   118	            <TableHead className="text-xs font-semibold uppercase text-gray-500">Type</TableHead>
+   939	   119	            <TableHead className="text-xs font-semibold uppercase text-gray-500">Name</TableHead>
+   940	   120	            <TableHead className="text-xs font-semibold uppercase text-gray-500">Package</TableHead>
+   941	   121	            <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   942	   122	            <TableHead className="text-xs font-semibold uppercase text-gray-500">Submitted</TableHead>
+   943	   123	            {showActions && (
+   944	   124	              <TableHead className="text-xs font-semibold uppercase text-gray-500">Actions</TableHead>
+   945	   125	            )}
+   946	   126	          </TableRow>
+   947	   127	        </TableHeader>
+   948	   128	        <TableBody>
+   949	   129	          {loading ? (
+   950	   130	            Array.from({ length: 5 }).map((_, i) => (
+   951	   131	              <TableRow key={i}>
+   952	   132	                {Array.from({ length: showActions ? 6 : 5 }).map((_, j) => (
+   953	   133	                  <TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>
+   954	   134	                ))}
+   955	   135	              </TableRow>
+   956	   136	            ))
+   957	   137	          ) : items.length > 0 ? (
+   958	   138	            items.map((v) => (
+   959	   139	              <TableRow key={v.id} className="hover:bg-gray-50/50">
+   960	   140	                <TableCell>
+   961	   141	                  <Badge variant="secondary" className={cn('text-[11px] capitalize', entityTypeColor[v.entityType] || 'bg-gray-100 text-gray-800')}>
+   962	   142	                    {v.entityType}
+   963	   143	                  </Badge>
+   964	   144	                </TableCell>
+   965	   145	                <TableCell className="text-sm font-medium text-gray-900">{v.entityName}</TableCell>
+   966	   146	                <TableCell className="text-sm text-gray-700 capitalize">{v.package}</TableCell>
+   967	   147	                <TableCell>
+   968	   148	                  <Badge variant="secondary" className={cn('text-[11px] capitalize', statusColor[v.status] || 'bg-gray-100 text-gray-800')}>
+   969	   149	                    {v.status.replace('_', ' ')}
+   970	   150	                  </Badge>
+   971	   151	                </TableCell>
+   972	   152	                <TableCell className="text-sm text-gray-600">{v.submittedDate}</TableCell>
+   973	   153	                {showActions && (
+   974	   154	                  <TableCell>
+   975	   155	                    <div className="flex items-center gap-1.5">
+   976	   156	                      <Button
+   977	   157	                        size="sm"
+   978	   158	                        className="text-[11px] bg-blue-600 hover:bg-blue-700 text-white h-7 px-2.5"
+   979	   159	                        onClick={() => openDialog(v, 'approved')}
+   980	   160	                      >
+   981	   161	                        Approve
+   982	   162	                      </Button>
+   983	   163	                      <Button
+   984	   164	                        size="sm"
+   985	   165	                        variant="outline"
+   986	   166	                        className="text-[11px] border-red-200 text-red-600 hover:bg-red-50 h-7 px-2.5"
+   987	   167	                        onClick={() => openDialog(v, 'rejected')}
+   988	   168	                      >
+   989	   169	                        Reject
+   990	   170	                      </Button>
+   991	   171	                    </div>
+   992	   172	                  </TableCell>
+   993	   173	                )}
+   994	   174	              </TableRow>
+   995	   175	            ))
+   996	   176	          ) : (
+   997	   177	            <TableRow>
+   998	   178	              <TableCell colSpan={showActions ? 6 : 5} className="text-center py-8 text-gray-400 text-sm">
+   999	   179	                No verification requests found
+  1000	   180	              </TableCell>
+  1001	   181	            </TableRow>
+  1002	   182	          )}
+  1003	   183	        </TableBody>
+  1004	   184	      </Table>
+  1005	   185	    </div>
+  1006	   186	  )
+  1007	   187	
+  1008	   188	  return (
+  1009	   189	    <div className="space-y-6 p-4 md:p-6">
+  1010	   190	      {/* Summary */}
+  1011	   191	      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  1012	   192	        <Card className="bg-white rounded-xl shadow-sm border-0">
+  1013	   193	          <CardContent className="p-4 flex items-center gap-3">
+  1014	   194	            <div className="w-10 h-10 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center">
+  1015	   195	              <AlertCircle className="w-5 h-5" />
+  1016	   196	            </div>
+  1017	   197	            <div>
+  1018	   198	              {loading ? <Skeleton className="h-7 w-8" /> : <p className="text-2xl font-bold text-gray-900">{pendingVerifications.length}</p>}
+  1019	   199	              <p className="text-xs text-gray-500">Pending Review</p>
+  1020	   200	            </div>
+  1021	   201	          </CardContent>
+  1022	   202	        </Card>
+  1023	   203	        <Card className="bg-white rounded-xl shadow-sm border-0">
+  1024	   204	          <CardContent className="p-4 flex items-center gap-3">
+  1025	   205	            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+  1026	   206	              <ShieldCheck className="w-5 h-5" />
+  1027	   207	            </div>
+  1028	   208	            <div>
+  1029	   209	              {loading ? <Skeleton className="h-7 w-8" /> : <p className="text-2xl font-bold text-gray-900">{allVerifications.filter((v) => v.status === 'approved').length}</p>}
+  1030	   210	              <p className="text-xs text-gray-500">Approved</p>
+  1031	   211	            </div>
+  1032	   212	          </CardContent>
+  1033	   213	        </Card>
+  1034	   214	        <Card className="bg-white rounded-xl shadow-sm border-0">
+  1035	   215	          <CardContent className="p-4 flex items-center gap-3">
+  1036	   216	            <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+  1037	   217	              <ShieldCheck className="w-5 h-5" />
+  1038	   218	            </div>
+  1039	   219	            <div>
+  1040	   220	              {loading ? <Skeleton className="h-7 w-8" /> : <p className="text-2xl font-bold text-gray-900">{allVerifications.filter((v) => v.status === 'rejected').length}</p>}
+  1041	   221	              <p className="text-xs text-gray-500">Rejected</p>
+  1042	   222	            </div>
+  1043	   223	          </CardContent>
+  1044	   224	        </Card>
+  1045	   225	      </div>
+  1046	   226	
+  1047	   227	      {/* Tabs */}
+  1048	   228	      <Tabs defaultValue="pending" className="space-y-4">
+  1049	   229	        <div className="flex items-center justify-between">
+  1050	   230	          <TabsList>
+  1051	   231	            <TabsTrigger value="pending">Pending</TabsTrigger>
+  1052	   232	            <TabsTrigger value="all">All</TabsTrigger>
+  1053	   233	          </TabsList>
+  1054	   234	          <Button
+  1055	   235	            size="sm"
+  1056	   236	            variant="outline"
+  1057	   237	            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50 gap-1.5"
+  1058	   238	            onClick={fetchVerifications}
+  1059	   239	            disabled={loading}
+  1060	   240	          >
+  1061	   241	            <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
+  1062	   242	            Refresh
+  1063	   243	          </Button>
+  1064	   244	        </div>
+  1065	   245	
+  1066	   246	        <TabsContent value="pending">
+  1067	   247	          <Card className="bg-white rounded-xl shadow-sm border-0">
+  1068	   248	            <CardHeader className="pb-3">
+  1069	   249	              <CardTitle className="text-base font-semibold text-gray-900">Pending Verifications</CardTitle>
+  1070	   250	            </CardHeader>
+  1071	   251	            <CardContent className="p-0">
+  1072	   252	              {renderTable(pendingVerifications, true)}
+  1073	   253	            </CardContent>
+  1074	   254	          </Card>
+  1075	   255	        </TabsContent>
+  1076	   256	
+  1077	   257	        <TabsContent value="all">
+  1078	   258	          <Card className="bg-white rounded-xl shadow-sm border-0">
+  1079	   259	            <CardHeader className="pb-3">
+  1080	   260	              <CardTitle className="text-base font-semibold text-gray-900">All Verifications</CardTitle>
+  1081	   261	            </CardHeader>
+  1082	   262	            <CardContent className="p-0">
+  1083	   263	              {renderTable(allVerifications, false)}
+  1084	   264	            </CardContent>
+  1085	   265	          </Card>
+  1086	   266	        </TabsContent>
+  1087	   267	      </Tabs>
+  1088	   268	
+  1089	   269	      {/* Approve / Reject Dialog */}
+  1090	   270	      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+  1091	   271	        <DialogContent className="sm:max-w-md">
+  1092	   272	          <DialogHeader>
+  1093	   273	            <DialogTitle className="flex items-center gap-2">
+  1094	   274	              {action === 'approved' ? (
+  1095	   275	                <ShieldCheck className="w-5 h-5 text-blue-600" />
+  1096	   276	              ) : (
+  1097	   277	                <AlertCircle className="w-5 h-5 text-red-600" />
+  1098	   278	              )}
+  1099	   279	              {action === 'approved' ? 'Approve Verification' : 'Reject Verification'}
+  1100	   280	            </DialogTitle>
+  1101	   281	          </DialogHeader>
+  1102	   282	          {selectedVerification && (
+  1103	   283	            <div className="space-y-4 py-2">
+  1104	   284	              <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+  1105	   285	                <div className="flex items-center gap-2">
+  1106	   286	                  <span className="text-xs text-gray-500 w-20">Name</span>
+  1107	   287	                  <span className="text-sm font-medium text-gray-900">{selectedVerification.entityName}</span>
+  1108	   288	                </div>
+  1109	   289	                <div className="flex items-center gap-2">
+  1110	   290	                  <span className="text-xs text-gray-500 w-20">Type</span>
+  1111	   291	                  <Badge variant="secondary" className={cn('text-[11px] capitalize', entityTypeColor[selectedVerification.entityType])}>
+  1112	   292	                    {selectedVerification.entityType}
+  1113	   293	                  </Badge>
+  1114	   294	                </div>
+  1115	   295	                <div className="flex items-center gap-2">
+  1116	   296	                  <span className="text-xs text-gray-500 w-20">Package</span>
+  1117	   297	                  <span className="text-sm text-gray-700 capitalize">{selectedVerification.package}</span>
+  1118	   298	                </div>
+  1119	   299	              </div>
+  1120	   300	              <div className="space-y-2">
+  1121	   301	                <Label>Review Notes</Label>
+  1122	   302	                <Textarea
+  1123	   303	                  placeholder={action === 'approved' ? 'Optional approval notes...' : 'Reason for rejection...'}
+  1124	   304	                  value={reviewNotes}
+  1125	   305	                  onChange={(e) => setReviewNotes(e.target.value)}
+  1126	   306	                  rows={3}
+  1127	   307	                />
+  1128	   308	              </div>
+  1129	   309	            </div>
+  1130	   310	          )}
+  1131	   311	          <DialogFooter>
+  1132	   312	            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+  1133	   313	            <Button
+  1134	   314	              className={cn(
+  1135	   315	                'text-white',
+  1136	   316	                action === 'approved' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'
+  1137	   317	              )}
+  1138	   318	              onClick={handleSubmitReview}
+  1139	   319	              disabled={submitting}
+  1140	   320	            >
+  1141	   321	              {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+  1142	   322	              {action === 'approved' ? 'Approve' : 'Reject'}
+  1143	   323	            </Button>
+  1144	   324	          </DialogFooter>
+  1145	   325	        </DialogContent>
+  1146	   326	      </Dialog>
+  1147	   327	    </div>
+  1148	   328	  )
+  1149	   329	}

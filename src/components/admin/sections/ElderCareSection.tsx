@@ -42,8 +42,8 @@ export function ElderCareSection() {
   const fetchData = async () => {
     try {
       const [bRes, cRes] = await Promise.all([fetch('/api/bookings?type=elder_care'), fetch('/api/caregivers?specialty=elder_care')])
-      if (bRes.ok) { const d = await bRes.json(); setBookings(Array.isArray(d) ? d : d.bookings || []) }
-      if (cRes.ok) { const d = await cRes.json(); setCaregivers(Array.isArray(d) ? d : d.caregivers || []) }
+      if (bRes.ok) { const d = await bRes.json(); setBookings(Array.isArray(d) ? d : d?.bookings || []) }
+      if (cRes.ok) { const d = await cRes.json(); setCaregivers(Array.isArray(d) ? d : d?.caregivers || []) }
     } catch { toast({ title: 'Error', description: 'Failed to fetch data', variant: 'destructive' }) }
     finally { setLoading(false) }
   }

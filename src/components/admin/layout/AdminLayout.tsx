@@ -96,7 +96,7 @@ export function Sidebar() {
         <div className="border-t border-gray-100 p-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
-              {user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              {(user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()) || 'A'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">{user?.role === 'super_admin' ? 'Super Admin' : 'Sub User'}</p>
@@ -135,7 +135,7 @@ export function Header() {
           )}
         </div>
         <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
-          {user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+          {(user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()) || 'A'}
         </div>
       </div>
     </header>

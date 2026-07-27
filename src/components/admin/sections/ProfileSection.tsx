@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/lib/store'
-import { Shield, Mail, Calendar, RefreshCw, Users, MapPin } from 'lucide-react'
+import { Mail, RefreshCw, Users, MapPin } from 'lucide-react'
 
 interface SubUser {
   id: string
@@ -182,21 +182,21 @@ export function ProfileSection() {
                       <TableCell className="text-sm text-gray-600">{su.email}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-1">
-                          {su.permissions.slice(0, MAX_VISIBLE_CHIPS).map((p) => (
+                          {(su.permissions || []).slice(0, MAX_VISIBLE_CHIPS).map((p) => (
                             <Badge key={p} variant="secondary" className={cn('text-[10px] capitalize', permissionColor(p))}>
                               {p.replace('_', ' ')}
                             </Badge>
                           ))}
-                          {su.permissions.length > MAX_VISIBLE_CHIPS && (
+                          {(su.permissions || []).length > MAX_VISIBLE_CHIPS && (
                             <Badge variant="secondary" className="text-[10px] bg-gray-100 text-gray-600">
-                              +{su.permissions.length - MAX_VISIBLE_CHIPS} more
+                              +{(su.permissions || []).length - MAX_VISIBLE_CHIPS} more
                             </Badge>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-1">
-                          {su.activeBranches.map((b) => (
+                          {(su.activeBranches || []).map((b) => (
                             <Badge key={b} variant="secondary" className="text-[10px] bg-blue-50 text-blue-700">
                               {b}
                             </Badge>

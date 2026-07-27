@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
-import { Plus, Pencil, Ban, Loader2, ShieldCheck, Users } from 'lucide-react'
+import { Plus, Pencil, Ban, Loader2, ShieldCheck } from 'lucide-react'
 
 const PERMISSION_MODULES = [
   'Dashboard', 'Child Care', 'Elder Care', 'Doctors', 'Doctor Analytics',

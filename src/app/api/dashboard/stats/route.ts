@@ -98,8 +98,8 @@ export async function GET() {
       recentBookings: recentBookings.map((b) => ({
         id: b.id,
         bookingId: b.bookingId,
-        patientName: b.patient.name,
-        patientUhid: b.patient.uhid,
+        patientName: b.patient?.name ?? 'Unknown',
+        patientUhid: b.patient?.uhid ?? null,
         doctorName: b.doctor?.name ?? "N/A",
         date: b.date,
         startTime: b.startTime,

@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils'
 import {
   Plus, Search, Eye, Ban, CheckCircle, Loader2, Stethoscope, FileText,
   DollarSign, Wifi, WifiOff, ShieldOff, Monitor, MoreVertical, X,
-  Pencil, Save, CalendarDays, Clock, Languages, MapPin, Award, Phone, Mail,
+  Pencil, Save, CalendarDays, Clock, Languages, MapPin, Phone, Mail,
   TrendingUp, Users, Globe, Home, BarChart3, IndianRupee,
 } from 'lucide-react'
 
@@ -297,7 +297,11 @@ export function DoctorsSection() {
   }
 
   // Parsed languages
-  const parsedLanguages = doctor?.languages ? (typeof doctor.languages === 'string' ? JSON.parse(doctor.languages) : doctor.languages) : []
+  const parsedLanguages = (() => {
+    if (!doctor?.languages) return []
+    if (typeof doctor.languages !== 'string') return doctor.languages
+    try { return JSON.parse(doctor.languages) } catch { return [] }
+  })()
 
   // Stats
   const onlineCount = doctors.filter(d => d.isOnline && !d.isBlocked).length

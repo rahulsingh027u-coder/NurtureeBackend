@@ -13,9 +13,9 @@ export async function GET() {
 
     const data = commissions.map((c) => ({
       id: c.id,
-      bookingId: c.booking.bookingId,
-      doctorName: c.doctor.name,
-      totalAmount: c.booking.totalAmount,
+      bookingId: c.booking?.bookingId ?? 'N/A',
+      doctorName: c.doctor?.name ?? 'Unknown',
+      totalAmount: c.booking?.totalAmount ?? 0,
       commissionRate: c.commissionRate,
       commissionAmount: c.commissionAmount,
       doctorEarnings: c.doctorEarnings,
