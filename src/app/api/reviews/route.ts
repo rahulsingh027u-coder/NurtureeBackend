@@ -1,6 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+// GET /api/reviews - Fetch reviews (optionally filter by doctorId or patientId)
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const doctorId = searchParams.get("doctorId");
+    const patientId = searchParams.get("patientId");
+    const bookingId = searchParams.get("bookingId");
+
+    const where: Record<string, string> = {};
+    if (doctorId) where.doctorId = doctorId;
+    if (patientId) where.patientId = patientId;
+    if (bookingId) where.bookingId = bookingId;
+
+    const reviews = await db.review.findMany({
+      where: Object.keys(where).length > 0 ? where : undefined,
+      include: {
+        doctor: { select: { name: true, specialty: true } },
+        patient: { select: { name: true } },
+        booking: { select: { id: true, bookingType: true, date: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json(reviews);
+  } catch (error) {
+    console.error("Reviews GET error:", error);
+    return NextResponse.json({ error: "Failed to fetch reviews" }, { status: 500 });
+  }
+}
+
+// POST /api/reviews - Create a new review
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
