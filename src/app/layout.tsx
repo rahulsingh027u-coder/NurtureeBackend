@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   keywords: ["Nurturee", "Healthcare", "Admin Portal", "Doctor Management", "Patient Care"],
   authors: [{ name: "Nurturee" }],
   icons: {
-    icon: "/logo.svg",
+    icon: "/logo.png",
   },
   openGraph: {
     title: "Nurturee Admin Portal",
