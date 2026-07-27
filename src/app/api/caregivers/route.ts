@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
 
     const data = caregivers.map((c) => ({
       id: c.id,
+      caregiverId: c.caregiverId,
       name: c.name,
       phone: c.phone,
       email: c.email,
@@ -61,8 +62,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Generate unique caregiver ID: NR + 8-digit number incrementing by 1-2
+    const lastCaregiver = await db.caregiver.findFirst({
+      orderBy: { caregiverId: 'desc' },
+      select: { caregiverId: true },
+    });
+    let lastNum = 12002116;
+    if (lastCaregiver?.caregiverId) {
+      const parsed = parseInt(lastCaregiver.caregiverId.replace('NR', ''));
+      if (!isNaN(parsed)) lastNum = parsed;
+    }
+    const nextNum = lastNum + Math.floor(Math.random() * 2) + 1;
+    const caregiverId = `NR${nextNum}`;
+
     const caregiver = await db.caregiver.create({
       data: {
+        caregiverId,
         name,
         phone,
         email: email ?? null,
