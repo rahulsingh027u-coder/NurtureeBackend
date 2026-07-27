@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
   Search, Eye, User, Users, UserPlus, CalendarDays,
-  FileText, Phone, Mail, MapPin, X, Loader2, Activity,
+  FileText, Phone, Mail, MapPin, Activity,
 } from 'lucide-react'
 
 interface Patient {
@@ -100,7 +100,7 @@ export function PatientsSection() {
       const res = await fetch(`/api/patients${params}`)
       if (res.ok) {
         const data = await res.json()
-        const list = Array.isArray(data) ? data : data.data || data.patients || []
+        const list = Array.isArray(data) ? data : data?.data || data?.patients || []
         setPatients(list)
       } else {
         toast({ title: 'Error', description: 'Failed to fetch patients', variant: 'destructive' })
@@ -143,13 +143,13 @@ export function PatientsSection() {
 
       if (bookingsRes.ok) {
         const data = await bookingsRes.json()
-        const allBookings: Booking[] = Array.isArray(data) ? data : data.bookings || data.data || []
+        const allBookings: Booking[] = Array.isArray(data) ? data : data?.bookings || data?.data || []
         setPatientBookings(allBookings.filter((b: Booking) => b.patientId === patient.id))
       }
 
       if (prescriptionsRes.ok) {
         const data = await prescriptionsRes.json()
-        const allPrescriptions: Prescription[] = Array.isArray(data) ? data : data.data || data.prescriptions || []
+        const allPrescriptions: Prescription[] = Array.isArray(data) ? data : data?.data || data?.prescriptions || []
         setPatientPrescriptions(allPrescriptions.filter((p: Prescription) => p.patientId === patient.id))
       }
     } catch {

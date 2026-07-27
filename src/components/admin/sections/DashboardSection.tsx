@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
   Stethoscope, Wifi, CalendarDays, Users, IndianRupee, ShieldCheck,
-  Baby, HeartPulse, ArrowRight, TrendingUp
+  Baby, HeartPulse, ArrowRight
 } from 'lucide-react'
 
 interface DashboardStats {

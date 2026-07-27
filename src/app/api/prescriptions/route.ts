@@ -30,9 +30,9 @@ export async function GET(req: NextRequest) {
     const data = prescriptions.map((p) => ({
       id: p.id,
       bookingId: p.bookingId,
-      doctorName: p.doctor.name,
-      patientName: p.patient.name,
-      patientUhid: p.patient.uhid,
+      doctorName: p.doctor?.name ?? 'Unknown',
+      patientName: p.patient?.name ?? 'Unknown',
+      patientUhid: p.patient?.uhid ?? null,
       diagnosis: p.diagnosis,
       medications: p.medications,
       notes: p.notes,

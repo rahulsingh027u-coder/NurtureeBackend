@@ -85,11 +85,11 @@ export function ChildCareSection() {
       ])
       if (bookingsRes.ok) {
         const data = await bookingsRes.json()
-        setBookings(Array.isArray(data) ? data : data.bookings || [])
+        setBookings(Array.isArray(data) ? data : data?.bookings || [])
       }
       if (caregiversRes.ok) {
         const data = await caregiversRes.json()
-        setCaregivers(Array.isArray(data) ? data : data.data || [])
+        setCaregivers(Array.isArray(data) ? data : data?.data || [])
       }
     } catch {
       toast({ title: 'Error', description: 'Failed to fetch data', variant: 'destructive' })
