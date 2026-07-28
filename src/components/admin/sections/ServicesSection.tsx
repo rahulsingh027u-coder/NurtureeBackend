@@ -83,7 +83,7 @@ function ServiceTable({ services, loading }: { services: Service[]; loading: boo
                 <TableCell className="text-sm text-gray-700 font-mono whitespace-nowrap">{formatPrice(s)}</TableCell>
                 <TableCell>
                   <Badge variant="secondary" className={cn('text-[11px] capitalize', modeColor[s.mode] || 'bg-gray-100 text-gray-800')}>
-                    {s.mode.replace('_', '-')}
+                    {s.mode === 'online' ? 'Online' : s.mode === 'in_home' ? 'Offline' : s.mode === 'both' ? 'Both' : s.mode}
                   </Badge>
                 </TableCell>
                 <TableCell>
