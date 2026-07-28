@@ -25,3 +25,26 @@ Stage Summary:
 - Error boundary prevents future blank pages from section crashes
 - Memory stable at ~700MB (3.9GB total)
 - Key files: daemon-launch.py, SectionErrorBoundary.tsx, layout/index.tsx, api/reviews/route.ts
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Add logout dropdown on superadmin icon + verify booking mode display
+
+Work Log:
+- Added DropdownMenu import to AdminLayout.tsx
+- Created handleLogout() function that clears localStorage session and calls store logout()
+- Wrapped Header avatar (top-right) in DropdownMenu with: user name/email label, My Profile link, Log out button (red styled)
+- Wrapped Sidebar user section in DropdownMenu with same menu items (opens upward)
+- Verified DashboardSection mode display: line 273 correctly maps online→'Online', in_home→'Offline'
+- Verified BookingsSection mode display: line 360 correctly maps in_home→'Offline', online→'Online'
+- Verified BookingsSection detail dialog: line 485 correctly maps in_home→'Offline'
+- Clean rebuild + daemon restart
+- Browser verified: login works, header avatar dropdown opens with 'My Profile' + 'Log out', clicking 'Log out' redirects to login page
+- Browser verified: sidebar avatar dropdown also opens correctly with same menu
+- Browser verified: Dashboard recent bookings table shows 'Online' and 'Offline' correctly (no 'HOME')
+
+Stage Summary:
+- Logout dropdown functional on both Header avatar and Sidebar user area
+- All booking mode displays show 'Online'/'Offline' (not 'HOME' or 'In Home')
+- Server running cleanly on port 3000, auth state saved at /tmp/nurturee-auth.json

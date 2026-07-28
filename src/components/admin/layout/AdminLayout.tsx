@@ -5,6 +5,10 @@ import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Bell } from 'lucide-react'
 import {
   LayoutDashboard, Baby, Users, Stethoscope, FileText, CalendarDays,
@@ -35,6 +39,11 @@ const navItems: NavItem[] = [
   { id: 'child_care', label: 'Child & Elder Care', icon: Baby, permission: 'child_care' },
   { id: 'profile', label: 'My Profile', icon: Settings, permission: 'profile' },
 ]
+
+const handleLogout = () => {
+  localStorage.removeItem('nurturee_admin_session')
+  useAppStore.getState().logout()
+}
 
 export function Sidebar() {
   const { activeSection, setActiveSection, user, logout, sidebarOpen, setSidebarOpen } = useAppStore()
@@ -96,15 +105,37 @@ export function Sidebar() {
 
         {/* User */}
         <div className="border-t border-gray-100 p-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
-              {(user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()) || 'A'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{user?.role === 'super_admin' ? 'Super Admin' : 'Sub User'}</p>
-              <p className="text-[11px] text-gray-400 truncate">{user?.email}</p>
-            </div>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-3 w-full text-left hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors cursor-pointer">
+                <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                  {(user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()) || 'A'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{user?.role === 'super_admin' ? 'Super Admin' : 'Sub User'}</p>
+                  <p className="text-[11px] text-gray-400 truncate">{user?.email}</p>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">{user?.name}</p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => { setActiveSection('profile'); setSidebarOpen(false) }} className="cursor-pointer gap-2">
+                <Settings className="w-4 h-4" />
+                My Profile
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer gap-2 text-red-600 focus:text-red-600 focus:bg-red-50">
+                <LogOut className="w-4 h-4" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
     </>
@@ -112,7 +143,7 @@ export function Sidebar() {
 }
 
 export function Header() {
-  const { activeSection, user, setSidebarOpen, notificationCount } = useAppStore()
+  const { activeSection, user, setSidebarOpen, notificationCount, setActiveSection } = useAppStore()
   const labels: Record<Section, string> = {
     dashboard: 'Dashboard', child_care: 'Child & Elder Care', elder_care: 'Elder Care',
     doctors: 'Doctors', patients: 'Patients', bookings: 'Bookings',
@@ -136,9 +167,31 @@ export function Header() {
             </span>
           )}
         </div>
-        <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
-          {(user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()) || 'A'}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold hover:ring-2 hover:ring-blue-300 transition-all cursor-pointer">
+              {(user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()) || 'A'}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="bottom" align="end" className="w-56">
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">{user?.name}</p>
+                <p className="text-xs text-gray-500">{user?.email}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setActiveSection('profile')} className="cursor-pointer gap-2">
+              <Settings className="w-4 h-4" />
+              My Profile
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer gap-2 text-red-600 focus:text-red-600 focus:bg-red-50">
+              <LogOut className="w-4 h-4" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )
