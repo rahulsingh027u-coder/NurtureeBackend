@@ -270,7 +270,7 @@ export function DashboardSection() {
                         <TableCell className="text-xs text-gray-600 py-2.5">{b.doctorName || '—'}</TableCell>
                         <TableCell className="py-2.5">
                           <Badge variant="secondary" className={cn('text-[10px] px-1.5 py-0 h-5', modeColor[b.consultationMode])}>
-                            {b.consultationMode === 'online' ? 'Online' : 'Home'}
+                            {b.consultationMode === 'online' ? 'Online' : 'Offline'}
                           </Badge>
                         </TableCell>
                         <TableCell className="py-2.5">
