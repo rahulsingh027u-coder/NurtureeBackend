@@ -1,0 +1,766 @@
+   200→      if (res.ok) { setDoctor({ ...doctor, verified: val }); fetchDoctors() }
+   201→    } catch { toast({ title: 'Error', variant: 'destructive' }) }
+   202→  }, [doctor, toast])
+   203→
+   204→  // Close menu on outside click
+   205→  useEffect(() => {
+   206→    const handleClick = (e: MouseEvent) => {
+   207→      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenuId(null)
+   208→    }
+   209→    document.addEventListener('mousedown', handleClick)
+   210→    return () => document.removeEventListener('mousedown', handleClick)
+   211→  }, [])
+   212→
+   213→  // Sync manual dropdown change → clear card highlight
+   214→  const handleStatusFilterChange = (val: string) => {
+   215→    setCardFilter(val === 'all' ? null : val)
+   216→    setStatusFilter(val)
+   217→  }
+   218→
+   219→  useEffect(() => { fetchDoctors() }, [search, statusFilter, specFilter, verifiedFilter])
+   220→
+   221→  const fetchDoctors = async () => {
+   222→    setLoading(true)
+   223→    try {
+   224→      const params = new URLSearchParams()
+   225→      if (search) params.set('search', search)
+   226→      if (statusFilter !== 'all') params.set('status', statusFilter)
+   227→      if (specFilter !== 'all') params.set('specialization', specFilter)
+   228→      if (verifiedFilter !== 'all') params.set('verified', verifiedFilter)
+   229→      const res = await fetch(`/api/doctors?${params.toString()}`)
+   230→      if (res.ok) { const data = await res.json(); setDoctors(Array.isArray(data) ? data : data.data || []) }
+   231→    } catch { toast({ title: 'Error', description: 'Failed to fetch doctors', variant: 'destructive' }) }
+   232→    finally { setLoading(false) }
+   233→  }
+   234→
+   235→  const getDoctorStatus = (d: Doctor): string => {
+   236→    if (d.isBlocked) return 'blocked'
+   237→    if (d.isOnline) return 'online'
+   238→    return 'offline'
+   239→  }
+   240→
+   241→  const handleCreate = async () => {
+   242→    if (!form.name || !form.email || !form.password || !form.specialty) {
+   243→      toast({ title: 'Error', description: 'Please fill required fields', variant: 'destructive' }); return
+   244→    }
+   245→    setCreating(true)
+   246→    try {
+   247→      const payload = { ...form, experience: Number(form.experience) || 0, feeOnline: Number(form.feeOnline) || 0, feeAtHome: Number(form.feeAtHome) || 0, commissionRate: Number(form.commissionRate) || 15 }
+   248→      const res = await fetch('/api/doctors', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+   249→      if (res.ok) { toast({ title: 'Doctor Added', description: `${form.name} added successfully` }); setAddOpen(false); setForm(emptyForm); fetchDoctors() }
+   250→      else { const data = await res.json(); toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' }) }
+   251→    } catch { toast({ title: 'Error', variant: 'destructive' }) }
+   252→    finally { setCreating(false) }
+   253→  }
+   254→
+   255→  // Open doctor detail dialog
+   256→  const handleViewDoctor = async (doc: Doctor) => {
+   257→    setSelectedDoctorForBlock(doc)
+   258→    setViewOpen(true)
+   259→    setDocLoading(true)
+   260→    setEditingCommission(false)
+   261→    setOpenMenuId(null)
+   262→    try {
+   263→      const [docRes, bookingsRes, prescriptionsRes] = await Promise.all([
+   264→        fetch(`/api/doctors/${doc.id}`),
+   265→        fetch(`/api/bookings?doctorId=${doc.id}`),
+   266→        fetch(`/api/prescriptions?doctorId=${doc.id}`),
+   267→      ])
+   268→      if (docRes.ok) {
+   269→        const d = await docRes.json()
+   270→        setDoctor(d)
+   271→        setCommissionValue(String(d.commissionRate))
+   272→      }
+   273→      if (bookingsRes.ok) {
+   274→        const data = await bookingsRes.json()
+   275→        setDoctorBookings(Array.isArray(data) ? data : data.data || [])
+   276→      }
+   277→      if (prescriptionsRes.ok) {
+   278→        const data = await prescriptionsRes.json()
+   279→        setDoctorPrescriptions(Array.isArray(data) ? data : data.data || [])
+   280→      }
+   281→    } catch { /* silent */ }
+   282→    finally { setDocLoading(false) }
+   283→  }
+   284→
+   285→  const saveCommission = async () => {
+   286→    if (!doctor) return
+   287→    setSavingCommission(true)
+   288→    try {
+   289→      const res = await fetch(`/api/doctors/${doctor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commissionRate: Number(commissionValue) }) })
+   290→      if (res.ok) {
+   291→        setDoctor({ ...doctor, commissionRate: Number(commissionValue) })
+   292→        setEditingCommission(false)
+   293→        fetchDoctors()
+   294→        toast({ title: 'Updated', description: 'Commission rate updated' })
+   295→      }
+   296→    } catch { toast({ title: 'Error', variant: 'destructive' }) }
+   297→    finally { setSavingCommission(false) }
+   298→  }
+   299→
+   300→  // Block/unblock via alert dialog
+   301→  const [selectedDoctorForBlock, setSelectedDoctorForBlock] = useState<Doctor | null>(null)
+   302→  const openBlockDialog = (doc: Doctor) => { setSelectedDoctorForBlock(doc); setBlockOpen(true); setOpenMenuId(null) }
+   303→  const handleBlockToggle = async () => {
+   304→    if (!selectedDoctorForBlock) return
+   305→    setBlocking(true)
+   306→    try {
+   307→      const isBlocked = !selectedDoctorForBlock.isBlocked
+   308→      const res = await fetch(`/api/doctors/${selectedDoctorForBlock.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isBlocked }) })
+   309→      if (res.ok) {
+   310→        toast({ title: isBlocked ? 'Blocked' : 'Unblocked', description: `${selectedDoctorForBlock.name} ${isBlocked ? 'blocked' : 'unblocked'}` })
+   311→        setBlockOpen(false); setViewOpen(false); fetchDoctors()
+   312→      } else toast({ title: 'Error', variant: 'destructive' })
+   313→    } catch { toast({ title: 'Error', variant: 'destructive' }) }
+   314→    finally { setBlocking(false) }
+   315→  }
+   316→
+   317→  // Parsed languages
+   318→  const parsedLanguages = (() => {
+   319→    if (!doctor?.languages) return []
+   320→    if (typeof doctor.languages !== 'string') return doctor.languages
+   321→    try { return JSON.parse(doctor.languages) } catch { return [] }
+   322→  })()
+   323→
+   324→  // Stats
+   325→  const onlineCount = doctors.filter(d => d.isOnline && !d.isBlocked).length
+   326→  const offlineCount = doctors.filter(d => !d.isOnline && !d.isBlocked).length
+   327→  const blockedCount = doctors.filter(d => d.isBlocked).length
+   328→  const portalCount = doctors.filter(d => d.isPortalUser).length
+   329→
+   330→  const statCards = [
+   331→    { label: 'Total Doctors', value: doctors.length, icon: Stethoscope, color: 'bg-blue-50', iconColor: 'text-blue-600', valueColor: 'text-blue-700', filterValue: 'all' },
+   332→    { label: 'Online', value: onlineCount, icon: Wifi, color: 'bg-green-50', iconColor: 'text-green-500', valueColor: 'text-green-700', filterValue: 'online' },
+   333→    { label: 'Offline', value: offlineCount, icon: WifiOff, color: 'bg-gray-50', iconColor: 'text-gray-400', valueColor: 'text-gray-700', filterValue: 'offline' },
+   334→    { label: 'Blocked', value: blockedCount, icon: ShieldOff, color: 'bg-red-50', iconColor: 'text-red-500', valueColor: 'text-red-700', filterValue: 'blocked' },
+   335→    { label: 'Using Portal', value: portalCount, icon: Monitor, color: 'bg-purple-50', iconColor: 'text-purple-500', valueColor: 'text-purple-700', filterValue: null },
+   336→  ]
+   337→
+   338→  const completedBookings = doctorBookings.filter(b => b.status === 'completed').length
+   339→
+   340→  return (
+   341→    <div className="space-y-5 p-4 md:p-6">
+   342→      {/* Search & Filters */}
+   343→      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+   344→        <div className="relative flex-1 w-full">
+   345→          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+   346→          <Input placeholder="Search doctors by name, email, or phone..." className="pl-9 h-9 rounded-lg border-gray-200 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
+   347→        </div>
+   348→        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+   349→          <SelectTrigger className="w-full sm:w-[140px] h-9 rounded-lg border-gray-200 text-sm"><SelectValue placeholder="All Status" /></SelectTrigger>
+   350→          <SelectContent>
+   351→            <SelectItem value="all">All Status</SelectItem>
+   352→            <SelectItem value="online">Online</SelectItem>
+   353→            <SelectItem value="offline">Offline</SelectItem>
+   354→            <SelectItem value="blocked">Blocked</SelectItem>
+   355→          </SelectContent>
+   356→        </Select>
+   357→        <Select value={specFilter} onValueChange={setSpecFilter}>
+   358→          <SelectTrigger className="w-full sm:w-[170px] h-9 rounded-lg border-gray-200 text-sm"><SelectValue placeholder="All Specializations" /></SelectTrigger>
+   359→          <SelectContent>
+   360→            <SelectItem value="all">All Specializations</SelectItem>
+   361→            {specialtyOptions.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+   362→          </SelectContent>
+   363→        </Select>
+   364→        <Select value={verifiedFilter} onValueChange={setVerifiedFilter}>
+   365→          <SelectTrigger className="w-full sm:w-[100px] h-9 rounded-lg border-gray-200 text-sm"><SelectValue placeholder="All" /></SelectTrigger>
+   366→          <SelectContent>
+   367→            <SelectItem value="all">All</SelectItem>
+   368→            <SelectItem value="true">Verified</SelectItem>
+   369→            <SelectItem value="false">Unverified</SelectItem>
+   370→          </SelectContent>
+   371→        </Select>
+   372→      </div>
+   373→
+   374→      {/* Stat Cards */}
+   375→      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+   376→        {statCards.map((card) => {
+   377→          const isActive = card.filterValue !== null && cardFilter === card.filterValue
+   378→          const isClickable = card.filterValue !== null
+   379→          return (
+   380→            <Card
+   381→              key={card.label}
+   382→              className={cn(
+   383→                'bg-white rounded-lg shadow-sm border-0 transition-all duration-150',
+   384→                isClickable && 'cursor-pointer hover:shadow-md hover:-translate-y-0.5',
+   385→                isActive && 'ring-2 ring-offset-1 ring-blue-500 shadow-md'
+   386→              )}
+   387→              {...(isClickable ? { onClick: () => handleCardClick(card.filterValue!) } : {})}
+   388→            >
+   389→              <CardContent className="p-4 flex items-center gap-3">
+   390→                <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center transition-colors', card.color, isActive && 'ring-2 ring-current opacity-80')}>
+   391→                  <card.icon className={cn('w-5 h-5', card.iconColor)} />
+   392→                </div>
+   393→                <div className="min-w-0">
+   394→                  <p className={cn('text-xl font-bold leading-tight', card.valueColor)}>{loading ? '—' : card.value}</p>
+   395→                  <p className={cn('text-xs mt-0.5 truncate', isActive ? 'text-blue-600 font-medium' : 'text-gray-500')}>{card.label}</p>
+   396→                </div>
+   397→                {isActive && (
+   398→                  <div className="ml-auto">
+   399→                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+   400→                      <X className="w-3 h-3 text-white" />
+   401→                    </div>
+   402→                  </div>
+   403→                )}
+   404→              </CardContent>
+   405→            </Card>
+   406→          )
+   407→        })}
+   408→      </div>
+   409→
+   410→      {/* Doctors Table */}
+   411→      <Card className="bg-white rounded-lg shadow-sm border-0 overflow-hidden">
+   412→        <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100">
+   413→          <h3 className="text-base font-semibold text-gray-900">Doctors</h3>
+   414→          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+   415→            <DialogTrigger asChild>
+   416→              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 h-8 text-xs font-medium rounded-lg">
+   417→                <Plus className="w-3.5 h-3.5" /> Add Doctor
+   418→              </Button>
+   419→            </DialogTrigger>
+   420→            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+   421→              <DialogHeader><DialogTitle>Add New Doctor</DialogTitle></DialogHeader>
+   422→              <div className="space-y-4 py-2">
+   423→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   424→                  <div className="space-y-2"><Label className="text-xs font-medium">Name *</Label><Input placeholder="Dr. Full Name" className="h-9 text-sm rounded-lg" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+   425→                  <div className="space-y-2"><Label className="text-xs font-medium">Email *</Label><Input type="email" placeholder="doctor@example.com" className="h-9 text-sm rounded-lg" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+   426→                </div>
+   427→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   428→                  <div className="space-y-2"><Label className="text-xs font-medium">Phone</Label><Input placeholder="+91 98765 43210" className="h-9 text-sm rounded-lg" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+   429→                  <div className="space-y-2"><Label className="text-xs font-medium">Password *</Label><Input type="password" placeholder="Set password" className="h-9 text-sm rounded-lg" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
+   430→                </div>
+   431→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   432→                  <div className="space-y-2">
+   433→                    <Label className="text-xs font-medium">Specialty *</Label>
+   434→                    <Select value={form.specialty} onValueChange={(v) => setForm({ ...form, specialty: v })}>
+   435→                      <SelectTrigger className="h-9 text-sm rounded-lg"><SelectValue placeholder="Select" /></SelectTrigger>
+   436→                      <SelectContent>{specialtyOptions.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent>
+   437→                    </Select>
+   438→                  </div>
+   439→                  <div className="space-y-2"><Label className="text-xs font-medium">Experience (yrs)</Label><Input type="number" placeholder="e.g. 5" className="h-9 text-sm rounded-lg" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} /></div>
+   440→                </div>
+   441→                <div className="space-y-2"><Label className="text-xs font-medium">Qualifications</Label><Input placeholder="MBBS, MD" className="h-9 text-sm rounded-lg" value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} /></div>
+   442→                <div className="space-y-2"><Label className="text-xs font-medium">Area</Label><Input placeholder="City or locality" className="h-9 text-sm rounded-lg" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} /></div>
+   443→                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+   444→                  <div className="space-y-2"><Label className="text-xs font-medium">Fee Online</Label><Input type="number" placeholder="500" className="h-9 text-sm rounded-lg" value={form.feeOnline} onChange={(e) => setForm({ ...form, feeOnline: e.target.value })} /></div>
+   445→                  <div className="space-y-2"><Label className="text-xs font-medium">Fee At Home</Label><Input type="number" placeholder="800" className="h-9 text-sm rounded-lg" value={form.feeAtHome} onChange={(e) => setForm({ ...form, feeAtHome: e.target.value })} /></div>
+   446→                  <div className="space-y-2"><Label className="text-xs font-medium">Commission %</Label><Input type="number" placeholder="15" className="h-9 text-sm rounded-lg" value={form.commissionRate} onChange={(e) => setForm({ ...form, commissionRate: e.target.value })} /></div>
+   447→                </div>
+   448→              </div>
+   449→              <DialogFooter>
+   450→                <Button variant="outline" onClick={() => setAddOpen(false)} className="rounded-lg">Cancel</Button>
+   451→                <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg" onClick={handleCreate} disabled={creating}>{creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Add Doctor</Button>
+   452→              </DialogFooter>
+   453→            </DialogContent>
+   454→          </Dialog>
+   455→        </div>
+   456→
+   457→        <div className="overflow-x-auto">
+   458→          <Table>
+   459→            <TableHeader>
+   460→              <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-0">
+   461→                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10 pl-5">Name</TableHead>
+   462→                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Phone</TableHead>
+   463→                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Status</TableHead>
+   464→                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Fee (On/Off)</TableHead>
+   465→                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Comm. %</TableHead>
+   466→                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Bookings</TableHead>
+   467→                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Earnings</TableHead>
+   468→                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10">Verified</TableHead>
+   469→                <TableHead className="text-xs font-semibold uppercase text-gray-500 h-10 pr-5 w-12"></TableHead>
+   470→              </TableRow>
+   471→            </TableHeader>
+   472→            <TableBody>
+   473→              {loading ? (
+   474→                Array.from({ length: 4 }).map((_, i) => (
+   475→                  <TableRow key={i} className="border-0">{Array.from({ length: 9 }).map((_, j) => (<TableCell key={j} className={j === 0 ? 'pl-5' : j === 8 ? 'pr-5' : ''}><Skeleton className="h-4 w-20" /></TableCell>))}</TableRow>
+   476→                ))
+   477→              ) : doctors.length > 0 ? (
+   478→                doctors.map((d) => {
+   479→                  const status = getDoctorStatus(d)
+   480→                  return (
+   481→                    <TableRow key={d.id} className="hover:bg-gray-50/50 border-0 border-b border-gray-100 last:border-0 cursor-pointer" onClick={() => handleViewDoctor(d)}>
+   482→                      <TableCell className="pl-5 py-3">
+   483→                        <p className="text-sm font-semibold text-gray-900">{d.name}</p>
+   484→                        <p className="text-xs text-gray-500 mt-0.5">{d.specialty}</p>
+   485→                      </TableCell>
+   486→                      <TableCell className="py-3"><p className="text-sm text-gray-700">{d.phone}</p></TableCell>
+   487→                      <TableCell className="py-3">
+   488→                        <div className="flex items-center gap-1.5">
+   489→                          <span className={cn('w-2 h-2 rounded-full', status === 'online' ? 'bg-green-500' : status === 'blocked' ? 'bg-red-500' : 'bg-gray-400')} />
+   490→                          <span className={cn('text-xs font-medium capitalize', status === 'online' ? 'text-green-700' : status === 'blocked' ? 'text-red-700' : 'text-gray-600')}>{status}</span>
+   491→                        </div>
+   492→                      </TableCell>
+   493→                      <TableCell className="py-3">
+   494→                        <p className="text-sm text-gray-700">
+   495→                          <span className="font-medium">{d.feeOnline > 0 ? `₹${d.feeOnline.toLocaleString()}` : '₹0'}</span>
+   496→                          <span className="text-gray-400 mx-0.5">/</span>
+   497→                          <span>{d.feeAtHome > 0 ? `₹${d.feeAtHome.toLocaleString()}` : '₹0'}</span>
+   498→                        </p>
+   499→                      </TableCell>
+   500→                      <TableCell className="py-3"><p className="text-sm font-medium text-gray-700">{d.commissionRate}%</p></TableCell>
+   501→                      <TableCell className="py-3"><p className="text-sm text-gray-700">{d.bookingCount || 0}</p></TableCell>
+   502→                      <TableCell className="py-3"><p className="text-sm font-medium text-gray-900">{d.totalEarnings > 0 ? `₹${d.totalEarnings.toLocaleString()}` : '₹0'}</p></TableCell>
+   503→                      <TableCell className="py-3">
+   504→                        {d.verified ? <CheckCircle className="w-4 h-4 text-green-500" /> : <span className="w-4 h-4 rounded-full border-2 border-gray-300 inline-block" />}
+   505→                      </TableCell>
+   506→                      <TableCell className="py-3 pr-5">
+   507→                        <div className="relative">
+   508→                          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 rounded-lg hover:bg-gray-100" onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === d.id ? null : d.id) }}>
+   509→                            <MoreVertical className="w-4 h-4 text-gray-500" />
+   510→                          </Button>
+   511→                          {openMenuId === d.id && (
+   512→                            <div ref={menuRef} className="absolute right-0 top-full mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+   513→                              <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); handleViewDoctor(d) }}>
+   514→                                <Eye className="w-3.5 h-3.5 text-gray-400" /> View Details
+   515→                              </button>
+   516→                              <button className={cn('w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2', d.isBlocked ? 'text-green-600' : 'text-red-600')} onClick={(e) => { e.stopPropagation(); openBlockDialog(d) }}>
+   517→                                {d.isBlocked ? <><CheckCircle className="w-3.5 h-3.5" /> Unblock</> : <><Ban className="w-3.5 h-3.5" /> Block</>}
+   518→                              </button>
+   519→                            </div>
+   520→                          )}
+   521→                        </div>
+   522→                      </TableCell>
+   523→                    </TableRow>
+   524→                  )
+   525→                })
+   526→              ) : (
+   527→                <TableRow className="border-0"><TableCell colSpan={9} className="text-center py-12 text-gray-400 text-sm">No doctors found</TableCell></TableRow>
+   528→              )}
+   529→            </TableBody>
+   530→          </Table>
+   531→        </div>
+   532→      </Card>
+   533→
+   534→      {/* ═══════════════════════════════════════════════════════════
+   535→          DOCTOR DETAIL DIALOG — Large Profile Management View
+   536→         ═══════════════════════════════════════════════════════════ */}
+   537→      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+   538→        <DialogContent className="sm:max-w-4xl max-h-[92vh] overflow-hidden p-0 flex flex-col">
+   539→          <DialogTitle className="sr-only">Doctor Details</DialogTitle>
+   540→          {docLoading && !doctor ? (
+   541→            <div className="flex-1 flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+   542→          ) : doctor ? (
+   543→            <>
+   544→              {/* ── Header ── */}
+   545→              <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+   546→                <div className="flex items-start justify-between">
+   547→                  <div>
+   548→                    <h2 className="text-xl font-bold text-gray-900">Doctor Details</h2>
+   549→                    <p className="text-sm text-gray-500 mt-0.5">Full profile and management controls</p>
+   550→                  </div>
+   551→                  <Button variant="ghost" size="sm" className="w-8 h-8 p-0 rounded-full hover:bg-gray-100" onClick={() => setViewOpen(false)}>
+   552→                    <X className="w-4 h-4 text-gray-400" />
+   553→                  </Button>
+   554→                </div>
+   555→              </div>
+   556→
+   557→              {/* ── Scrollable Content ── */}
+   558→              <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   559→                <div className="px-6 py-5 space-y-6">
+   560→
+   561→                  {/* ── Profile Summary ── */}
+   562→                  <div className="flex items-center gap-4">
+   563→                    <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+   564→                      <span className="text-lg font-bold text-blue-700">{doctor.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
+   565→                    </div>
+   566→                    <div className="flex-1 min-w-0">
+   567→                      <h3 className="text-lg font-bold text-gray-900">{doctor.name}</h3>
+   568→                      <p className="text-sm text-gray-500">{doctor.specialty}{doctor.qualifications ? ` · ${doctor.qualifications}` : ''}</p>
+   569→                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+   570→                        <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{doctor.phone}</span>
+   571→                        <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{doctor.email}</span>
+   572→                      </div>
+   573→                    </div>
+   574→                  </div>
+   575→
+   576→                  {/* ── Status Toggles ── */}
+   577→                  <div className="flex items-center gap-8 bg-gray-50 rounded-xl p-4">
+   578→                    <div className="flex items-center gap-3">
+   579→                      <Wifi className="w-4 h-4 text-gray-500" />
+   580→                      <span className="text-sm text-gray-600 w-16">Online</span>
+   581→                      <Toggle checked={doctor.isOnline} onChange={toggleOnline} disabled={doctor.isBlocked} />
+   582→                    </div>
+   583→                    <div className="flex items-center gap-3">
+   584→                      <ShieldOff className="w-4 h-4 text-gray-500" />
+   585→                      <span className="text-sm text-gray-600 w-16">Blocked</span>
+   586→                      <Toggle checked={doctor.isBlocked} onChange={toggleBlocked} />
+   587→                    </div>
+   588→                    <div className="flex items-center gap-3">
+   589→                      <CheckCircle className="w-4 h-4 text-gray-500" />
+   590→                      <span className="text-sm text-gray-600 w-16">Verified</span>
+   591→                      <Toggle checked={doctor.verified} onChange={toggleVerified} />
+   592→                    </div>
+   593→                  </div>
+   594→
+   595→                  {/* ── 2x2 Info Cards Grid ── */}
+   596→                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   597→
+   598→                    {/* Commission Rate */}
+   599→                    <div className="bg-gray-50 rounded-xl p-5">
+   600→                      <div className="flex items-center justify-between mb-3">
+   601→                        <h4 className="text-sm font-semibold text-gray-600">Commission Rate</h4>
+   602→                        {editingCommission ? (
+   603→                          <div className="flex items-center gap-1.5">
+   604→                            <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-500 hover:text-gray-700 px-2" onClick={() => { setEditingCommission(false); setCommissionValue(String(doctor.commissionRate)) }}>
+   605→                              <X className="w-3 h-3" />
+   606→                            </Button>
+   607→                            <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 gap-1" onClick={saveCommission} disabled={savingCommission}>
+   608→                              {savingCommission ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
+   609→                            </Button>
+   610→                          </div>
+   611→                        ) : (
+   612→                          <Button size="sm" variant="outline" className="h-7 text-xs border-gray-300 text-gray-600 hover:bg-white px-2 gap-1" onClick={() => setEditingCommission(true)}>
+   613→                            <Pencil className="w-3 h-3" /> Edit
+   614→                          </Button>
+   615→                        )}
+   616→                      </div>
+   617→                      {editingCommission ? (
+   618→                        <div className="flex items-center gap-2">
+   619→                          <Input type="number" value={commissionValue} onChange={(e) => setCommissionValue(e.target.value)} className="h-10 w-24 text-center text-lg font-bold rounded-lg border-gray-300" />
+   620→                          <span className="text-lg text-gray-400">%</span>
+   621→                        </div>
+   622→                      ) : (
+   623→                        <p className="text-3xl font-bold text-blue-600">{doctor.commissionRate}%</p>
+   624→                      )}
+   625→                    </div>
+   626→
+   627→                    {/* Earnings & Due */}
+   628→                    <div className="bg-gray-50 rounded-xl p-5">
+   629→                      <h4 className="text-sm font-semibold text-gray-600 mb-3">Earnings & Due</h4>
+   630→                      <div className="space-y-2.5">
+   631→                        <div className="flex items-center justify-between">
+   632→                          <span className="text-sm text-gray-500">Total Earnings</span>
+   633→                          <span className="text-sm font-semibold text-gray-900">₹{(doctor.totalEarnings || 0).toLocaleString()}</span>
+   634→                        </div>
+   635→                        <div className="flex items-center justify-between">
+   636→                          <span className="text-sm text-gray-500">Platform Fee Paid</span>
+   637→                          <span className="text-sm font-semibold text-green-600">₹{(doctor.totalCommissionPaid || 0).toLocaleString()}</span>
+   638→                        </div>
+   639→                        <div className="flex items-center justify-between">
+   640→                          <span className="text-sm text-gray-500">Platform Fee Due</span>
+   641→                          <span className="text-sm font-semibold text-red-600">₹{(doctor.commissionDue || 0).toLocaleString()}</span>
+   642→                        </div>
+   643→                      </div>
+   644→                    </div>
+   645→
+   646→                    {/* Consultation Fees */}
+   647→                    <div className="bg-gray-50 rounded-xl p-5">
+   648→                      <h4 className="text-sm font-semibold text-gray-600 mb-3">Consultation Fees</h4>
+   649→                      <div className="space-y-2.5">
+   650→                        <div className="flex items-center justify-between">
+   651→                          <span className="text-sm text-gray-500">Online Fee</span>
+   652→                          <span className="text-sm font-semibold text-gray-900">₹{(doctor.feeOnline || 0).toLocaleString()}</span>
+   653→                        </div>
+   654→                        <div className="flex items-center justify-between">
+   655→                          <span className="text-sm text-gray-500">Home Visit Fee</span>
+   656→                          <span className="text-sm font-semibold text-gray-900">₹{(doctor.feeAtHome || 0).toLocaleString()}</span>
+   657→                        </div>
+   658→                      </div>
+   659→                    </div>
+   660→
+   661→                    {/* Availability & Info */}
+   662→                    <div className="bg-gray-50 rounded-xl p-5">
+   663→                      <h4 className="text-sm font-semibold text-gray-600 mb-3">Availability</h4>
+   664→                      <div className="space-y-2.5">
+   665→                        <div className="flex items-center justify-between">
+   666→                          <span className="text-sm text-gray-500 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />Experience</span>
+   667→                          <span className="text-sm font-semibold text-gray-900">{doctor.experience || 0} yrs</span>
+   668→                        </div>
+   669→                        <div className="flex items-center justify-between">
+   670→                          <span className="text-sm text-gray-500 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" />Area</span>
+   671→                          <span className="text-sm font-semibold text-gray-900">{doctor.area || 'N/A'}</span>
+   672→                        </div>
+   673→                        <div className="flex items-center justify-between">
+   674→                          <span className="text-sm text-gray-500 flex items-center gap-1.5"><Languages className="w-3.5 h-3.5" />Languages</span>
+   675→                          <span className="text-sm font-semibold text-gray-900">{parsedLanguages.length > 0 ? parsedLanguages.join(', ') : 'N/A'}</span>
+   676→                        </div>
+   677→                      </div>
+   678→                    </div>
+   679→                  </div>
+   680→
+   681→                  {/* ── Tabs: Bookings, Prescriptions & Analytics ── */}
+   682→                  <Tabs defaultValue="bookings" className="w-full">
+   683→                    <TabsList className="w-full">
+   684→                      <TabsTrigger value="bookings" className="flex-1 gap-1.5 text-sm"><CalendarDays className="w-3.5 h-3.5" /> Bookings ({doctorBookings.length})</TabsTrigger>
+   685→                      <TabsTrigger value="prescriptions" className="flex-1 gap-1.5 text-sm"><FileText className="w-3.5 h-3.5" /> Prescriptions ({doctorPrescriptions.length})</TabsTrigger>
+   686→                      <TabsTrigger value="analytics" className="flex-1 gap-1.5 text-sm"><BarChart3 className="w-3.5 h-3.5" /> Analytics</TabsTrigger>
+   687→                    </TabsList>
+   688→
+   689→                    <TabsContent value="bookings" className="mt-4">
+   690→                      <div className="max-h-[280px] overflow-y-auto rounded-lg border border-gray-200" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   691→                        <Table>
+   692→                          <TableHeader>
+   693→                            <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   694→                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Booking ID</TableHead>
+   695→                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient</TableHead>
+   696→                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
+   697→                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Service</TableHead>
+   698→                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Amount</TableHead>
+   699→                              <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   700→                            </TableRow>
+   701→                          </TableHeader>
+   702→                          <TableBody>
+   703→                            {doctorBookings.length > 0 ? doctorBookings.map((b) => (
+   704→                              <TableRow key={b.id} className="hover:bg-gray-50/50">
+   705→                                <TableCell className="font-mono text-xs text-blue-700 font-medium">{b.bookingId || '—'}</TableCell>
+   706→                                <TableCell>
+   707→                                  <div>
+   708→                                    <p className="text-sm text-gray-900">{b.patientName}</p>
+   709→                                    {b.patientUhid && <p className="text-[11px] text-gray-400 font-mono">{b.patientUhid}</p>}
+   710→                                  </div>
+   711→                                </TableCell>
+   712→                                <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
+   713→                                <TableCell className="text-sm text-gray-600">{b.serviceName || '—'}</TableCell>
+   714→                                <TableCell className="text-sm font-medium text-gray-900">{b.totalAmount ? `₹${b.totalAmount.toLocaleString()}` : '—'}</TableCell>
+   715→                                <TableCell>
+   716→                                  <Badge variant="secondary" className={cn('text-[11px] capitalize', bookingStatusColor[b.status] || 'bg-gray-100 text-gray-800')}>
+   717→                                    {b.status.replace('_', ' ')}
+   718→                                  </Badge>
+   719→                                </TableCell>
+   720→                              </TableRow>
+   721→                            )) : (
+   722→                              <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-400 text-sm">No bookings found</TableCell></TableRow>
+   723→                            )}
+   724→                          </TableBody>
+   725→                        </Table>
+   726→                      </div>
+   727→                      {doctorBookings.length > 0 && (
+   728→                        <div className="mt-3 flex items-center gap-6 text-xs text-gray-500">
+   729→                          <span>Total: <strong className="text-gray-900">{doctorBookings.length}</strong></span>
+   730→                          <span>Completed: <strong className="text-green-700">{completedBookings}</strong></span>
+   731→                          <span>Earnings: <strong className="text-blue-700">₹{(doctor.totalEarnings || 0).toLocaleString()}</strong></span>
+   732→                        </div>
+   733→                      )}
+   734→                    </TabsContent>
+   735→
+   736→                    <TabsContent value="prescriptions" className="mt-4">
+   737→                      {doctorPrescriptions.length > 0 ? (
+   738→                        <div className="max-h-[280px] overflow-y-auto space-y-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   739→                          {doctorPrescriptions.map((p) => (
+   740→                            <div key={p.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+   741→                              <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+   742→                              <div className="flex-1 min-w-0">
+   743→                                <p className="text-sm font-medium text-gray-900 truncate">{p.patientName}</p>
+   744→                                {p.diagnosis && <p className="text-xs text-gray-500 truncate">{p.diagnosis}</p>}
+   745→                              </div>
+   746→                              <p className="text-xs text-gray-400 flex-shrink-0">{p.date}</p>
+   747→                            </div>
+   748→                          ))}
+   749→                        </div>
+   750→                      ) : (
+   751→                        <p className="text-center text-gray-400 text-sm py-8">No prescriptions found for this doctor</p>
+   752→                      )}
+   753→                    </TabsContent>
+   754→
+   755→                    {/* ── Analytics Tab ── */}
+   756→                    <TabsContent value="analytics" className="mt-4">
+   757→                      {(() => {
+   758→                        const bk = doctorBookings
+   759→                        const total = bk.length
+   760→                        const completed = bk.filter(b => b.status === 'completed')
+   761→                        const online = bk.filter(b => b.consultationMode === 'online')
+   762→                        const offline = bk.filter(b => b.consultationMode === 'in_home')
+   763→                        const platform = bk.filter(b => b.source === 'portal' || b.source === 'website')
+   764→                        const direct = bk.filter(b => b.source === 'admin')
+   765→                        const totalRevenue = completed.reduce((s, b) => s + (b.totalAmount || 0), 0)
+   766→                        const platformRevenue = completed.filter(b => b.source === 'portal' || b.source === 'website').reduce((s, b) => s + (b.totalAmount || 0), 0)
+   767→                        const totalCommission = completed.reduce((s, b) => s + (b.commissionAmount || 0), 0)
+   768→                        const totalEarnings = completed.reduce((s, b) => s + (b.doctorEarnings || 0), 0)
+   769→
+   770→                        // Unique patients
+   771→                        const uniquePatients = new Set(bk.map(b => b.patientUhid || b.patientName)).size
+   772→
+   773→                        // Peak hours (from startTime)
+   774→                        const hourCounts: Record<string, number> = {}
+   775→                        bk.forEach(b => { if (b.startTime) { const h = b.startTime.split(':')[0] + ':00'; hourCounts[h] = (hourCounts[h] || 0) + 1 } })
+   776→                        const peakHours = Object.entries(hourCounts).sort((a, b) => b[1] - a[1]).slice(0, 3)
+   777→                        const maxHourCount = peakHours.length > 0 ? peakHours[0][1] : 1
+   778→
+   779→                        // Peak days (day of week from date)
+   780→                        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+   781→                        const dayCounts: Record<string, number> = {}
+   782→                        bk.forEach(b => { try { const d = new Date(b.date); dayCounts[dayNames[d.getDay()]] = (dayCounts[dayNames[d.getDay()]] || 0) + 1 } catch {} })
+   783→                        const peakDays = Object.entries(dayCounts).sort((a, b) => b[1] - a[1]).slice(0, 3)
+   784→                        const maxDayCount = peakDays.length > 0 ? peakDays[0][1] : 1
+   785→
+   786→                        return (
+   787→                          <div className="space-y-4">
+   788→                            {/* Row 1: Overview stats */}
+   789→                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   790→                              <div className="bg-blue-50 rounded-xl p-3.5 text-center">
+   791→                                <Users className="w-4 h-4 text-blue-600 mx-auto mb-1" />
+   792→                                <p className="text-lg font-bold text-gray-900">{uniquePatients}</p>
+   793→                                <p className="text-[11px] text-gray-500">Unique Patients</p>
+   794→                              </div>
+   795→                              <div className="bg-green-50 rounded-xl p-3.5 text-center">
+   796→                                <TrendingUp className="w-4 h-4 text-green-600 mx-auto mb-1" />
+   797→                                <p className="text-lg font-bold text-gray-900">{completed.length}</p>
+   798→                                <p className="text-[11px] text-gray-500">Completed</p>
+   799→                              </div>
+   800→                              <div className="bg-amber-50 rounded-xl p-3.5 text-center">
+   801→                                <IndianRupee className="w-4 h-4 text-amber-600 mx-auto mb-1" />
+   802→                                <p className="text-lg font-bold text-gray-900">₹{totalRevenue.toLocaleString()}</p>
+   803→                                <p className="text-[11px] text-gray-500">Total Revenue</p>
+   804→                              </div>
+   805→                              <div className="bg-purple-50 rounded-xl p-3.5 text-center">
+   806→                                <DollarSign className="w-4 h-4 text-purple-600 mx-auto mb-1" />
+   807→                                <p className="text-lg font-bold text-gray-900">₹{totalEarnings.toLocaleString()}</p>
+   808→                                <p className="text-[11px] text-gray-500">Doctor Earnings</p>
+   809→                              </div>
+   810→                            </div>
+   811→
+   812→                            {/* Row 2: Online vs Offline + Platform vs Direct */}
+   813→                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   814→                              {/* Online vs Offline */}
+   815→                              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+   816→                                <h5 className="text-xs font-semibold text-gray-500 uppercase">Consultation Mode</h5>
+   817→                                <div className="flex items-center gap-3">
+   818→                                  <div className="flex-1">
+   819→                                    <div className="flex items-center justify-between text-xs mb-1">
+   820→                                      <span className="flex items-center gap-1 text-teal-700"><Globe className="w-3 h-3" /> Online</span>
+   821→                                      <span className="font-semibold text-gray-900">{online.length}</span>
+   822→                                    </div>
+   823→                                    <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+   824→                                      <div className="h-full bg-teal-500 rounded-full transition-all" style={{ width: `${total > 0 ? (online.length / total * 100) : 0}%` }} />
+   825→                                    </div>
+   826→                                  </div>
+   827→                                </div>
+   828→                                <div className="flex items-center gap-3">
+   829→                                  <div className="flex-1">
+   830→                                    <div className="flex items-center justify-between text-xs mb-1">
+   831→                                      <span className="flex items-center gap-1 text-amber-700"><Home className="w-3 h-3" /> Offline (Home Visit)</span>
+   832→                                      <span className="font-semibold text-gray-900">{offline.length}</span>
+   833→                                    </div>
+   834→                                    <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+   835→                                      <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${total > 0 ? (offline.length / total * 100) : 0}%` }} />
+   836→                                    </div>
+   837→                                  </div>
+   838→                                </div>
+   839→                              </div>
+   840→
+   841→                              {/* Platform vs Direct */}
+   842→                              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+   843→                                <h5 className="text-xs font-semibold text-gray-500 uppercase">Patient Source</h5>
+   844→                                <div className="flex items-center gap-3">
+   845→                                  <div className="flex-1">
+   846→                                    <div className="flex items-center justify-between text-xs mb-1">
+   847→                                      <span className="flex items-center gap-1 text-blue-700"><Globe className="w-3 h-3" /> Platform</span>
+   848→                                      <span className="font-semibold text-gray-900">{platform.length}</span>
+   849→                                    </div>
+   850→                                    <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+   851→                                      <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${total > 0 ? (platform.length / total * 100) : 0}%` }} />
+   852→                                    </div>
+   853→                                  </div>
+   854→                                </div>
+   855→                                <div className="flex items-center gap-3">
+   856→                                  <div className="flex-1">
+   857→                                    <div className="flex items-center justify-between text-xs mb-1">
+   858→                                      <span className="flex items-center gap-1 text-gray-500"><Users className="w-3 h-3" /> Direct / Admin</span>
+   859→                                      <span className="font-semibold text-gray-900">{direct.length}</span>
+   860→                                    </div>
+   861→                                    <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+   862→                                      <div className="h-full bg-gray-500 rounded-full transition-all" style={{ width: `${total > 0 ? (direct.length / total * 100) : 0}%` }} />
+   863→                                    </div>
+   864→                                  </div>
+   865→                                </div>
+   866→                              </div>
+   867→                            </div>
+   868→
+   869→                            {/* Row 3: Revenue Breakdown */}
+   870→                            <div className="bg-blue-50 rounded-xl p-4">
+   871→                              <h5 className="text-xs font-semibold text-blue-700 uppercase mb-3">Revenue Breakdown</h5>
+   872→                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   873→                                <div>
+   874→                                  <p className="text-[11px] text-gray-500">Total Revenue</p>
+   875→                                  <p className="text-sm font-bold text-gray-900">₹{totalRevenue.toLocaleString()}</p>
+   876→                                </div>
+   877→                                <div>
+   878→                                  <p className="text-[11px] text-gray-500">From Platform</p>
+   879→                                  <p className="text-sm font-bold text-blue-700">₹{platformRevenue.toLocaleString()}</p>
+   880→                                </div>
+   881→                                <div>
+   882→                                  <p className="text-[11px] text-gray-500">Platform Commission</p>
+   883→                                  <p className="text-sm font-bold text-red-600">₹{totalCommission.toLocaleString()}</p>
+   884→                                </div>
+   885→                                <div>
+   886→                                  <p className="text-[11px] text-gray-500">Doctor Earnings</p>
+   887→                                  <p className="text-sm font-bold text-green-700">₹{totalEarnings.toLocaleString()}</p>
+   888→                                </div>
+   889→                              </div>
+   890→                            </div>
+   891→
+   892→                            {/* Row 4: Peak Hours & Peak Days */}
+   893→                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   894→                              {/* Peak Hours */}
+   895→                              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+   896→                                <h5 className="text-xs font-semibold text-gray-500 uppercase">Peak Hours</h5>
+   897→                                {peakHours.length > 0 ? peakHours.map(([hour, count]) => (
+   898→                                  <div key={hour} className="flex items-center gap-3">
+   899→                                    <span className="text-xs text-gray-600 w-12 font-mono">{hour}</span>
+   900→                                    <div className="flex-1 h-2.5 rounded-full bg-gray-200 overflow-hidden">
+   901→                                      <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${(count / maxHourCount) * 100}%` }} />
+   902→                                    </div>
+   903→                                    <span className="text-xs font-semibold text-gray-700 w-6 text-right">{count}</span>
+   904→                                  </div>
+   905→                                )) : <p className="text-xs text-gray-400">No data</p>}
+   906→                              </div>
+   907→
+   908→                              {/* Peak Days */}
+   909→                              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+   910→                                <h5 className="text-xs font-semibold text-gray-500 uppercase">Peak Days</h5>
+   911→                                {peakDays.length > 0 ? peakDays.map(([day, count]) => (
+   912→                                  <div key={day} className="flex items-center gap-3">
+   913→                                    <span className="text-xs text-gray-600 w-24">{day}</span>
+   914→                                    <div className="flex-1 h-2.5 rounded-full bg-gray-200 overflow-hidden">
+   915→                                      <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${(count / maxDayCount) * 100}%` }} />
+   916→                                    </div>
+   917→                                    <span className="text-xs font-semibold text-gray-700 w-6 text-right">{count}</span>
+   918→                                  </div>
+   919→                                )) : <p className="text-xs text-gray-400">No data</p>}
+   920→                              </div>
+   921→                            </div>
+   922→
+   923→                            {total === 0 && (
+   924→                              <p className="text-center text-gray-400 text-sm py-6">No booking data available for analytics</p>
+   925→                            )}
+   926→                          </div>
+   927→                        )
+   928→                      })()}
+   929→                    </TabsContent>
+   930→                  </Tabs>
+   931→
+   932→                </div>
+   933→              </div>
+   934→            </>
+   935→          ) : null}
+   936→        </DialogContent>
+   937→      </Dialog>
+   938→
+   939→      {/* Block/Unblock AlertDialog */}
+   940→      <AlertDialog open={blockOpen} onOpenChange={setBlockOpen}>
+   941→        <AlertDialogContent>
+   942→          <AlertDialogHeader>
+   943→            <AlertDialogTitle>{selectedDoctorForBlock?.isBlocked ? 'Unblock Doctor' : 'Block Doctor'}</AlertDialogTitle>
+   944→            <AlertDialogDescription>
+   945→              {selectedDoctorForBlock?.isBlocked
+   946→                ? `Are you sure you want to unblock ${selectedDoctorForBlock?.name}? They will regain access to their portal and can accept new bookings.`
+   947→                : `Are you sure you want to block ${selectedDoctorForBlock?.name}? They will lose access to their portal and won't be able to accept new bookings. This action can be reversed later.`}
+   948→            </AlertDialogDescription>
+   949→          </AlertDialogHeader>
+   950→          <AlertDialogFooter>
+   951→            <AlertDialogCancel disabled={blocking}>Cancel</AlertDialogCancel>
+   952→            <AlertDialogAction
+   953→              onClick={handleBlockToggle}
+   954→              disabled={blocking}
+   955→              className={selectedDoctorForBlock?.isBlocked ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-600' : 'bg-red-600 hover:bg-red-700 focus:ring-red-600'}
+   956→            >
+   957→              {blocking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+   958→              {selectedDoctorForBlock?.isBlocked ? 'Unblock' : 'Block'} Doctor
+   959→            </AlertDialogAction>
+   960→          </AlertDialogFooter>
+   961→        </AlertDialogContent>
+   962→      </AlertDialog>
+   963→    </div>
+   964→  )
+   965→}

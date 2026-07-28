@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -17,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
-  Search, Eye, User, Users, UserPlus, CalendarDays,
+  Search, Eye, User, Users, UserPlus, CalendarDays, X,
   FileText, Phone, Mail, MapPin, Activity,
 } from 'lucide-react'
 
@@ -92,15 +91,19 @@ export function PatientsSection() {
   const [patientBookings, setPatientBookings] = useState<Booking[]>([])
   const [patientPrescriptions, setPatientPrescriptions] = useState<Prescription[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
+  const [cardFilter, setCardFilter] = useState<string | null>(null)
+  const [patientFilter, setPatientFilter] = useState<'all' | 'new_this_month' | 'with_bookings'>('all')
 
   const fetchPatients = useCallback(async (query?: string) => {
     try {
       setLoading(true)
-      const params = query ? `?search=${encodeURIComponent(query)}` : ''
-      const res = await fetch(`/api/patients${params}`)
+      const params = new URLSearchParams()
+      if (query) params.set('search', query)
+      const qs = params.toString() ? `?${params.toString()}` : ''
+      const res = await fetch(`/api/patients${qs}`)
       if (res.ok) {
         const data = await res.json()
-        const list = Array.isArray(data) ? data : data?.data || data?.patients || []
+        const list: Patient[] = Array.isArray(data) ? data : data?.data || data?.patients || []
         setPatients(list)
       } else {
         toast({ title: 'Error', description: 'Failed to fetch patients', variant: 'destructive' })
@@ -125,6 +128,8 @@ export function PatientsSection() {
   const clearSearch = () => {
     setSearchInput('')
     setSearch('')
+    setCardFilter(null)
+    setPatientFilter('all')
     fetchPatients()
   }
 
@@ -159,7 +164,7 @@ export function PatientsSection() {
     }
   }
 
-  // Stat calculations
+  // Stat calculations (always on full data)
   const totalPatients = patients.length
   const now = new Date()
   const thisMonth = now.getMonth()
@@ -170,10 +175,27 @@ export function PatientsSection() {
   }).length
   const withActiveBookings = patients.filter(p => (p.bookingCount || 0) > 0).length
 
+  // Client-side filter applied after stat cards
+  const filteredPatients = patientFilter === 'all'
+    ? patients
+    : patientFilter === 'new_this_month'
+      ? patients.filter(p => { const d = new Date(p.createdAt); return d.getMonth() === thisMonth && d.getFullYear() === thisYear })
+      : patients.filter(p => (p.bookingCount || 0) > 0)
+
+  const handleCardClick = (filterValue: string, filterType: 'all' | 'new_this_month' | 'with_bookings') => {
+    if (cardFilter === filterValue) {
+      setCardFilter(null)
+      setPatientFilter('all')
+    } else {
+      setCardFilter(filterValue)
+      setPatientFilter(filterType)
+    }
+  }
+
   const statCards = [
-    { label: 'Total Patients', value: totalPatients, icon: Users, bg: 'bg-blue-100', text: 'text-blue-600' },
-    { label: 'New This Month', value: newThisMonth, icon: UserPlus, bg: 'bg-green-100', text: 'text-green-600' },
-    { label: 'With Active Bookings', value: withActiveBookings, icon: Activity, bg: 'bg-purple-100', text: 'text-purple-600' },
+    { label: 'Total Patients', value: totalPatients, icon: Users, bg: 'bg-blue-100', text: 'text-blue-600', filterValue: 'all', filterType: 'all' as const },
+    { label: 'New This Month', value: newThisMonth, icon: UserPlus, bg: 'bg-green-100', text: 'text-green-600', filterValue: 'new_month', filterType: 'new_this_month' as const },
+    { label: 'With Bookings', value: withActiveBookings, icon: Activity, bg: 'bg-purple-100', text: 'text-purple-600', filterValue: 'with_bookings', filterType: 'with_bookings' as const },
   ]
 
   const formatDate = (dateStr: string) => {
@@ -192,25 +214,42 @@ export function PatientsSection() {
         <p className="text-sm text-gray-500 mt-0.5">View and manage all patients with their Unique Health ID (UHID)</p>
       </div>
 
-      {/* Stat Cards - 3 in a row */}
+      {/* Stat Cards - 3 clickable filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {statCards.map((s) => (
-          <Card key={s.label} className="bg-white rounded-xl shadow-sm border-0">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={cn('w-10 h-10 rounded-full flex items-center justify-center shrink-0', s.bg, s.text)}>
-                <s.icon className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                {loading ? (
-                  <Skeleton className="h-6 w-10 mb-1" />
-                ) : (
-                  <p className="text-xl font-bold text-gray-900">{s.value}</p>
+        {statCards.map((s) => {
+          const isActive = cardFilter === s.filterValue
+          return (
+            <Card
+              key={s.label}
+              className={cn(
+                'bg-white rounded-xl shadow-sm border-0 transition-all duration-150 cursor-pointer hover:shadow-md hover:-translate-y-0.5',
+                isActive && 'ring-2 ring-offset-1 ring-blue-500 shadow-md'
+              )}
+              onClick={() => handleCardClick(s.filterValue, s.filterType)}
+            >
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={cn('w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors', s.bg, s.text, isActive && 'ring-2 ring-current opacity-80')}>
+                  <s.icon className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  {loading ? (
+                    <Skeleton className="h-6 w-10 mb-1" />
+                  ) : (
+                    <p className="text-xl font-bold text-gray-900 truncate">{s.value}</p>
+                  )}
+                  <p className={cn('text-[11px] truncate', isActive ? 'text-blue-600 font-medium' : 'text-gray-500')}>{s.label}</p>
+                </div>
+                {isActive && (
+                  <div className="ml-auto">
+                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                      <X className="w-3 h-3 text-white" />
+                    </div>
+                  </div>
                 )}
-                <p className="text-[11px] text-gray-500">{s.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {/* Table Card */}
@@ -253,8 +292,8 @@ export function PatientsSection() {
                       ))}
                     </TableRow>
                   ))
-                ) : patients.length > 0 ? (
-                  patients.map((p) => (
+                ) : filteredPatients.length > 0 ? (
+                  filteredPatients.map((p) => (
                     <TableRow key={p.id} className="hover:bg-gray-50/50">
                       <TableCell className="font-mono text-xs text-blue-600 font-medium">{p.uhid}</TableCell>
                       <TableCell className="text-sm font-medium text-gray-900">{p.name}</TableCell>
@@ -296,7 +335,7 @@ export function PatientsSection() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-8 text-gray-400 text-sm">
-                      {search ? 'No patients found matching your search' : 'No patients found'}
+                      {search ? 'No patients found matching your search' : patientFilter !== 'all' ? 'No patients in this category' : 'No patients found'}
                     </TableCell>
                   </TableRow>
                 )}
