@@ -33,7 +33,7 @@ interface DashboardStats {
     patientName: string
     patientUhid?: string
     doctorName?: string
-    consultationMode: string
+    mode: string
     status: string
     date: string
     startTime: string
@@ -269,8 +269,8 @@ export function DashboardSection() {
                         <TableCell className="font-mono text-xs text-blue-600 py-2.5">{b.patientUhid || '—'}</TableCell>
                         <TableCell className="text-xs text-gray-600 py-2.5">{b.doctorName || '—'}</TableCell>
                         <TableCell className="py-2.5">
-                          <Badge variant="secondary" className={cn('text-[10px] px-1.5 py-0 h-5', modeColor[b.consultationMode])}>
-                            {b.consultationMode === 'online' ? 'Online' : 'Offline'}
+                          <Badge variant="secondary" className={cn('text-[10px] px-1.5 py-0 h-5', modeColor[b.mode])}>
+                            {b.mode === 'online' ? 'Online' : 'Offline'}
                           </Badge>
                         </TableCell>
                         <TableCell className="py-2.5">

@@ -357,7 +357,7 @@ export function BookingsSection() {
                           'text-[11px] capitalize',
                           modeColor[b.mode] || 'bg-gray-100 text-gray-800'
                         )}>
-                          {b.mode === 'in_home' ? 'offline' : b.mode}
+                          {b.mode === 'in_home' ? 'Offline' : b.mode === 'online' ? 'Online' : b.mode || '-'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-gray-700">{b.serviceName || '-'}</TableCell>
