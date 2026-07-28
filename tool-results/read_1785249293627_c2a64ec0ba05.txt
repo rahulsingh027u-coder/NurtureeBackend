@@ -1,0 +1,783 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+     5→import { Badge } from '@/components/ui/badge'
+     6→import { Button } from '@/components/ui/button'
+     7→import { Input } from '@/components/ui/input'
+     8→import { Label } from '@/components/ui/label'
+     9→import { Textarea } from '@/components/ui/textarea'
+    10→import { Skeleton } from '@/components/ui/skeleton'
+    11→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    12→import {
+    13→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    14→} from '@/components/ui/table'
+    15→import {
+    16→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+    17→} from '@/components/ui/dialog'
+    18→import {
+    19→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    20→} from '@/components/ui/select'
+    21→import { useToast } from '@/hooks/use-toast'
+    22→import { cn } from '@/lib/utils'
+    23→import {
+    24→  Plus, Check, X, Star, Loader2, UserCog, Phone, Mail, Award,
+    25→  Eye, Upload, FileText, Shield, BarChart3, IndianRupee, CalendarDays, AlertCircle, CheckCircle2,
+    26→} from 'lucide-react'
+    27→
+    28→interface Caregiver {
+    29→  id: string
+    30→  caregiverId: string
+    31→  name: string
+    32→  phone: string
+    33→  email?: string
+    34→  specialty: string
+    35→  experience: number
+    36→  rating?: number
+    37→  isAvailable: boolean
+    38→  isAadhaarVerified?: boolean
+    39→  isPoliceVerified?: boolean
+    40→  isMedicalVerified?: boolean
+    41→  isVideoVerified?: boolean
+    42→  qualifications?: string
+    43→}
+    44→
+    45→interface CaregiverDetail {
+    46→  caregiver: {
+    47→    id: string; caregiverId: string; name: string; phone: string; email: string | null;
+    48→    specialty: string; experience: number; qualifications: string | null;
+    49→    isAvailable: boolean; isVerified: boolean; rating: number; createdAt: string;
+    50→  }
+    51→  verificationStatus: { aadhaar: boolean; police: boolean; medical: boolean; video: boolean }
+    52→  verificationRecord: {
+    53→    id: string; status: string; package: string | null;
+    54→    documents: { type: string; url: string; verified: boolean }[];
+    55→    reviewNotes: string | null; reviewedAt: string | null; createdAt: string;
+    56→  } | null
+    57→  pendingVerifications: string[]
+    58→  bookings: {
+    59→    id: string; bookingId: string; patientName: string; patientUhid: string;
+    60→    patientPhone: string; serviceName: string; serviceCategory: string;
+    61→    type: string; mode: string; status: string; source: string;
+    62→    date: string; startTime: string; endTime: string | null;
+    63→    totalAmount: number; commissionAmount: number;
+    64→  }[]
+    65→  earnings: {
+    66→    totalEarnings: number; totalCommission: number; netEarnings: number;
+    67→    completedBookings: number; totalBookings: number;
+    68→    monthlyEarnings: Record<string, number>;
+    69→  }
+    70→  analytics: {
+    71→    statusBreakdown: Record<string, number>;
+    72→    dayBreakdown: Record<string, number>;
+    73→    averageRating: number; totalReviews: number;
+    74→  }
+    75→}
+    76→
+    77→const specialtyBadge: Record<string, string> = {
+    78→  child_care: 'bg-pink-100 text-pink-700',
+    79→  elder_care: 'bg-orange-100 text-orange-700',
+    80→}
+    81→
+    82→const specialtyLabel: Record<string, string> = {
+    83→  child_care: 'Child Care',
+    84→  elder_care: 'Elder Care',
+    85→}
+    86→
+    87→const statusColor: Record<string, string> = {
+    88→  completed: 'bg-green-100 text-green-700',
+    89→  confirmed: 'bg-blue-100 text-blue-700',
+    90→  in_progress: 'bg-yellow-100 text-yellow-700',
+    91→  pending: 'bg-gray-100 text-gray-600',
+    92→  cancelled: 'bg-red-100 text-red-600',
+    93→}
+    94→
+    95→export function CaregiversSection() {
+    96→  const { toast } = useToast()
+    97→  const [caregivers, setCaregivers] = useState<Caregiver[]>([])
+    98→  const [loading, setLoading] = useState(true)
+    99→  const [addOpen, setAddOpen] = useState(false)
+   100→  const [creating, setCreating] = useState(false)
+   101→  const [profileOpen, setProfileOpen] = useState(false)
+   102→  const [selectedId, setSelectedId] = useState<string | null>(null)
+   103→  const [detail, setDetail] = useState<CaregiverDetail | null>(null)
+   104→  const [detailLoading, setDetailLoading] = useState(false)
+   105→  const [uploading, setUploading] = useState(false)
+   106→
+   107→  const [specialtyFilter, setSpecialtyFilter] = useState('all')
+   108→  const [statusFilter, setStatusFilter] = useState('all')
+   109→  const [verifiedFilter, setVerifiedFilter] = useState('all')
+   110→
+   111→  const [form, setForm] = useState({
+   112→    name: '', phone: '', email: '', specialty: '', experience: '', qualifications: '',
+   113→  })
+   114→
+   115→  const fetchCaregivers = useCallback(async (specialty?: string, available?: string, verified?: string) => {
+   116→    setLoading(true)
+   117→    try {
+   118→      const params = new URLSearchParams()
+   119→      if (specialty && specialty !== 'all') params.set('specialty', specialty)
+   120→      if (available && available !== 'all') params.set('available', available === 'available' ? 'true' : 'false')
+   121→      if (verified && verified !== 'all') params.set('verified', verified === 'verified' ? 'true' : 'false')
+   122→      const res = await fetch(`/api/caregivers?${params.toString()}`)
+   123→      if (res.ok) {
+   124→        const data = await res.json()
+   125→        setCaregivers(Array.isArray(data) ? data : data.data || [])
+   126→      } else {
+   127→        toast({ title: 'Error', description: 'Failed to fetch caregivers', variant: 'destructive' })
+   128→      }
+   129→    } catch {
+   130→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   131→    } finally {
+   132→      setLoading(false)
+   133→    }
+   134→  }, [toast])
+   135→
+   136→  useEffect(() => { fetchCaregivers() }, [fetchCaregivers])
+   137→
+   138→  useEffect(() => {
+   139→    fetchCaregivers(specialtyFilter, statusFilter, verifiedFilter)
+   140→  }, [specialtyFilter, statusFilter, verifiedFilter, fetchCaregivers])
+   141→
+   142→  const openProfile = async (id: string) => {
+   143→    setSelectedId(id)
+   144→    setProfileOpen(true)
+   145→    setDetailLoading(true)
+   146→    setDetail(null)
+   147→    try {
+   148→      const res = await fetch(`/api/caregivers/${id}`)
+   149→      if (res.ok) {
+   150→        const data = await res.json()
+   151→        setDetail(data)
+   152→      } else {
+   153→        toast({ title: 'Error', description: 'Failed to load caregiver details', variant: 'destructive' })
+   154→        setProfileOpen(false)
+   155→      }
+   156→    } catch {
+   157→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   158→      setProfileOpen(false)
+   159→    } finally {
+   160→      setDetailLoading(false)
+   161→    }
+   162→  }
+   163→
+   164→  const handleUpload = async (fileType: string) => {
+   165→    if (!selectedId) return
+   166→    setUploading(true)
+   167→    try {
+   168→      const res = await fetch(`/api/caregivers/${selectedId}`, {
+   169→        method: 'PATCH',
+   170→        headers: { 'Content-Type': 'application/json' },
+   171→        body: JSON.stringify({ documentType: fileType }),
+   172→      })
+   173→      if (res.ok) {
+   174→        toast({ title: 'Updated', description: `${fileType} document marked as uploaded` })
+   175→        openProfile(selectedId)
+   176→      } else {
+   177→        toast({ title: 'Error', description: 'Failed to update document', variant: 'destructive' })
+   178→      }
+   179→    } catch {
+   180→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   181→    } finally {
+   182→      setUploading(false)
+   183→    }
+   184→  }
+   185→
+   186→  const handleCreate = async () => {
+   187→    if (!form.name || !form.phone || !form.specialty) {
+   188→      toast({ title: 'Error', description: 'Please fill required fields (Name, Phone, Specialty)', variant: 'destructive' })
+   189→      return
+   190→    }
+   191→    setCreating(true)
+   192→    try {
+   193→      const res = await fetch('/api/caregivers', {
+   194→        method: 'POST',
+   195→        headers: { 'Content-Type': 'application/json' },
+   196→        body: JSON.stringify({ ...form, experience: form.experience ? Number(form.experience) : 0 }),
+   197→      })
+   198→      if (res.ok) {
+   199→        toast({ title: 'Caregiver Added', description: 'New caregiver has been added successfully' })
+   200→        setAddOpen(false)
+   201→        setForm({ name: '', phone: '', email: '', specialty: '', experience: '', qualifications: '' })
+   202→        fetchCaregivers(specialtyFilter, statusFilter, verifiedFilter)
+   203→      } else {
+   204→        const data = await res.json()
+   205→        toast({ title: 'Error', description: data.error || 'Failed to add caregiver', variant: 'destructive' })
+   206→      }
+   207→    } catch {
+   208→      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+   209→    } finally {
+   210→      setCreating(false)
+   211→    }
+   212→  }
+   213→
+   214→  const renderStarRating = (rating?: number) => {
+   215→    if (!rating) return <span className="text-gray-400 text-sm">-</span>
+   216→    return (
+   217→      <div className="flex items-center gap-0.5">
+   218→        {Array.from({ length: 5 }).map((_, i) => (
+   219→          <Star key={i} className={cn('w-3.5 h-3.5', i < Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200')} />
+   220→        ))}
+   221→        <span className="text-xs text-gray-500 ml-1">{rating.toFixed(1)}</span>
+   222→      </div>
+   223→    )
+   224→  }
+   225→
+   226→  const VerificationIcon = ({ verified }: { verified: boolean | undefined }) => {
+   227→    if (verified) return <Check className="w-4 h-4 text-blue-600" />
+   228→    return <X className="w-4 h-4 text-red-400" />
+   229→  }
+   230→
+   231→  const formatCurrency = (val: number) =>
+   232→    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val)
+   233→
+   234→  // ---- PROFILE DIALOG CONTENT ----
+   235→  const ProfileTab = () => {
+   236→    if (!detail) return null
+   237→    const c = detail.caregiver
+   238→    return (
+   239→      <div className="space-y-5">
+   240→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   241→          <div className="rounded-xl bg-gray-50 p-4 space-y-3">
+   242→            <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider">Personal Info</h4>
+   243→            <div className="space-y-2">
+   244→              <InfoRow label="Profile ID" value={c.caregiverId} />
+   245→              <InfoRow label="Full Name" value={c.name} />
+   246→              <InfoRow label="Phone" value={c.phone} icon={<Phone className="w-3.5 h-3.5 text-gray-400" />} />
+   247→              <InfoRow label="Email" value={c.email || 'N/A'} icon={<Mail className="w-3.5 h-3.5 text-gray-400" />} />
+   248→              <InfoRow label="Specialty" value={specialtyLabel[c.specialty] || c.specialty} />
+   249→            </div>
+   250→          </div>
+   251→          <div className="rounded-xl bg-gray-50 p-4 space-y-3">
+   252→            <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider">Professional Info</h4>
+   253→            <div className="space-y-2">
+   254→              <InfoRow label="Experience" value={`${c.experience} years`} icon={<Award className="w-3.5 h-3.5 text-gray-400" />} />
+   255→              <InfoRow label="Qualifications" value={c.qualifications || 'N/A'} />
+   256→              <InfoRow label="Rating" value={c.rating > 0 ? `${c.rating.toFixed(1)} / 5.0` : 'No ratings yet'} />
+   257→              <InfoRow label="Joined" value={new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} />
+   258→            </div>
+   259→          </div>
+   260→        </div>
+   261→        <div className="flex items-center gap-3">
+   262→          <Badge variant="secondary" className={cn('text-xs px-3 py-1', c.isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600')}>
+   263→            {c.isAvailable ? 'Available' : 'Unavailable'}
+   264→          </Badge>
+   265→          <Badge variant="secondary" className={cn('text-xs px-3 py-1', c.isVerified ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-600')}>
+   266→            {c.isVerified ? 'Verified' : 'Not Verified'}
+   267→          </Badge>
+   268→          <Badge variant="secondary" className="text-xs px-3 py-1 bg-gray-100 text-gray-600">
+   269→            {detail.bookings?.length || 0} Total Bookings
+   270→          </Badge>
+   271→        </div>
+   272→      </div>
+   273→    )
+   274→  }
+   275→
+   276→  const DocumentsTab = () => {
+   277→    if (!detail) return null
+   278→    const docs = detail.verificationRecord?.documents || []
+   279→    const docTypes = ['Aadhaar Card', 'Police Certificate', 'Medical Fitness Certificate', 'Video Verification']
+   280→    return (
+   281→      <div className="space-y-5">
+   282→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   283→          {docTypes.map((dt) => {
+   284→            const found = docs.find((d) => d.type.toLowerCase().includes(dt.toLowerCase().split(' ')[0].toLowerCase()))
+   285→            return (
+   286→              <div key={dt} className="rounded-xl border border-gray-200 p-4">
+   287→                <div className="flex items-center justify-between mb-3">
+   288→                  <div className="flex items-center gap-2">
+   289→                    <FileText className="w-4 h-4 text-gray-400" />
+   290→                    <span className="text-sm font-medium text-gray-800">{dt}</span>
+   291→                  </div>
+   292→                  {found ? (
+   293→                    <Badge variant="secondary" className="text-[10px] bg-green-50 text-green-600 border border-green-100">Uploaded</Badge>
+   294→                  ) : (
+   295→                    <Badge variant="secondary" className="text-[10px] bg-orange-50 text-orange-600 border border-orange-100">Pending</Badge>
+   296→                  )}
+   297→                </div>
+   298→                {found ? (
+   299→                  <div className="space-y-1">
+   300→                    <p className="text-xs text-gray-500">File: {found.type}</p>
+   301→                    <div className="flex gap-2 mt-2">
+   302→                      <Button size="sm" variant="outline" className="text-xs h-7 border-blue-200 text-blue-600">
+   303→                        <Eye className="w-3 h-3 mr-1" /> View
+   304→                      </Button>
+   305→                      <Button size="sm" variant="outline" className="text-xs h-7">
+   306→                        Download
+   307→                      </Button>
+   308→                    </div>
+   309→                  </div>
+   310→                ) : (
+   311→                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
+   312→                    <Upload className="w-5 h-5 text-gray-300 mx-auto mb-1" />
+   313→                    <p className="text-xs text-gray-400 mb-2">No document uploaded</p>
+   314→                    <Button
+   315→                      size="sm" variant="outline" className="text-xs h-7 border-blue-200 text-blue-600"
+   316→                      disabled={uploading}
+   317→                      onClick={() => handleUpload(dt)}
+   318→                    >
+   319→                      {uploading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+   320→                      Upload
+   321→                    </Button>
+   322→                  </div>
+   323→                )}
+   324→              </div>
+   325→            )
+   326→          })}
+   327→        </div>
+   328→      </div>
+   329→    )
+   330→  }
+   331→
+   332→  const VerificationTab = () => {
+   333→    if (!detail) return null
+   334→    const vs = detail.verificationStatus
+   335→    const pending = detail.pendingVerifications
+   336→    const verifications = [
+   337→      { label: 'Aadhaar Verification', key: 'aadhaar', desc: 'Government ID verification via Aadhaar card' },
+   338→      { label: 'Police Verification', key: 'police', desc: 'Background check through police records' },
+   339→      { label: 'Medical Fitness', key: 'medical', desc: 'Medical fitness certificate from registered practitioner' },
+   340→      { label: 'Video Verification', key: 'video', desc: 'Live video call verification of identity and credentials' },
+   341→    ] as const
+   342→    return (
+   343→      <div className="space-y-4">
+   344→        {pending.length === 0 ? (
+   345→          <div className="rounded-xl bg-green-50 border border-green-100 p-5 text-center">
+   346→            <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-2" />
+   347→            <p className="text-sm font-medium text-green-700">All Verifications Complete</p>
+   348→            <p className="text-xs text-green-600 mt-1">This caregiver has passed all verification checks</p>
+   349→          </div>
+   350→        ) : (
+   351→          <div className="rounded-xl bg-orange-50 border border-orange-100 p-4">
+   352→            <div className="flex items-center gap-2 mb-1">
+   353→              <AlertCircle className="w-4 h-4 text-orange-500" />
+   354→              <p className="text-sm font-medium text-orange-700">{pending.length} Pending Verification{pending.length > 1 ? 's' : ''}</p>
+   355→            </div>
+   356→            <p className="text-xs text-orange-600">{pending.join(', ')} — action required</p>
+   357→          </div>
+   358→        )}
+   359→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   360→          {verifications.map((v) => {
+   361→            const done = vs[v.key]
+   362→            return (
+   363→              <div key={v.key} className="rounded-xl border border-gray-200 p-4">
+   364→                <div className="flex items-center justify-between mb-1">
+   365→                  <span className="text-sm font-medium text-gray-800">{v.label}</span>
+   366→                  {done ? (
+   367→                    <Badge variant="secondary" className="text-[10px] bg-green-50 text-green-600 border border-green-100 flex items-center gap-1">
+   368→                      <Check className="w-3 h-3" /> Verified
+   369→                    </Badge>
+   370→                  ) : (
+   371→                    <Badge variant="secondary" className="text-[10px] bg-red-50 text-red-500 border border-red-100 flex items-center gap-1">
+   372→                      <X className="w-3 h-3" /> Pending
+   373→                    </Badge>
+   374→                  )}
+   375→                </div>
+   376→                <p className="text-xs text-gray-400">{v.desc}</p>
+   377→              </div>
+   378→            )
+   379→          })}
+   380→        </div>
+   381→        {detail.verificationRecord && (
+   382→          <div className="rounded-xl bg-gray-50 p-4 space-y-2">
+   383→            <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider">Verification Record</h4>
+   384→            <InfoRow label="Package" value={detail.verificationRecord.package || 'N/A'} />
+   385→            <InfoRow label="Status" value={detail.verificationRecord.status} />
+   386→            <InfoRow label="Applied On" value={new Date(detail.verificationRecord.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} />
+   387→            {detail.verificationRecord.reviewNotes && <InfoRow label="Review Notes" value={detail.verificationRecord.reviewNotes} />}
+   388→          </div>
+   389→        )}
+   390→      </div>
+   391→    )
+   392→  }
+   393→
+   394→  const EarningsTab = () => {
+   395→    if (!detail) return null
+   396→    const e = detail.earnings
+   397→    if (!e) return <p className='text-sm text-gray-400'>No earnings data</p>
+   398→    const months = Object.entries(e.monthlyEarnings || {}).sort().slice(-6)
+   399→    return (
+   400→      <div className="space-y-5">
+   401→        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   402→          <StatCard label="Total Revenue" value={formatCurrency(e.totalEarnings)} icon={<IndianRupee className="w-4 h-4" />} color="blue" />
+   403→          <StatCard label="Platform Commission" value={formatCurrency(e.totalCommission)} icon={<BarChart3 className="w-4 h-4" />} color="orange" />
+   404→          <StatCard label="Net Earnings" value={formatCurrency(e.netEarnings)} icon={<IndianRupee className="w-4 h-4" />} color="green" />
+   405→          <StatCard label="Completed" value={`${e.completedBookings}/${e.totalBookings}`} icon={<CheckCircle2 className="w-4 h-4" />} color="purple" />
+   406→        </div>
+   407→        {months.length > 0 && (
+   408→          <div className="rounded-xl border border-gray-200 p-4">
+   409→            <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-3">Monthly Revenue Trend</h4>
+   410→            <div className="space-y-2">
+   411→              {months.map(([month, amount]) => {
+   412→                const maxAmt = Math.max(...months.map(([, a]) => a), 1)
+   413→                const pct = (amount / maxAmt) * 100
+   414→                return (
+   415→                  <div key={month} className="flex items-center gap-3">
+   416→                    <span className="text-xs text-gray-500 w-16 shrink-0">{month}</span>
+   417→                    <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+   418→                      <div className="h-full bg-blue-500 rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max(pct, 8)}%` }}>
+   419→                        <span className="text-[10px] text-white font-medium whitespace-nowrap">{formatCurrency(amount)}</span>
+   420→                      </div>
+   421→                    </div>
+   422→                  </div>
+   423→                )
+   424→              })}
+   425→            </div>
+   426→          </div>
+   427→        )}
+   428→      </div>
+   429→    )
+   430→  }
+   431→
+   432→  const AnalyticsTab = () => {
+   433→    if (!detail) return null
+   434→    const a = detail.analytics
+   435→    if (!a) return <p className='text-sm text-gray-400'>No analytics data</p>
+   436→    const statusEntries = Object.entries(a.statusBreakdown || {})
+   437→    const dayEntries = Object.entries(a.dayBreakdown || {})
+   438→    const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+   439→    const sortedDays = dayEntries.sort((a, b) => dayOrder.indexOf(a[0]) - dayOrder.indexOf(b[0]))
+   440→    const maxDay = Math.max(...sortedDays.map(([, v]) => v), 1)
+   441→    return (
+   442→      <div className="space-y-5">
+   443→        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+   444→          <StatCard label="Total Bookings" value={String(detail.bookings?.length || 0)} icon={<CalendarDays className="w-4 h-4" />} color="blue" />
+   445→          <StatCard label="Avg Rating" value={`${(a.averageRating || 0).toFixed(1)}/5`} icon={<Star className="w-4 h-4" />} color="amber" />
+   446→          <StatCard label="Completion Rate" value={detail.bookings?.length > 0 ? `${Math.round(((a.statusBreakdown?.completed || 0) / detail.bookings.length) * 100)}%` : 'N/A'} icon={<CheckCircle2 className="w-4 h-4" />} color="green" />
+   447→        </div>
+   448→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   449→          {statusEntries.length > 0 && (
+   450→            <div className="rounded-xl border border-gray-200 p-4">
+   451→              <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-3">Booking Status</h4>
+   452→              <div className="space-y-2">
+   453→                {statusEntries.map(([status, count]) => (
+   454→                  <div key={status} className="flex items-center justify-between">
+   455→                    <div className="flex items-center gap-2">
+   456→                      <Badge variant="secondary" className={cn('text-[10px]', statusColor[status] || 'bg-gray-100 text-gray-600')}>
+   457→                        {status}
+   458→                      </Badge>
+   459→                    </div>
+   460→                    <div className="flex items-center gap-2">
+   461→                      <div className="w-24 bg-gray-100 rounded-full h-2 overflow-hidden">
+   462→                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${detail.bookings?.length ? (count / detail.bookings.length) * 100 : 0}%` }} />
+   463→                      </div>
+   464→                      <span className="text-xs font-medium text-gray-700 w-6 text-right">{count}</span>
+   465→                    </div>
+   466→                  </div>
+   467→                ))}
+   468→              </div>
+   469→            </div>
+   470→          )}
+   471→          {sortedDays.length > 0 && (
+   472→            <div className="rounded-xl border border-gray-200 p-4">
+   473→              <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-3">Bookings by Day</h4>
+   474→              <div className="space-y-2">
+   475→                {sortedDays.map(([day, count]) => (
+   476→                  <div key={day} className="flex items-center gap-3">
+   477→                    <span className="text-xs text-gray-500 w-8 shrink-0">{day}</span>
+   478→                    <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+   479→                      <div className="h-full bg-indigo-500 rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max((count / maxDay) * 100, 10)}%` }}>
+   480→                        <span className="text-[10px] text-white font-medium">{count}</span>
+   481→                      </div>
+   482→                    </div>
+   483→                  </div>
+   484→                ))}
+   485→              </div>
+   486→            </div>
+   487→          )}
+   488→        </div>
+   489→      </div>
+   490→    )
+   491→  }
+   492→
+   493→  const BookingsTab = () => {
+   494→    if (!detail) return null
+   495→    if (detail.bookings.length === 0) {
+   496→      return <div className="text-center py-8 text-gray-400 text-sm">No bookings found for this caregiver</div>
+   497→    }
+   498→    return (
+   499→      <div className="overflow-x-auto rounded-xl border border-gray-200">
+   500→        <Table>
+   501→          <TableHeader>
+   502→            <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   503→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Booking ID</TableHead>
+   504→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient</TableHead>
+   505→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Service</TableHead>
+   506→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
+   507→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Mode</TableHead>
+   508→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   509→              <TableHead className="text-xs font-semibold uppercase text-gray-500">Amount</TableHead>
+   510→            </TableRow>
+   511→          </TableHeader>
+   512→          <TableBody>
+   513→            {detail.bookings.map((b) => (
+   514→              <TableRow key={b.id} className="hover:bg-gray-50/50">
+   515→                <TableCell className="text-xs font-mono text-blue-600">{b.bookingId}</TableCell>
+   516→                <TableCell>
+   517→                  <p className="text-sm text-gray-800">{b.patientName}</p>
+   518→                  <p className="text-[10px] text-gray-400">{b.patientUhid}</p>
+   519→                </TableCell>
+   520→                <TableCell className="text-sm text-gray-600">{b.serviceName}</TableCell>
+   521→                <TableCell className="text-sm text-gray-600">{b.date}</TableCell>
+   522→                <TableCell>
+   523→                  <Badge variant="secondary" className={cn('text-[10px]', b.mode === 'online' ? 'bg-purple-50 text-purple-600' : 'bg-teal-50 text-teal-600')}>
+   524→                    {b.mode === 'online' ? 'Online' : 'In-Home'}
+   525→                  </Badge>
+   526→                </TableCell>
+   527→                <TableCell>
+   528→                  <Badge variant="secondary" className={cn('text-[10px] capitalize', statusColor[b.status] || 'bg-gray-100 text-gray-600')}>
+   529→                    {b.status}
+   530→                  </Badge>
+   531→                </TableCell>
+   532→                <TableCell className="text-sm font-medium text-gray-800">{formatCurrency(b.totalAmount)}</TableCell>
+   533→              </TableRow>
+   534→            ))}
+   535→          </TableBody>
+   536→        </Table>
+   537→      </div>
+   538→    )
+   539→  }
+   540→
+   541→  return (
+   542→    <div className="space-y-6 p-4 md:p-6">
+   543→      <Card className="bg-white rounded-xl shadow-sm border-0">
+   544→        <CardHeader className="pb-3 flex flex-row items-center justify-between flex-wrap gap-3">
+   545→          <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
+   546→            <UserCog className="w-4 h-4 text-blue-600" />
+   547→            Caregivers
+   548→          </CardTitle>
+   549→          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+   550→            <DialogTrigger asChild>
+   551→              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+   552→                <Plus className="w-4 h-4" /> Add Caregiver
+   553→              </Button>
+   554→            </DialogTrigger>
+   555→            <DialogContent className="sm:max-w-md">
+   556→              <DialogHeader><DialogTitle>Add New Caregiver</DialogTitle></DialogHeader>
+   557→              <div className="space-y-4 py-2">
+   558→                <div className="space-y-2">
+   559→                  <Label>Name *</Label>
+   560→                  <Input placeholder="Enter full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+   561→                </div>
+   562→                <div className="grid grid-cols-2 gap-3">
+   563→                  <div className="space-y-2">
+   564→                    <Label>Phone *</Label>
+   565→                    <Input placeholder="Phone number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+   566→                  </div>
+   567→                  <div className="space-y-2">
+   568→                    <Label>Email</Label>
+   569→                    <Input placeholder="Email address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+   570→                  </div>
+   571→                </div>
+   572→                <div className="space-y-2">
+   573→                  <Label>Specialty *</Label>
+   574→                  <Select value={form.specialty} onValueChange={(v) => setForm({ ...form, specialty: v })}>
+   575→                    <SelectTrigger><SelectValue placeholder="Select specialty" /></SelectTrigger>
+   576→                    <SelectContent>
+   577→                      <SelectItem value="child_care">Child Care</SelectItem>
+   578→                      <SelectItem value="elder_care">Elder Care</SelectItem>
+   579→                    </SelectContent>
+   580→                  </Select>
+   581→                </div>
+   582→                <div className="space-y-2">
+   583→                  <Label>Experience (years)</Label>
+   584→                  <Input type="number" min="0" placeholder="Years of experience" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} />
+   585→                </div>
+   586→                <div className="space-y-2">
+   587→                  <Label>Qualifications</Label>
+   588→                  <Textarea placeholder="Certifications, training, etc." value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} rows={3} />
+   589→                </div>
+   590→              </div>
+   591→              <DialogFooter>
+   592→                <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+   593→                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>
+   594→                  {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Add Caregiver
+   595→                </Button>
+   596→              </DialogFooter>
+   597→            </DialogContent>
+   598→          </Dialog>
+   599→        </CardHeader>
+   600→        <CardContent className="p-0">
+   601→          <div className="px-4 pb-3 pt-1 flex flex-wrap items-center gap-3 border-b border-gray-100">
+   602→            <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
+   603→              <SelectTrigger className="w-[150px] h-8 text-sm"><SelectValue placeholder="Specialty" /></SelectTrigger>
+   604→              <SelectContent>
+   605→                <SelectItem value="all">All Specialties</SelectItem>
+   606→                <SelectItem value="child_care">Child Care</SelectItem>
+   607→                <SelectItem value="elder_care">Elder Care</SelectItem>
+   608→              </SelectContent>
+   609→            </Select>
+   610→            <Select value={statusFilter} onValueChange={setStatusFilter}>
+   611→              <SelectTrigger className="w-[140px] h-8 text-sm"><SelectValue placeholder="Status" /></SelectTrigger>
+   612→              <SelectContent>
+   613→                <SelectItem value="all">All Status</SelectItem>
+   614→                <SelectItem value="available">Available</SelectItem>
+   615→                <SelectItem value="unavailable">Unavailable</SelectItem>
+   616→              </SelectContent>
+   617→            </Select>
+   618→            <Select value={verifiedFilter} onValueChange={setVerifiedFilter}>
+   619→              <SelectTrigger className="w-[140px] h-8 text-sm"><SelectValue placeholder="Verified" /></SelectTrigger>
+   620→              <SelectContent>
+   621→                <SelectItem value="all">All Verified</SelectItem>
+   622→                <SelectItem value="verified">Verified</SelectItem>
+   623→                <SelectItem value="unverified">Unverified</SelectItem>
+   624→              </SelectContent>
+   625→            </Select>
+   626→          </div>
+   627→          <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+   628→            <Table>
+   629→              <TableHeader>
+   630→                <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+   631→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Profile ID</TableHead>
+   632→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Name</TableHead>
+   633→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Phone</TableHead>
+   634→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Specialty</TableHead>
+   635→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Experience</TableHead>
+   636→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Rating</TableHead>
+   637→                  <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Aadhaar</TableHead>
+   638→                  <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Police</TableHead>
+   639→                  <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Medical</TableHead>
+   640→                  <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Video</TableHead>
+   641→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+   642→                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Actions</TableHead>
+   643→                </TableRow>
+   644→              </TableHeader>
+   645→              <TableBody>
+   646→                {loading ? (
+   647→                  Array.from({ length: 5 }).map((_, i) => (
+   648→                    <TableRow key={i}>{Array.from({ length: 12 }).map((_, j) => (<TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>))}</TableRow>
+   649→                  ))
+   650→                ) : caregivers.length > 0 ? (
+   651→                  caregivers.map((c) => (
+   652→                    <TableRow key={c.id} className="hover:bg-gray-50/50">
+   653→                      <TableCell className="text-xs font-mono text-blue-600 font-medium">{c.caregiverId}</TableCell>
+   654→                      <TableCell>
+   655→                        <p className="text-sm font-medium text-gray-900">{c.name}</p>
+   656→                        {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
+   657→                      </TableCell>
+   658→                      <TableCell className="text-sm text-gray-600">{c.phone}</TableCell>
+   659→                      <TableCell>
+   660→                        <Badge variant="secondary" className={cn('text-[11px] capitalize', specialtyBadge[c.specialty] || 'bg-gray-100 text-gray-700')}>
+   661→                          {specialtyLabel[c.specialty] || c.specialty}
+   662→                        </Badge>
+   663→                      </TableCell>
+   664→                      <TableCell className="text-sm text-gray-600">{c.experience} yrs</TableCell>
+   665→                      <TableCell>{renderStarRating(c.rating)}</TableCell>
+   666→                      <TableCell className="text-center"><VerificationIcon verified={c.isAadhaarVerified} /></TableCell>
+   667→                      <TableCell className="text-center"><VerificationIcon verified={c.isPoliceVerified} /></TableCell>
+   668→                      <TableCell className="text-center"><VerificationIcon verified={c.isMedicalVerified} /></TableCell>
+   669→                      <TableCell className="text-center"><VerificationIcon verified={c.isVideoVerified} /></TableCell>
+   670→                      <TableCell>
+   671→                        <Badge variant="secondary" className={cn('text-[11px]', c.isAvailable ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700')}>
+   672→                          {c.isAvailable ? 'Available' : 'Unavailable'}
+   673→                        </Badge>
+   674→                      </TableCell>
+   675→                      <TableCell>
+   676→                        <Button size="sm" variant="outline" className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => openProfile(c.id)}>
+   677→                          <Eye className="w-3 h-3 mr-1" /> View Profile
+   678→                        </Button>
+   679→                      </TableCell>
+   680→                    </TableRow>
+   681→                  ))
+   682→                ) : (
+   683→                  <TableRow>
+   684→                    <TableCell colSpan={12} className="text-center py-8 text-gray-400 text-sm">No caregivers found</TableCell>
+   685→                  </TableRow>
+   686→                )}
+   687→              </TableBody>
+   688→            </Table>
+   689→          </div>
+   690→        </CardContent>
+   691→      </Card>
+   692→
+   693→      {/* ===== CAREGIVER DETAIL DIALOG ===== */}
+   694→      <Dialog open={profileOpen} onOpenChange={(open) => { setProfileOpen(open); if (!open) { setDetail(null); setSelectedId(null) } }}>
+   695→        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+   696→          <DialogHeader>
+   697→            <DialogTitle className="flex items-center gap-2">
+   698→              <UserCog className="w-5 h-5 text-blue-600" />
+   699→              {detail ? detail.caregiver.name : 'Caregiver Profile'}
+   700→              {detail && <span className="text-sm font-mono font-normal text-blue-600 ml-1">{detail.caregiver.caregiverId}</span>}
+   701→            </DialogTitle>
+   702→          </DialogHeader>
+   703→          {detailLoading ? (
+   704→            <div className="space-y-4 py-6">
+   705→              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+   706→            </div>
+   707→          ) : detail ? (
+   708→            <Tabs defaultValue="profile" className="w-full">
+   709→              <TabsList className="w-full justify-start bg-gray-100 rounded-lg p-1 h-auto flex-wrap gap-1">
+   710→                <TabsTrigger value="profile" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8">
+   711→                  <UserCog className="w-3.5 h-3.5 mr-1" /> Profile
+   712→                </TabsTrigger>
+   713→                <TabsTrigger value="documents" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8">
+   714→                  <FileText className="w-3.5 h-3.5 mr-1" /> Documents
+   715→                </TabsTrigger>
+   716→                <TabsTrigger value="verification" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8 relative">
+   717→                  <Shield className="w-3.5 h-3.5 mr-1" /> Verification
+   718→                  {detail.pendingVerifications.length > 0 && (
+   719→                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold">
+   720→                      {detail.pendingVerifications.length}
+   721→                    </span>
+   722→                  )}
+   723→                </TabsTrigger>
+   724→                <TabsTrigger value="earnings" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8">
+   725→                  <IndianRupee className="w-3.5 h-3.5 mr-1" /> Earnings
+   726→                </TabsTrigger>
+   727→                <TabsTrigger value="analytics" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8">
+   728→                  <BarChart3 className="w-3.5 h-3.5 mr-1" /> Analytics
+   729→                </TabsTrigger>
+   730→                <TabsTrigger value="bookings" className="text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-3 h-8">
+   731→                  <CalendarDays className="w-3.5 h-3.5 mr-1" /> Bookings
+   732→                </TabsTrigger>
+   733→              </TabsList>
+   734→              <TabsContent value="profile" className="mt-4"><ProfileTab /></TabsContent>
+   735→              <TabsContent value="documents" className="mt-4"><DocumentsTab /></TabsContent>
+   736→              <TabsContent value="verification" className="mt-4"><VerificationTab /></TabsContent>
+   737→              <TabsContent value="earnings" className="mt-4"><EarningsTab /></TabsContent>
+   738→              <TabsContent value="analytics" className="mt-4"><AnalyticsTab /></TabsContent>
+   739→              <TabsContent value="bookings" className="mt-4"><BookingsTab /></TabsContent>
+   740→            </Tabs>
+   741→          ) : null}
+   742→        </DialogContent>
+   743→      </Dialog>
+   744→    </div>
+   745→  )
+   746→}
+   747→
+   748→// ---- Reusable Components ----
+   749→
+   750→function InfoRow({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
+   751→  return (
+   752→    <div className="flex items-start gap-2">
+   753→      {icon && <div className="mt-0.5 shrink-0">{icon}</div>}
+   754→      <div className="min-w-0">
+   755→        <p className="text-[11px] text-gray-400">{label}</p>
+   756→        <p className="text-sm text-gray-800 break-words">{value}</p>
+   757→      </div>
+   758→    </div>
+   759→  )
+   760→}
+   761→
+   762→function StatCard({ label, value, icon, color }: { label: string; value: string; icon: React.ReactNode; color: string }) {
+   763→  const colorMap: Record<string, string> = {
+   764→    blue: 'bg-blue-50 text-blue-600',
+   765→    green: 'bg-green-50 text-green-600',
+   766→    orange: 'bg-orange-50 text-orange-600',
+   767→    purple: 'bg-purple-50 text-purple-600',
+   768→    amber: 'bg-amber-50 text-amber-600',
+   769→    red: 'bg-red-50 text-red-600',
+   770→  }
+   771→  return (
+   772→    <div className="rounded-xl bg-gray-50 p-4">
+   773→      <div className="flex items-center gap-2 mb-1">
+   774→        <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center', colorMap[color] || 'bg-gray-100 text-gray-500')}>
+   775→          {icon}
+   776→        </div>
+   777→        <span className="text-[11px] text-gray-400">{label}</span>
+   778→      </div>
+   779→      <p className="text-lg font-bold text-gray-900">{value}</p>
+   780→    </div>
+   781→  )
+   782→}
+   783→

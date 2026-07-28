@@ -9,7 +9,7 @@ import { Bell } from 'lucide-react'
 import {
   LayoutDashboard, Baby, Users, Stethoscope, FileText, CalendarDays,
   UserCog, DollarSign, BarChart3, ShieldCheck, Package, LogOut, ChevronLeft,
-  ClipboardList, UserCircle, ChevronRight, Settings
+  ClipboardList, UserCircle, Settings
 } from 'lucide-react'
 
 interface NavItem {

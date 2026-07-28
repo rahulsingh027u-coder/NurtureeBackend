@@ -18,7 +18,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
-  Search, Eye, CalendarDays, IndianRupee, X as XIcon, X,
+  Search, Eye, CalendarDays, IndianRupee, X,
   MapPin, FileText, Building2, Phone, User, Stethoscope, Wifi, WifiOff, CheckCircle, XCircle,
 } from 'lucide-react'
 
