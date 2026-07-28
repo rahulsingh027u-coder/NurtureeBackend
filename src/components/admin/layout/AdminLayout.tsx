@@ -12,7 +12,7 @@ import {
 import { Bell } from 'lucide-react'
 import {
   LayoutDashboard, Baby, Users, Stethoscope, FileText, CalendarDays,
-  UserCog, DollarSign, BarChart3, ShieldCheck, Package, LogOut, ChevronLeft,
+  UserCog, IndianRupee, BarChart3, ShieldCheck, Package, LogOut, ChevronLeft,
   ClipboardList, UserCircle, Settings
 } from 'lucide-react'
 
@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
   { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: 'analytics' },
   { id: 'patients', label: 'Patients', icon: ClipboardList, permission: 'patients' },
   { id: 'verification', label: 'Verification', icon: ShieldCheck, permission: 'verification' },
-  { id: 'commission', label: 'Commission Settings', icon: DollarSign, permission: 'commission' },
+  { id: 'commission', label: 'Commission Settings', icon: IndianRupee, permission: 'commission' },
   { id: 'subusers', label: 'Sub Users', icon: UserCog, permission: 'subusers' },
   { id: 'caregivers', label: 'Caregivers', icon: UserCircle, permission: 'caregivers' },
   { id: 'services', label: 'Services', icon: Package, permission: 'services' },
