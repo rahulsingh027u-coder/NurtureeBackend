@@ -16,9 +16,9 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
   Plus, Search, Eye, Ban, CheckCircle, Loader2, Stethoscope, FileText,
-  DollarSign, Wifi, WifiOff, ShieldOff, Monitor, MoreVertical, X,
+  IndianRupee, Wifi, WifiOff, ShieldOff, Monitor, MoreVertical, X,
   Pencil, Save, CalendarDays, Clock, Languages, MapPin, Phone, Mail,
-  TrendingUp, Users, Globe, Home, BarChart3, IndianRupee,
+  TrendingUp, Users, Globe, Home, BarChart3,
 } from 'lucide-react'
 
 /* ─── Types ─── */
@@ -803,7 +803,7 @@ export function DoctorsSection() {
                                 <p className="text-[11px] text-gray-500">Total Revenue</p>
                               </div>
                               <div className="bg-purple-50 rounded-xl p-3.5 text-center">
-                                <DollarSign className="w-4 h-4 text-purple-600 mx-auto mb-1" />
+                                <IndianRupee className="w-4 h-4 text-purple-600 mx-auto mb-1" />
                                 <p className="text-lg font-bold text-gray-900">₹{totalEarnings.toLocaleString()}</p>
                                 <p className="text-[11px] text-gray-500">Doctor Earnings</p>
                               </div>
