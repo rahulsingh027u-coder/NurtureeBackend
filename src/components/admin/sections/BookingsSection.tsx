@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
   Search, Eye, CalendarDays, IndianRupee, X as XIcon,
-  MapPin, FileText, Building2, Phone, User, Stethoscope,
+  MapPin, FileText, Building2, Phone, User, Stethoscope, Wifi, WifiOff, CheckCircle, XCircle,
 } from 'lucide-react'
 
 interface Booking {
@@ -77,6 +77,27 @@ export function BookingsSection() {
   const [serviceFilter, setServiceFilter] = useState('all')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
+  const [cardFilter, setCardFilter] = useState<string | null>(null)
+
+  // Card click handler: sets the right filter (status or mode)
+  const handleCardClick = (filterValue: string, filterType: 'status' | 'mode' | 'today' | 'all') => {
+    if (cardFilter === filterValue) {
+      // Deselect
+      setCardFilter(null)
+      if (filterType === 'status') setStatusFilter('all')
+      else if (filterType === 'mode') setModeFilter('all')
+      else if (filterType === 'today') { setDateFrom(''); setDateTo('') }
+    } else {
+      setCardFilter(filterValue)
+      if (filterType === 'status') setStatusFilter(filterValue)
+      else if (filterType === 'mode') setModeFilter(filterValue)
+      else if (filterType === 'today') {
+        const today = new Date().toISOString().split('T')[0]
+        setDateFrom(today)
+        setDateTo(today)
+      }
+    }
+  }
 
   const buildQueryString = useCallback(() => {
     const params = new URLSearchParams()
@@ -153,37 +174,54 @@ export function BookingsSection() {
   const uniqueServices = Array.from(new Set(bookings.map(b => b.serviceName).filter(Boolean))).sort()
 
   const statCards = [
-    { label: 'Total Bookings', value: totalBookings, icon: CalendarDays, bg: 'bg-blue-100', text: 'text-blue-600' },
-    { label: "Today's", value: todaysCount, icon: CalendarDays, bg: 'bg-amber-100', text: 'text-amber-600' },
-    { label: 'Online', value: onlineCount, icon: Search, bg: 'bg-teal-100', text: 'text-teal-600' },
-    { label: 'Offline', value: offlineCount, icon: Stethoscope, bg: 'bg-amber-100', text: 'text-amber-600' },
-    { label: 'Completed', value: completedCount, icon: FileText, bg: 'bg-green-100', text: 'text-green-600' },
-    { label: 'Cancelled', value: cancelledCount, icon: XIcon, bg: 'bg-red-100', text: 'text-red-600' },
+    { label: 'Total Bookings', value: totalBookings, icon: CalendarDays, bg: 'bg-blue-100', text: 'text-blue-600', filterValue: 'all', filterType: 'all' as const },
+    { label: "Today's", value: todaysCount, icon: CalendarDays, bg: 'bg-amber-100', text: 'text-amber-600', filterValue: 'today', filterType: 'today' as const },
+    { label: 'Online', value: onlineCount, icon: Wifi, bg: 'bg-teal-100', text: 'text-teal-600', filterValue: 'online', filterType: 'mode' as const },
+    { label: 'Offline', value: offlineCount, icon: WifiOff, bg: 'bg-amber-100', text: 'text-amber-600', filterValue: 'in_home', filterType: 'mode' as const },
+    { label: 'Completed', value: completedCount, icon: CheckCircle, bg: 'bg-green-100', text: 'text-green-600', filterValue: 'completed', filterType: 'status' as const },
+    { label: 'Cancelled', value: cancelledCount, icon: XCircle, bg: 'bg-red-100', text: 'text-red-600', filterValue: 'cancelled', filterType: 'status' as const },
   ]
 
   return (
     <div className="space-y-6 p-4 md:p-6">
       {/* Stat Cards - 6 in a row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {statCards.map((s) => (
-          <Card key={s.label} className="bg-white rounded-xl shadow-sm border-0">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={cn('w-10 h-10 rounded-full flex items-center justify-center shrink-0', s.bg, s.text)}>
-                <s.icon className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                {loading ? (
-                  <Skeleton className="h-6 w-10 mb-1" />
-                ) : (
-                  <p className="text-xl font-bold text-gray-900 truncate">
-                    {s.value}
-                  </p>
+        {statCards.map((s) => {
+          const isActive = cardFilter === s.filterValue
+          return (
+            <Card
+              key={s.label}
+              className={cn(
+                'bg-white rounded-xl shadow-sm border-0 transition-all duration-150 cursor-pointer hover:shadow-md hover:-translate-y-0.5',
+                isActive && 'ring-2 ring-offset-1 ring-blue-500 shadow-md'
+              )}
+              onClick={() => handleCardClick(s.filterValue, s.filterType)}
+            >
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={cn('w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors', s.bg, s.text, isActive && 'ring-2 ring-current opacity-80')}>
+                  <s.icon className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  {loading ? (
+                    <Skeleton className="h-6 w-10 mb-1" />
+                  ) : (
+                    <p className="text-xl font-bold text-gray-900 truncate">
+                      {s.value}
+                    </p>
+                  )}
+                  <p className={cn('text-[11px] truncate', isActive ? 'text-blue-600 font-medium' : 'text-gray-500')}>{s.label}</p>
+                </div>
+                {isActive && (
+                  <div className="ml-auto">
+                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                      <X className="w-3 h-3 text-white" />
+                    </div>
+                  </div>
                 )}
-                <p className="text-[11px] text-gray-500 truncate">{s.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {/* Bookings Table Card */}
