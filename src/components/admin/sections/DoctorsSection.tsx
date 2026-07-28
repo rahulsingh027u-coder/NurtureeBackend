@@ -134,6 +134,18 @@ export function DoctorsSection() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [specFilter, setSpecFilter] = useState('all')
   const [verifiedFilter, setVerifiedFilter] = useState('all')
+  const [cardFilter, setCardFilter] = useState<string | null>(null)
+
+  // Sync card click → statusFilter (or 'all' to reset)
+  const handleCardClick = (filterValue: string) => {
+    if (cardFilter === filterValue) {
+      setCardFilter(null)
+      setStatusFilter('all')
+    } else {
+      setCardFilter(filterValue)
+      setStatusFilter(filterValue)
+    }
+  }
 
   // Add doctor
   const [addOpen, setAddOpen] = useState(false)
@@ -197,6 +209,12 @@ export function DoctorsSection() {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  // Sync manual dropdown change → clear card highlight
+  const handleStatusFilterChange = (val: string) => {
+    setCardFilter(val === 'all' ? null : val)
+    setStatusFilter(val)
+  }
 
   useEffect(() => { fetchDoctors() }, [search, statusFilter, specFilter, verifiedFilter])
 
@@ -310,11 +328,11 @@ export function DoctorsSection() {
   const portalCount = doctors.filter(d => d.isPortalUser).length
 
   const statCards = [
-    { label: 'Total Doctors', value: doctors.length, icon: Stethoscope, color: 'bg-blue-50', iconColor: 'text-blue-600', valueColor: 'text-blue-700' },
-    { label: 'Online', value: onlineCount, icon: Wifi, color: 'bg-green-50', iconColor: 'text-green-500', valueColor: 'text-green-700' },
-    { label: 'Offline', value: offlineCount, icon: WifiOff, color: 'bg-gray-50', iconColor: 'text-gray-400', valueColor: 'text-gray-700' },
-    { label: 'Blocked', value: blockedCount, icon: ShieldOff, color: 'bg-red-50', iconColor: 'text-red-500', valueColor: 'text-red-700' },
-    { label: 'Using Portal', value: portalCount, icon: Monitor, color: 'bg-purple-50', iconColor: 'text-purple-500', valueColor: 'text-purple-700' },
+    { label: 'Total Doctors', value: doctors.length, icon: Stethoscope, color: 'bg-blue-50', iconColor: 'text-blue-600', valueColor: 'text-blue-700', filterValue: 'all' },
+    { label: 'Online', value: onlineCount, icon: Wifi, color: 'bg-green-50', iconColor: 'text-green-500', valueColor: 'text-green-700', filterValue: 'online' },
+    { label: 'Offline', value: offlineCount, icon: WifiOff, color: 'bg-gray-50', iconColor: 'text-gray-400', valueColor: 'text-gray-700', filterValue: 'offline' },
+    { label: 'Blocked', value: blockedCount, icon: ShieldOff, color: 'bg-red-50', iconColor: 'text-red-500', valueColor: 'text-red-700', filterValue: 'blocked' },
+    { label: 'Using Portal', value: portalCount, icon: Monitor, color: 'bg-purple-50', iconColor: 'text-purple-500', valueColor: 'text-purple-700', filterValue: null },
   ]
 
   const completedBookings = doctorBookings.filter(b => b.status === 'completed').length
@@ -327,7 +345,7 @@ export function DoctorsSection() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input placeholder="Search doctors by name, email, or phone..." className="pl-9 h-9 rounded-lg border-gray-200 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
           <SelectTrigger className="w-full sm:w-[140px] h-9 rounded-lg border-gray-200 text-sm"><SelectValue placeholder="All Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
@@ -355,19 +373,38 @@ export function DoctorsSection() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {statCards.map((card) => (
-          <Card key={card.label} className="bg-white rounded-lg shadow-sm border-0">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', card.color)}>
-                <card.icon className={cn('w-5 h-5', card.iconColor)} />
-              </div>
-              <div>
-                <p className={cn('text-xl font-bold leading-tight', card.valueColor)}>{loading ? '—' : card.value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{card.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {statCards.map((card) => {
+          const isActive = card.filterValue !== null && cardFilter === card.filterValue
+          const isClickable = card.filterValue !== null
+          return (
+            <Card
+              key={card.label}
+              className={cn(
+                'bg-white rounded-lg shadow-sm border-0 transition-all duration-150',
+                isClickable && 'cursor-pointer hover:shadow-md hover:-translate-y-0.5',
+                isActive && 'ring-2 ring-offset-1 ring-blue-500 shadow-md'
+              )}
+              {...(isClickable ? { onClick: () => handleCardClick(card.filterValue!) } : {})}
+            >
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center transition-colors', card.color, isActive && 'ring-2 ring-current opacity-80')}>
+                  <card.icon className={cn('w-5 h-5', card.iconColor)} />
+                </div>
+                <div className="min-w-0">
+                  <p className={cn('text-xl font-bold leading-tight', card.valueColor)}>{loading ? '—' : card.value}</p>
+                  <p className={cn('text-xs mt-0.5 truncate', isActive ? 'text-blue-600 font-medium' : 'text-gray-500')}>{card.label}</p>
+                </div>
+                {isActive && (
+                  <div className="ml-auto">
+                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                      <X className="w-3 h-3 text-white" />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {/* Doctors Table */}
