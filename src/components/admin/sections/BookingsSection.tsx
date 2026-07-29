@@ -105,11 +105,12 @@ export function BookingsSection() {
     params.set('limit', '100')
     if (modeFilter !== 'all') params.set('mode', modeFilter)
     if (statusFilter !== 'all') params.set('status', statusFilter)
+    if (serviceFilter !== 'all') params.set('service', serviceFilter)
     if (dateFrom) params.set('dateFrom', dateFrom)
     if (dateTo) params.set('dateTo', dateTo)
     if (search) params.set('search', search)
     return params.toString()
-  }, [modeFilter, statusFilter, dateFrom, dateTo, search])
+  }, [modeFilter, statusFilter, serviceFilter, dateFrom, dateTo, search])
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -156,12 +157,10 @@ export function BookingsSection() {
     setDetailOpen(true)
   }
 
-  // Client-side service filter (API doesn't support service filter param)
-  const filteredBookings = serviceFilter === 'all'
-    ? bookings
-    : bookings.filter(b => b.serviceName?.toLowerCase().includes(serviceFilter.toLowerCase()))
+  // All filters are now server-side
+  const filteredBookings = bookings
 
-  // Stat calculations
+  // Stat calculations (on server-filtered data)
   const totalBookings = bookings.length
   const todayStr = new Date().toISOString().split('T')[0]
   const todaysCount = bookings.filter(b => b.date === todayStr).length
@@ -170,8 +169,8 @@ export function BookingsSection() {
   const completedCount = bookings.filter(b => b.status === 'completed').length
   const cancelledCount = bookings.filter(b => b.status === 'cancelled').length
 
-  // Unique services for service filter dropdown
-  const uniqueServices = Array.from(new Set(bookings.map(b => b.serviceName).filter(Boolean))).sort()
+  // Unique service IDs for service filter dropdown
+  const uniqueServices = Array.from(new Set(bookings.map(b => b.serviceId).filter(Boolean))).sort()
 
   const statCards = [
     { label: 'Total Bookings', value: totalBookings, icon: CalendarDays, bg: 'bg-blue-100', text: 'text-blue-600', filterValue: 'all', filterType: 'all' as const },
@@ -341,7 +340,7 @@ export function BookingsSection() {
                       <TableCell className="text-sm font-medium text-gray-900">{b.patientName}</TableCell>
                       <TableCell>
                         {b.patientUhid ? (
-                          <span className="text-xs font-mono text-blue-600 hover:underline cursor-pointer">
+                          <span className="text-xs font-mono text-blue-600">
                             {b.patientUhid}
                           </span>
                         ) : (

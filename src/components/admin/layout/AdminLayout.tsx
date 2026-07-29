@@ -159,14 +159,30 @@ export function Header() {
       </Button>
       <h2 className="text-sm font-semibold text-gray-900">{labels[activeSection]}</h2>
       <div className="ml-auto flex items-center gap-4">
-        <div className="relative">
-          <Bell className="w-5 h-5 text-gray-500" />
-          {notificationCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">
-              {notificationCount > 9 ? '9+' : notificationCount}
-            </span>
-          )}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="relative cursor-pointer hover:text-gray-700 transition-colors">
+              <Bell className="w-5 h-5 text-gray-500" />
+              {notificationCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">
+                  {notificationCount > 9 ? '9+' : notificationCount}
+                </span>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="bottom" align="end" className="w-64">
+            <DropdownMenuLabel className="text-xs">Notifications</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {notificationCount > 0 ? (
+              <DropdownMenuItem className="text-sm text-blue-700 cursor-pointer gap-2">
+                <Bell className="w-4 h-4" />
+                {notificationCount} unread notification{notificationCount > 1 ? 's' : ''}
+              </DropdownMenuItem>
+            ) : (
+              <div className="px-2 py-3 text-sm text-gray-400 text-center">No new notifications</div>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold hover:ring-2 hover:ring-blue-300 transition-all cursor-pointer">

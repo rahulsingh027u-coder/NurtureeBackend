@@ -142,14 +142,14 @@ export function PatientsSection() {
 
     try {
       const [bookingsRes, prescriptionsRes] = await Promise.all([
-        fetch('/api/bookings?page=1&limit=100'),
-        fetch('/api/prescriptions'),
+        fetch(`/api/bookings?search=${encodeURIComponent(patient.uhid)}`),
+        fetch(`/api/prescriptions?search=${encodeURIComponent(patient.uhid)}`),
       ])
 
       if (bookingsRes.ok) {
         const data = await bookingsRes.json()
         const allBookings: Booking[] = Array.isArray(data) ? data : data?.bookings || data?.data || []
-        setPatientBookings(allBookings.filter((b: Booking) => b.patientId === patient.id))
+        setPatientBookings(allBookings.filter((b: Booking) => b.patientUhid === patient.uhid || b.patientId === patient.id))
       }
 
       if (prescriptionsRes.ok) {

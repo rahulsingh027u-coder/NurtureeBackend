@@ -130,39 +130,60 @@ export function SubUsersSection() {
     setEditOpen(true)
   }
 
-  const handleEditSave = () => {
+  const [saving, setSaving] = useState(false)
+
+  const handleEditSave = async () => {
     if (!selectedUser) return
-    // Update state locally since the endpoint may not exist
-    setSubUsers(prev =>
-      prev.map(u =>
-        u.id === selectedUser.id
-          ? {
-              ...u,
-              name: editForm.name,
-              email: editForm.email,
-              permissions: editForm.permissions,
-              branches: editForm.branches,
-            }
-          : u
-      )
-    )
-    toast({ title: 'Sub User Updated', description: `${editForm.name} has been updated successfully` })
-    setEditOpen(false)
-    setSelectedUser(null)
+    setSaving(true)
+    try {
+      const payload: Record<string, unknown> = {
+        name: editForm.name,
+        email: editForm.email,
+        permissions: editForm.permissions,
+        branches: editForm.branches,
+      }
+      if (editForm.password) payload.password = editForm.password
+      const res = await fetch(`/api/subusers/${selectedUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        toast({ title: 'Sub User Updated', description: `${editForm.name} has been updated successfully` })
+        setEditOpen(false)
+        setSelectedUser(null)
+        fetchSubUsers()
+      } else {
+        const data = await res.json()
+        toast({ title: 'Error', description: data.error || 'Failed to update', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleDeactivate = (user: SubUser) => {
-    setSubUsers(prev =>
-      prev.map(u =>
-        u.id === user.id
-          ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' }
-          : u
-      )
-    )
-    toast({
-      title: user.status === 'active' ? 'User Deactivated' : 'User Activated',
-      description: `${user.name} has been ${user.status === 'active' ? 'deactivated' : 'activated'}`,
-    })
+  const handleDeactivate = async (user: SubUser) => {
+    const newStatus = user.status === 'active' ? false : true
+    try {
+      const res = await fetch(`/api/subusers/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: newStatus }),
+      })
+      if (res.ok) {
+        toast({
+          title: newStatus ? 'User Activated' : 'User Deactivated',
+          description: `${user.name} has been ${newStatus ? 'activated' : 'deactivated'}`,
+        })
+        fetchSubUsers()
+      } else {
+        toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    }
   }
 
   const togglePermission = (form: typeof createForm, setForm: (f: typeof createForm) => void, perm: string) => {
@@ -448,7 +469,8 @@ export function SubUsersSection() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleEditSave}>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleEditSave} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save Changes
             </Button>
           </DialogFooter>

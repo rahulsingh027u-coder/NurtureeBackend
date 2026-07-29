@@ -53,9 +53,9 @@ export function AnalyticsSection() {
 
       const [summaryRes, bpdRes, ooRes, revRes] = await Promise.all([
         fetch(`/api/analytics${qs}`),
-        fetch('/api/analytics/bookings-per-day?days=30'),
-        fetch('/api/analytics/online-offline'),
-        fetch('/api/analytics/revenue?days=30'),
+        fetch(`/api/analytics/bookings-per-day${qs || '?days=30'}`),
+        fetch(`/api/analytics/online-offline${qs || ''}`),
+        fetch(`/api/analytics/revenue${qs || '?days=30'}`),
       ])
 
       if (summaryRes.ok) {
