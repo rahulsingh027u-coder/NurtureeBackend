@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-export async function PATCH(
+async function handleReview(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -49,7 +49,10 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Verification PATCH error:", error);
+    console.error("Verification review error:", error);
     return NextResponse.json({ error: "Failed to update verification" }, { status: 500 });
   }
 }
+
+// Support both PUT and PATCH for flexibility
+export { handleReview as PUT, handleReview as PATCH };
