@@ -66,6 +66,8 @@ model Doctor {
   totalConsultations Int   @default(0)
   avgRating       Float    @default(0)
   verified        Boolean  @default(false)
+  isSuspended     Boolean  @default(false)
+  suspensionReason String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -195,6 +197,8 @@ model Caregiver {
   qualifications  String?
   isAvailable     Boolean  @default(true)
   isVerified      Boolean  @default(false)
+  isSuspended     Boolean  @default(false)
+  suspensionReason String?
   rating          Float    @default(0)
   aadhaarVerified Boolean  @default(false)
   policeVerified  Boolean  @default(false)
@@ -308,12 +312,15 @@ model Verification {
   id              String   @id @default(cuid())
   entityType      String   // doctor, caregiver
   entityId        String
-  status          String   @default("pending") // pending, in_progress, approved, rejected
+  status          String   @default("pending") // pending, in_progress, approved, rejected, suspended, resubmitted
   package         String?  // basic, comprehensive, video
-  documents       String   @default("[]") // JSON: [{type, url, verified}]
+  documents       String   @default("[]") // JSON: [{type, url, verified, uploadedAt, rejectedAt, rejectionReason}]
   reviewNotes     String?
   reviewedBy      String?
   reviewedAt      DateTime?
+  attemptCount    Int      @default(1) // tracks re-submission attempts (max 3)
+  isSuspended     Boolean  @default(false) // true after 3 rejections
+  suspensionReason String?  // reason for suspension
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
