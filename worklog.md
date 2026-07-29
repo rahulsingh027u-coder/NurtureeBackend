@@ -48,3 +48,32 @@ Stage Summary:
 - Logout dropdown functional on both Header avatar and Sidebar user area
 - All booking mode displays show 'Online'/'Offline' (not 'HOME' or 'In Home')
 - Server running cleanly on port 3000, auth state saved at /tmp/nurturee-auth.json
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Update VerificationSection.tsx to align with rewritten verification API
+
+Work Log:
+- Read verification API route.ts — found it returned all verifications without ?type= filtering and lacked documents field
+- Read VerificationSection.tsx — found it used Pending/All tabs (not Doctors/Caregivers), had submittedDate field mismatch (API returns createdAt), used PATCH instead of PUT
+- Updated /api/verification/route.ts: added NextRequest support for ?type=doctor|caregiver query param, added DOCTOR_DOC_TYPES and CAREGIVER_DOC_TYPES arrays, returns entityPhone, entitySpecialty, parsed documents array, and docTypes
+- Updated /api/verification/[id]/route.ts: exported both PUT and PATCH handlers via alias
+- Rewrote VerificationSection.tsx:
+  - Changed tabs from Pending/All to Doctors/Caregivers (with pending count badges)
+  - Fetches /api/verification?type=doctor and ?type=caregiver separately
+  - Uses <Input> component for search (was raw <input> — issue #14 fixed)
+  - Added search bar with name/phone filtering
+  - New detail dialog showing entity info, documents checklist with view links, review notes
+  - Two dialogs: View detail + Approve/Reject action
+  - Uses PUT method for review submission
+  - Proper date formatting via formatDate helper
+  - Status icons and color-coded badges
+  - Action buttons only shown for pending items
+- Build succeeded, server restarted, API verified (200, returns correct format with ?type=doctor)
+
+Stage Summary:
+- VerificationSection now fully aligned with API: Doctors/Caregivers tabs, document display, proper field mapping
+- API supports ?type= filtering and returns rich data (phone, specialty, documents, docTypes)
+- Both PUT and PATCH accepted for review actions
+- Issue #14 (raw <input> → <Input>) fixed as part of this update
