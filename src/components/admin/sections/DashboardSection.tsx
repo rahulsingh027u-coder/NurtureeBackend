@@ -84,7 +84,6 @@ function formatCurrency(val: number) {
 
 export function DashboardSection() {
   const { user, setActiveSection } = useAppStore()
-  const { toast } = useToast()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
 
