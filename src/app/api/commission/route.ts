@@ -165,17 +165,50 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: true, updated });
     }
 
-    // Update doctor's commission rate
+    // Update doctor's commission rate & recalculate all existing commissions
     if (doctorId && commissionRate !== undefined) {
       const rate = Number(commissionRate);
       if (isNaN(rate) || rate < 0 || rate > 100) {
         return NextResponse.json({ error: 'Commission rate must be between 0 and 100' }, { status: 400 });
       }
+
+      // Fetch all commissions for this doctor with their booking totalAmount
+      const existingCommissions = await db.commission.findMany({
+        where: { doctorId },
+        select: { id: true, totalAmount: true },
+      });
+
+      // Recalculate each commission record
+      const recalculated = existingCommissions.map(c => ({
+        id: c.id,
+        commissionRate: rate,
+        commissionAmount: Math.round(c.totalAmount * (rate / 100) * 100) / 100,
+        doctorEarnings: Math.round(c.totalAmount * (1 - rate / 100) * 100) / 100,
+      }));
+
+      // Batch update each commission
+      for (const r of recalculated) {
+        await db.commission.update({
+          where: { id: r.id },
+          data: {
+            commissionRate: r.commissionRate,
+            commissionAmount: r.commissionAmount,
+            doctorEarnings: r.doctorEarnings,
+          },
+        });
+      }
+
+      // Update doctor rate + recalculate commissionDue
+      const remaining = await db.commission.aggregate({
+        _sum: { commissionAmount: true },
+        where: { doctorId, paymentStatus: { in: ['pending', 'overdue'] } },
+      });
       await db.doctor.update({
         where: { id: doctorId },
-        data: { commissionRate: rate },
+        data: { commissionRate: rate, commissionDue: remaining._sum.commissionAmount ?? 0 },
       });
-      return NextResponse.json({ success: true, doctorId, newRate: rate });
+
+      return NextResponse.json({ success: true, doctorId, newRate: rate, updatedCount: recalculated.length });
     }
 
     return NextResponse.json({ error: 'Missing commissionId or doctorId+markAllAs or doctorId+commissionRate' }, { status: 400 });
