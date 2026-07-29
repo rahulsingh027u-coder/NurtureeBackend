@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     if (doctorId) where.doctorId = doctorId;
 
     if (service) {
-      where.service = { name: service };
+      where.serviceId = service;
     }
 
     if (dateFrom || dateTo) {

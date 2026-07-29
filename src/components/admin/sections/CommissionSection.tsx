@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
-import { IndianRupee, TrendingUp, Wallet, Clock, RefreshCw } from 'lucide-react'
+import { IndianRupee, TrendingUp, Wallet, Clock, RefreshCw, XCircle } from 'lucide-react'
 
 interface CommissionEntry {
   id: string
@@ -72,7 +72,7 @@ export function CommissionSection() {
   return (
     <div className="space-y-6 p-4 md:p-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="bg-white rounded-xl shadow-sm border-0">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
@@ -114,6 +114,17 @@ export function CommissionSection() {
             <div>
               {loading ? <Skeleton className="h-7 w-16" /> : <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary?.pendingCommission ?? 0)}</p>}
               <p className="text-xs text-gray-500">Commission Pending</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white rounded-xl shadow-sm border-0">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+              <XCircle className="w-5 h-5" />
+            </div>
+            <div>
+              {loading ? <Skeleton className="h-7 w-16" /> : <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary?.overdueCommission ?? 0)}</p>}
+              <p className="text-xs text-gray-500">Commission Overdue</p>
             </div>
           </CardContent>
         </Card>

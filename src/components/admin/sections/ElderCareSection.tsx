@@ -121,7 +121,7 @@ export function ElderCareSection() {
                     <Select value={form.time} onValueChange={v => setForm({ ...form, time: v })}>
                       <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
-                        {['08:00','09:00','10:00','11:00','12:00','14:00','16:00','18:00'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        {['08:00 AM','09:00 AM','10:00 AM','11:00 AM','12:00 PM','02:00 PM','04:00 PM','06:00 PM'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>

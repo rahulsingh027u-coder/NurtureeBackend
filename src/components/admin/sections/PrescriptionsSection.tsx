@@ -105,7 +105,7 @@ export function PrescriptionsSection() {
   // Unique doctors for filter dropdown
   const uniqueDoctors = Array.from(new Set(prescriptions.map(p => p.doctorName).filter(Boolean))).sort()
 
-  // Client-side filters
+  // Client-side filters (doctor, status, date) — applied on fetched data
   const filtered = prescriptions.filter((p) => {
     if (doctorFilter !== 'all' && p.doctorName !== doctorFilter) return false
     if (statusFilter !== 'all') {
