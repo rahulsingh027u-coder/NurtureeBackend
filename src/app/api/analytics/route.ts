@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { db } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,20 +14,19 @@ export async function GET(req: NextRequest) {
     const where = Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}
 
     const [totalBookings, totalRevenueResult, platformRevenueResult] = await Promise.all([
-      prisma.booking.count({ where }),
-      prisma.booking.aggregate({ _sum: { totalAmount: true }, where }),
-      prisma.booking.aggregate({ _sum: { commissionAmount: true }, where }),
+      db.booking.count({ where }),
+      db.booking.aggregate({ _sum: { totalAmount: true }, where }),
+      db.booking.aggregate({ _sum: { commissionAmount: true }, where }),
     ])
 
     const totalRevenue = totalRevenueResult._sum.totalAmount || 0
     const platformRevenue = platformRevenueResult._sum.commissionAmount || 0
 
-    // Calculate average bookings per day (last 30 days if no filter)
     const daysWhere = Object.keys(dateFilter).length > 0
       ? where
       : { date: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] } }
 
-    const recentCount = await prisma.booking.count({ where: daysWhere })
+    const recentCount = await db.booking.count({ where: daysWhere })
     const daysSpan = from && to
       ? Math.max(1, Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / (1000 * 60 * 60 * 24)) + 1)
       : 30
