@@ -110,7 +110,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { commissionId, paymentStatus, doctorId, markAllAs } = body;
+    const { commissionId, paymentStatus, doctorId, markAllAs, commissionRate } = body;
 
     if (markAllAs && doctorId) {
       const validStatuses = ['paid', 'pending', 'overdue'];
@@ -165,7 +165,20 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: true, updated });
     }
 
-    return NextResponse.json({ error: 'Missing commissionId or doctorId+markAllAs' }, { status: 400 });
+    // Update doctor's commission rate
+    if (doctorId && commissionRate !== undefined) {
+      const rate = Number(commissionRate);
+      if (isNaN(rate) || rate < 0 || rate > 100) {
+        return NextResponse.json({ error: 'Commission rate must be between 0 and 100' }, { status: 400 });
+      }
+      await db.doctor.update({
+        where: { id: doctorId },
+        data: { commissionRate: rate },
+      });
+      return NextResponse.json({ success: true, doctorId, newRate: rate });
+    }
+
+    return NextResponse.json({ error: 'Missing commissionId or doctorId+markAllAs or doctorId+commissionRate' }, { status: 400 });
   } catch (error) {
     console.error("Commission PATCH error:", error);
     return NextResponse.json({ error: "Failed to update commission" }, { status: 500 });

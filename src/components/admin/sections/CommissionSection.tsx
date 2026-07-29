@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import {
   IndianRupee, TrendingUp, Wallet, Clock, RefreshCw, XCircle,
   ChevronRight, MoreVertical, CheckCircle2, AlertTriangle, ArrowUpDown,
-  User, Eye,
+  User, Eye, Pencil, Check,
 } from 'lucide-react'
 
 /* ------------------------------------------------------------------ */
@@ -126,6 +126,10 @@ export function CommissionSection() {
   // Detail sheet state
   const [selectedDoctor, setSelectedDoctor] = useState<CommissionEntry | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+
+  // Inline rate editing state
+  const [editingRateId, setEditingRateId] = useState<string | null>(null)
+  const [editingRateValue, setEditingRateValue] = useState('')
 
   /* ---------- Fetch ---------- */
 
@@ -235,6 +239,41 @@ export function CommissionSection() {
     } finally {
       setDetailLoading(false)
     }
+  }
+
+  /* ---------- Rate update ---------- */
+
+  const updateCommissionRate = async (doctorId: string, newRate: number) => {
+    try {
+      const res = await fetch('/api/commission', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doctorId, commissionRate: newRate }),
+      })
+      if (res.ok) {
+        toast({ title: 'Rate Updated', description: `Commission rate set to ${newRate}%` })
+        fetchCommissions()
+      } else {
+        toast({ title: 'Error', description: 'Failed to update rate', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    }
+  }
+
+  const handleRateSave = (doctorId: string) => {
+    const val = parseFloat(editingRateValue)
+    if (isNaN(val) || val < 0 || val > 100) {
+      toast({ title: 'Invalid', description: 'Rate must be 0-100', variant: 'destructive' })
+      return
+    }
+    updateCommissionRate(doctorId, val)
+    setEditingRateId(null)
+  }
+
+  const handleRateKeyDown = (e: React.KeyboardEvent, doctorId: string) => {
+    if (e.key === 'Enter') handleRateSave(doctorId)
+    if (e.key === 'Escape') setEditingRateId(null)
   }
 
   /* ---------- Sort header helper ---------- */
@@ -376,10 +415,38 @@ export function CommissionSection() {
                         </TableCell>
                         <TableCell className="text-sm text-gray-700 text-right font-mono">{c.bookingCount}</TableCell>
                         <TableCell className="text-sm text-gray-700 text-right font-mono">{fmt(c.totalRevenue)}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="outline" className="text-[11px] font-mono border-blue-200 text-blue-700">
-                            {c.commissionRate}%
-                          </Badge>
+                        <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                          {editingRateId === c.doctorId ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={0.5}
+                                value={editingRateValue}
+                                onChange={e => setEditingRateValue(e.target.value)}
+                                onKeyDown={e => handleRateKeyDown(e, c.doctorId)}
+                                onBlur={() => handleRateSave(c.doctorId)}
+                                autoFocus
+                                className="w-16 h-6 px-1.5 text-[11px] font-mono text-right border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400"
+                              />
+                              <span className="text-[11px] text-gray-400">%</span>
+                            </div>
+                          ) : (
+                            <button
+                              className="group/rate inline-flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-all"
+                              onClick={() => {
+                                setEditingRateId(c.doctorId)
+                                setEditingRateValue(String(c.commissionRate))
+                              }}
+                              title="Click to edit rate"
+                            >
+                              <Badge variant="outline" className="text-[11px] font-mono border-blue-200 text-blue-700 group-hover/rate:border-blue-300">
+                                {c.commissionRate}%
+                              </Badge>
+                              <Pencil className="w-3 h-3 text-blue-400 opacity-0 group-hover/rate:opacity-100 transition-opacity" />
+                            </button>
+                          )}
                         </TableCell>
                         <TableCell className="text-sm text-blue-700 text-right font-medium font-mono">{fmt(c.commissionAmount)}</TableCell>
                         <TableCell className="text-sm text-gray-700 text-right font-mono">{fmt(c.doctorEarnings)}</TableCell>
@@ -450,6 +517,7 @@ export function CommissionSection() {
             doctor={selectedDoctor}
             onStatusChange={updateStatus}
             onMarkAll={markAllAs}
+            onRateChange={updateCommissionRate}
             loading={detailLoading}
           />}
         </SheetContent>
@@ -483,15 +551,18 @@ function StatCard({ icon, bg, iconBg, value, label }: {
   )
 }
 
-function DoctorDetailSheet({ doctor, onStatusChange, onMarkAll, loading }: {
+function DoctorDetailSheet({ doctor, onStatusChange, onMarkAll, onRateChange, loading }: {
   doctor: CommissionEntry
   onStatusChange: (id: string, status: string) => void
   onMarkAll: (doctorId: string, status: string) => void
+  onRateChange: (doctorId: string, newRate: number) => void
   loading: boolean
 }) {
   const paidPct = getPaidPercent(doctor)
   const worst = getWorstStatus(doctor)
   const cfg = statusConfig[worst] || statusConfig.pending
+  const [editingRate, setEditingRate] = useState(false)
+  const [rateVal, setRateVal] = useState(String(doctor.commissionRate))
 
   return (
     <div className="space-y-5 pt-2">
@@ -512,7 +583,49 @@ function DoctorDetailSheet({ doctor, onStatusChange, onMarkAll, loading }: {
       {/* Quick stats */}
       <div className="grid grid-cols-2 gap-3">
         <MiniStat label="Total Revenue" value={fmt(doctor.totalRevenue)} />
-        <MiniStat label="Commission Rate" value={`${doctor.commissionRate}%`} />
+        <div className="rounded-lg bg-gray-50 p-3 text-center">
+          <p className="text-[11px] text-gray-400">Commission Rate</p>
+          {editingRate ? (
+            <div className="flex items-center justify-center gap-1 mt-0.5">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={0.5}
+                value={rateVal}
+                onChange={e => setRateVal(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const v = parseFloat(rateVal)
+                    if (!isNaN(v) && v >= 0 && v <= 100) {
+                      onRateChange(doctor.doctorId, v)
+                      setEditingRate(false)
+                    }
+                  }
+                  if (e.key === 'Escape') { setEditingRate(false); setRateVal(String(doctor.commissionRate)) }
+                }}
+                onBlur={() => {
+                  const v = parseFloat(rateVal)
+                  if (!isNaN(v) && v >= 0 && v <= 100) {
+                    onRateChange(doctor.doctorId, v)
+                  }
+                  setEditingRate(false)
+                }}
+                autoFocus
+                className="w-14 h-6 px-1 text-sm font-mono text-center border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400"
+              />
+              <span className="text-sm text-gray-500">%</span>
+            </div>
+          ) : (
+            <button
+              className="flex items-center justify-center gap-1 group/rd w-full mt-0.5"
+              onClick={() => { setEditingRate(true); setRateVal(String(doctor.commissionRate)) }}
+            >
+              <p className="text-sm font-semibold text-gray-900 font-mono">{doctor.commissionRate}%</p>
+              <Pencil className="w-3 h-3 text-blue-400 opacity-0 group-hover/rd:opacity-100 transition-opacity" />
+            </button>
+          )}
+        </div>
         <MiniStat label="Platform Commission" value={fmt(doctor.commissionAmount)} />
         <MiniStat label="Doctor Earnings" value={fmt(doctor.doctorEarnings)} />
       </div>
