@@ -77,3 +77,24 @@ Stage Summary:
 - API supports ?type= filtering and returns rich data (phone, specialty, documents, docTypes)
 - Both PUT and PATCH accepted for review actions
 - Issue #14 (raw <input> → <Input>) fixed as part of this update
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Complete verification redesign with re-upload, 3-attempt limit, and suspension
+
+Work Log:
+- Schema migration: Added attemptCount, isSuspended, suspensionReason to Verification model; isSuspended, suspensionReason to Doctor and Caregiver models
+- Rewrote /api/verification/route.ts: NMC-based mandatory doc types (4 mandatory + 4 optional for doctors, 4+4 for caregivers), returns rich entity details (phone, email, fees, caregiver checks), mandatory pending calculation, attempt tracking
+- Rewrote /api/verification/[id]/route.ts: PUT/PATCH for approve/reject with auto-suspend on 3rd rejection, POST for resubmit and unsuspend actions, body-read-once fix
+- Rewrote VerificationSection.tsx: Doctors/Caregivers tabs, search by name/phone/email, summary cards (pending/approved/rejected/suspended), table with attempt counter (x/3 with remaining), detail dialog with personal info + fees + uploaded docs + mandatory pending (NMC note) + optional docs, review dialog with final rejection warning, unsuspend dialog with reset explanation, suspension/rejection/resubmitted banners
+- Fixed bug: rejection suspension check must happen AFTER attempt increment (not before)
+- Fixed bug: POST handler was reading body twice causing 'Body is unusable' error
+- Verified all flows via API: reject (attempt 2), resubmit, reject (attempt 3 → suspended), unsuspend (reset to pending, 3 fresh attempts)
+
+Stage Summary:
+- Full verification flow: Submit → Review → Approve/Reject → (if rejected) Resubmit → Review again → (3rd reject) Suspend → Admin Unsuspend → Fresh 3 attempts
+- Schema: Verification.attemptCount, isSuspended, suspensionReason; Doctor/Caregiver.isSuspended, suspensionReason
+- API endpoints: GET ?type=doctor|caregiver, PUT /api/verification/[id] (approve/reject), POST /api/verification/[id] (resubmit|unsuspend)
+- NMC mandatory docs: Medical Degree, NMC Registration, Govt ID, Passport Photo
+- Caregiver mandatory docs: Aadhaar, Police Verification, Medical Fitness, Address Proof

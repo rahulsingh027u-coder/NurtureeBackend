@@ -169,8 +169,14 @@ export function BookingsSection() {
   const completedCount = bookings.filter(b => b.status === 'completed').length
   const cancelledCount = bookings.filter(b => b.status === 'cancelled').length
 
-  // Unique service IDs for service filter dropdown
-  const uniqueServices = Array.from(new Set(bookings.map(b => b.serviceId).filter(Boolean))).sort()
+  // Build service map: serviceId -> serviceName for dropdown display
+  const serviceMap = new Map<string, string>()
+  bookings.forEach(b => {
+    if (b.serviceId && b.serviceName && !serviceMap.has(b.serviceId)) {
+      serviceMap.set(b.serviceId, b.serviceName)
+    }
+  })
+  const uniqueServices = Array.from(serviceMap.entries()).sort((a, b) => a[1].localeCompare(b[1]))
 
   const statCards = [
     { label: 'Total Bookings', value: totalBookings, icon: CalendarDays, bg: 'bg-blue-100', text: 'text-blue-600', filterValue: 'all', filterType: 'all' as const },
@@ -294,8 +300,8 @@ export function BookingsSection() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Services</SelectItem>
-                  {uniqueServices.map((s) => (
-                    <SelectItem key={s} value={s!}>{s}</SelectItem>
+                  {uniqueServices.map(([id, name]) => (
+                    <SelectItem key={id} value={id}>{name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
