@@ -98,3 +98,21 @@ Stage Summary:
 - API endpoints: GET ?type=doctor|caregiver, PUT /api/verification/[id] (approve/reject), POST /api/verification/[id] (resubmit|unsuspend)
 - NMC mandatory docs: Medical Degree, NMC Registration, Govt ID, Passport Photo
 - Caregiver mandatory docs: Aadhaar, Police Verification, Medical Fitness, Address Proof
+---
+Task ID: 1
+Agent: main
+Task: Fix Commission page - API aggregation, clickable bars, status management
+
+Work Log:
+- Audited CommissionSection.tsx, /api/commission/route.ts, Prisma schema
+- Found 5 critical bugs: API key mismatch (data vs commissions), per-booking vs per-doctor aggregation mismatch, no PATCH endpoint, no clickable rows, no status management
+- Rewrote /api/commission/route.ts: GET aggregates per-doctor with booking breakdowns, PATCH supports single/bulk status updates, recalculates doctor.commissionDue
+- Fixed schema field mismatch (profileImage -> avatar for Doctor model)
+- Rewrote CommissionSection.tsx with: 5 summary cards, search bar, status filter tabs, sortable columns, clickable rows opening detail Sheet, progress bars, per-booking breakdown table, dropdown actions for status changes
+- Verified GET returns per-doctor aggregated data with bookings array
+- Verified PATCH updates single commission and recalculates doctor commissionDue
+
+Stage Summary:
+- Commission API now returns {commissions: [...], summary: {...}} with per-doctor aggregation
+- Commission UI features clickable progress bars, doctor detail sheet, booking breakdown, status filter tabs, search, sort, bulk actions
+- All verified working via curl tests

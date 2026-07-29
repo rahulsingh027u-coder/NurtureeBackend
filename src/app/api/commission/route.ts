@@ -1,53 +1,100 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+// GET /api/commission — per-doctor aggregated commission data
 export async function GET() {
   try {
     const commissions = await db.commission.findMany({
       orderBy: { createdAt: "desc" },
       include: {
-        doctor: { select: { name: true } },
-        booking: { select: { totalAmount: true, bookingId: true } },
+        doctor: { select: { id: true, name: true, commissionRate: true, specialty: true, avatar: true } },
+        booking: { select: { id: true, totalAmount: true, bookingId: true, status: true, createdAt: true } },
       },
     });
 
-    const data = commissions.map((c) => ({
-      id: c.id,
-      bookingId: c.booking?.bookingId ?? 'N/A',
-      doctorName: c.doctor?.name ?? 'Unknown',
-      totalAmount: c.booking?.totalAmount ?? 0,
-      commissionRate: c.commissionRate,
-      commissionAmount: c.commissionAmount,
-      doctorEarnings: c.doctorEarnings,
-      paymentStatus: c.paymentStatus,
-      paidAt: c.paidAt,
-      createdAt: c.createdAt,
-    }));
+    // Aggregate per doctor
+    const doctorMap = new Map<string, {
+      id: string
+      doctorId: string
+      doctorName: string
+      specialty: string | null
+      profileImage: string | null
+      commissionRate: number
+      bookingCount: number
+      totalRevenue: number
+      commissionAmount: number
+      doctorEarnings: number
+      paidAmount: number
+      pendingAmount: number
+      overdueAmount: number
+      bookings: Array<{
+        commissionId: string
+        bookingId: string
+        totalAmount: number
+        commissionRate: number
+        commissionAmount: number
+        doctorEarnings: number
+        paymentStatus: string
+        paidAt: Date | null
+        bookingDate: Date
+      }>
+    }>();
 
-    const summary = await db.commission.aggregate({
-      _sum: { commissionAmount: true },
-      where: {},
-    });
+    for (const c of commissions) {
+      const did = c.doctorId;
+      const entry = {
+        commissionId: c.id,
+        bookingId: c.booking?.bookingId ?? 'N/A',
+        totalAmount: c.totalAmount,
+        commissionRate: c.commissionRate,
+        commissionAmount: c.commissionAmount,
+        doctorEarnings: c.doctorEarnings,
+        paymentStatus: c.paymentStatus,
+        paidAt: c.paidAt,
+        bookingDate: c.createdAt,
+      };
 
-    const paidSummary = await db.commission.aggregate({
-      _sum: { commissionAmount: true },
-      where: { paymentStatus: "paid" },
-    });
+      const existing = doctorMap.get(did);
+      if (existing) {
+        existing.bookingCount += 1;
+        existing.totalRevenue += c.totalAmount;
+        existing.commissionAmount += c.commissionAmount;
+        existing.doctorEarnings += c.doctorEarnings;
+        if (c.paymentStatus === 'paid') existing.paidAmount += c.commissionAmount;
+        if (c.paymentStatus === 'pending') existing.pendingAmount += c.commissionAmount;
+        if (c.paymentStatus === 'overdue') existing.overdueAmount += c.commissionAmount;
+        existing.bookings.push(entry);
+      } else {
+        doctorMap.set(did, {
+          id: `doc-${did}`,
+          doctorId: did,
+          doctorName: c.doctor?.name ?? 'Unknown',
+          specialty: c.doctor?.specialty ?? null,
+          profileImage: c.doctor?.avatar ?? null,
+          commissionRate: c.doctor?.commissionRate ?? c.commissionRate,
+          bookingCount: 1,
+          totalRevenue: c.totalAmount,
+          commissionAmount: c.commissionAmount,
+          doctorEarnings: c.doctorEarnings,
+          paidAmount: c.paymentStatus === 'paid' ? c.commissionAmount : 0,
+          pendingAmount: c.paymentStatus === 'pending' ? c.commissionAmount : 0,
+          overdueAmount: c.paymentStatus === 'overdue' ? c.commissionAmount : 0,
+          bookings: [entry],
+        });
+      }
+    }
 
-    const pendingSummary = await db.commission.aggregate({
-      _sum: { commissionAmount: true },
-      where: { paymentStatus: "pending" },
-    });
+    const commissionsList = Array.from(doctorMap.values());
 
-    const overdueSummary = await db.commission.aggregate({
-      _sum: { commissionAmount: true },
-      where: { paymentStatus: "overdue" },
-    });
+    const allSummary = await db.commission.aggregate({ _sum: { commissionAmount: true } });
+    const paidSummary = await db.commission.aggregate({ _sum: { commissionAmount: true }, where: { paymentStatus: "paid" } });
+    const pendingSummary = await db.commission.aggregate({ _sum: { commissionAmount: true }, where: { paymentStatus: "pending" } });
+    const overdueSummary = await db.commission.aggregate({ _sum: { commissionAmount: true }, where: { paymentStatus: "overdue" } });
 
     return NextResponse.json({
-      data,
+      commissions: commissionsList,
       summary: {
-        totalCommission: summary._sum.commissionAmount ?? 0,
+        totalCommission: allSummary._sum.commissionAmount ?? 0,
         paidCommission: paidSummary._sum.commissionAmount ?? 0,
         pendingCommission: pendingSummary._sum.commissionAmount ?? 0,
         overdueCommission: overdueSummary._sum.commissionAmount ?? 0,
@@ -56,5 +103,71 @@ export async function GET() {
   } catch (error) {
     console.error("Commission GET error:", error);
     return NextResponse.json({ error: "Failed to fetch commissions" }, { status: 500 });
+  }
+}
+
+// PATCH /api/commission — update payment status
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { commissionId, paymentStatus, doctorId, markAllAs } = body;
+
+    if (markAllAs && doctorId) {
+      const validStatuses = ['paid', 'pending', 'overdue'];
+      if (!validStatuses.includes(markAllAs)) {
+        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      }
+      const updateData: Record<string, unknown> = { paymentStatus: markAllAs };
+      if (markAllAs === 'paid') updateData.paidAt = new Date();
+
+      const result = await db.commission.updateMany({
+        where: { doctorId, paymentStatus: { not: markAllAs } },
+        data: updateData,
+      });
+
+      const remaining = await db.commission.aggregate({
+        _sum: { commissionAmount: true },
+        where: { doctorId, paymentStatus: { in: ['pending', 'overdue'] } },
+      });
+      await db.doctor.update({
+        where: { id: doctorId },
+        data: { commissionDue: remaining._sum.commissionAmount ?? 0 },
+      });
+
+      return NextResponse.json({ updated: result.count });
+    }
+
+    if (commissionId) {
+      const validStatuses = ['paid', 'pending', 'overdue'];
+      if (!paymentStatus || !validStatuses.includes(paymentStatus)) {
+        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      }
+      const updateData: Record<string, unknown> = { paymentStatus };
+      if (paymentStatus === 'paid') updateData.paidAt = new Date();
+
+      const updated = await db.commission.update({
+        where: { id: commissionId },
+        data: updateData,
+        include: { doctor: { select: { id: true } } },
+      });
+
+      if (updated.doctor?.id) {
+        const remaining = await db.commission.aggregate({
+          _sum: { commissionAmount: true },
+          where: { doctorId: updated.doctor.id, paymentStatus: { in: ['pending', 'overdue'] } },
+        });
+        await db.doctor.update({
+          where: { id: updated.doctor.id },
+          data: { commissionDue: remaining._sum.commissionAmount ?? 0 },
+        });
+      }
+
+      return NextResponse.json({ success: true, updated });
+    }
+
+    return NextResponse.json({ error: 'Missing commissionId or doctorId+markAllAs' }, { status: 400 });
+  } catch (error) {
+    console.error("Commission PATCH error:", error);
+    return NextResponse.json({ error: "Failed to update commission" }, { status: 500 });
   }
 }
