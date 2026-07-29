@@ -165,7 +165,7 @@ export function VerificationSection() {
     ? currentList.filter((v) =>
         v.entityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         v.entityPhone.includes(searchQuery) ||
-        v.entityEmail.toLowerCase().includes(searchQuery.toLowerCase())
+        (v.entityEmail || '').toLowerCase().includes(searchQuery.toLowerCase())
       )
     : currentList
 

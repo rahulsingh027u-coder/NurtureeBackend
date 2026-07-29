@@ -185,7 +185,7 @@ export function ProfileSection() {
           <div className="flex items-center gap-4">
             <Avatar className="h-14 w-14">
               <AvatarFallback className="bg-blue-100 text-blue-700 text-lg font-semibold">
-                {user ? initials(user.name) : 'AD'}
+                {user?.name ? initials(user.name) : 'AD'}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-1">
@@ -360,7 +360,7 @@ export function ProfileSection() {
                         <div className="flex items-center gap-2.5">
                           <Avatar className="h-7 w-7">
                             <AvatarFallback className="bg-blue-50 text-blue-700 text-[10px] font-semibold">
-                              {initials(su.name)}
+                              {su.name ? initials(su.name) : '?'}
                             </AvatarFallback>
                           </Avatar>
                           <span className="text-sm font-medium text-gray-900">{su.name}</span>

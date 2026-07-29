@@ -133,8 +133,6 @@ export function CaregiversSection() {
     }
   }, [toast])
 
-  useEffect(() => { fetchCaregivers() }, [fetchCaregivers])
-
   useEffect(() => {
     fetchCaregivers(specialtyFilter, statusFilter, verifiedFilter)
   }, [specialtyFilter, statusFilter, verifiedFilter, fetchCaregivers])

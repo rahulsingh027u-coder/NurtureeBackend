@@ -116,3 +116,28 @@ Stage Summary:
 - Commission API now returns {commissions: [...], summary: {...}} with per-doctor aggregation
 - Commission UI features clickable progress bars, doctor detail sheet, booking breakdown, status filter tabs, search, sort, bulk actions
 - All verified working via curl tests
+
+---
+Task ID: 2
+Agent: main
+Task: Fix sandbox error - full system review and fix
+
+Work Log:
+- Found daemon-launch.py crash loop: script treated 'stop'/'start' args as port numbers
+- Fixed daemon-launch.py to handle 'stop' command properly with SIGTERM + pkill
+- Found Prisma query logging enabled in production (log: ['query']) causing massive I/O and OOM kills
+- Fixed db.ts: log only in development, errors only in production
+- Found database file was 0 bytes (empty/corrupted)
+- Re-seeded database with prisma db push + tsx prisma/seed.ts
+- Audited all 19 admin component files for runtime errors
+- Fixed VerificationSection.tsx: null guard on entityEmail.toLowerCase()
+- Fixed ProfileSection.tsx: null guards on user.name and su.name before initials()
+- Fixed ElderCareSection.tsx: wrong API response key (d?.caregivers → d?.data)
+- Fixed CaregiversSection.tsx: removed duplicate useEffect causing double API calls
+- Verified all 10 API routes return 200
+- Verified login works (admin@nurturee.in / admin123)
+- Verified commission API returns per-doctor aggregated data
+
+Stage Summary:
+- Root causes: empty DB + Prisma log spam + daemon crash loop + 4 component runtime bugs
+- All fixed, server running stable, all APIs healthy
