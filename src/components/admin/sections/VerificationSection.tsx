@@ -1063,11 +1063,11 @@ export function VerificationSection() {
           onClick={() => setOverlayImg(null)}
         >
           <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 pr-10">
               <span className="text-sm text-white font-medium">{overlayImg.label}</span>
               <button
                 type="button"
-                className="text-xs text-blue-300 hover:text-blue-100 hover:underline"
+                className="text-xs text-blue-300 hover:text-blue-100 hover:underline shrink-0 whitespace-nowrap"
                 onClick={() => {
                   try {
                     const parts = overlayImg.url.split(',')
