@@ -38,7 +38,7 @@ const tabMeta: Record<CategoryKey, { label: string; icon: React.ElementType }> =
   child_care: { label: 'Child Care', icon: Baby },
   elder_care: { label: 'Elder Care', icon: Heart },
   doctor_consultation: { label: 'Doctor Consultation', icon: Stethoscope },
-  caregiver_verification: { label: 'Caregiver Verification', icon: UserCheck },
+  caregiver_verification: { label: 'Care Partner Verification', icon: UserCheck },
 }
 
 function formatPrice(service: Service): string {

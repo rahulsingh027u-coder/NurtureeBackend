@@ -136,7 +136,7 @@ export function ChildCareSection() {
         body: JSON.stringify({ caregiverId: selectedCaregiver }),
       })
       if (res.ok) {
-        toast({ title: 'Caregiver Assigned', description: 'Caregiver has been assigned to the booking' })
+        toast({ title: 'Care Partner Assigned', description: 'Caregiver has been assigned to the booking' })
         setAssignOpen(false)
         setSelectedCaregiver('')
         fetchData()
@@ -271,7 +271,7 @@ export function ChildCareSection() {
                 <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Booking ID</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Caregiver</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Care Partner</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Actions</TableHead>
@@ -328,10 +328,10 @@ export function ChildCareSection() {
         </CardContent>
       </Card>
 
-      {/* Caregivers Panel */}
+      {/* Care Partners Panel */}
       <Card className="bg-white rounded-xl shadow-sm border-0">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-gray-900">Child Care Caregivers</CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-900">Child Care Care Partners</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -361,11 +361,11 @@ export function ChildCareSection() {
         </CardContent>
       </Card>
 
-      {/* Assign Caregiver Dialog */}
+      {/* Assign Care Partner Dialog */}
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Assign Caregiver</DialogTitle>
+            <DialogTitle>Assign Care Partner</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-600">
             Assign a caregiver to booking <span className="font-mono text-blue-700">{selectedBooking?.bookingId}</span> for <span className="font-medium">{selectedBooking?.patientName}</span>
@@ -387,7 +387,7 @@ export function ChildCareSection() {
             <Button variant="outline" onClick={() => setAssignOpen(false)}>Cancel</Button>
             <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleAssign} disabled={assigning || !selectedCaregiver}>
               {assigning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Assign Caregiver
+              Assign Care Partner
             </Button>
           </DialogFooter>
         </DialogContent>

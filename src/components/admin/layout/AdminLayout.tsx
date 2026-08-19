@@ -34,7 +34,7 @@ const navItems: NavItem[] = [
   { id: 'verification', label: 'Verification', icon: ShieldCheck, permission: 'verification' },
   { id: 'commission', label: 'Commission Settings', icon: IndianRupee, permission: 'commission' },
   { id: 'subusers', label: 'Sub Users', icon: UserCog, permission: 'subusers' },
-  { id: 'caregivers', label: 'Caregivers', icon: UserCircle, permission: 'caregivers' },
+  { id: 'caregivers', label: 'Care Partners', icon: UserCircle, permission: 'caregivers' },
   { id: 'services', label: 'Services', icon: Package, permission: 'services' },
   { id: 'child_care', label: 'Child & Elder Care', icon: Baby, permission: 'child_care' },
   { id: 'profile', label: 'My Profile', icon: Settings, permission: 'profile' },
@@ -147,7 +147,7 @@ export function Header() {
   const labels: Record<Section, string> = {
     dashboard: 'Dashboard', child_care: 'Child & Elder Care', elder_care: 'Elder Care',
     doctors: 'Doctors', patients: 'Patients', bookings: 'Bookings',
-    prescriptions: 'Prescriptions', caregivers: 'Caregivers', subusers: 'Sub Users',
+    prescriptions: 'Prescriptions', caregivers: 'Care Partners', subusers: 'Sub Users',
     commission: 'Commission Settings', analytics: 'Analytics',
     verification: 'Verification', services: 'Services', profile: 'My Profile',
   }

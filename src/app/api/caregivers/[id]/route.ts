@@ -22,7 +22,7 @@ export async function GET(
     });
 
     if (!caregiver) {
-      return NextResponse.json({ error: "Caregiver not found" }, { status: 404 });
+      return NextResponse.json({ error: "Care Partner not found" }, { status: 404 });
     }
 
     // Get verification record for this caregiver
@@ -159,7 +159,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Caregiver detail error:", error);
+    console.error("Care Partner detail error:", error);
     return NextResponse.json(
       { error: "Failed to fetch caregiver details" },
       { status: 500 }

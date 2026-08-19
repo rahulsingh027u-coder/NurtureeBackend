@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data });
   } catch (error) {
-    console.error("Caregivers GET error:", error);
+    console.error("Care Partners GET error:", error);
     return NextResponse.json({ error: "Failed to fetch caregivers" }, { status: 500 });
   }
 }
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(caregiver, { status: 201 });
   } catch (error) {
-    console.error("Caregivers POST error:", error);
+    console.error("Care Partners POST error:", error);
     return NextResponse.json({ error: "Failed to create caregiver" }, { status: 500 });
   }
 }
