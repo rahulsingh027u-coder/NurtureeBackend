@@ -719,14 +719,7 @@ export function VerificationSection() {
                         <button
                           type="button"
                           className="text-xs text-blue-600 hover:underline flex items-center gap-1"
-                          onClick={() => {
-                            const url = doc.url
-                            if (url.startsWith('data:')) {
-                              setOverlayImg({ url, label: findDocLabel(displayV, doc.type) })
-                            } else {
-                              window.open(url, '_blank')
-                            }
-                          }}
+                          onClick={() => setOverlayImg({ url: doc.url, label: findDocLabel(displayV, doc.type) })}
                         >
                           <Eye className="w-3 h-3" />View
                         </button>
@@ -1069,8 +1062,10 @@ export function VerificationSection() {
                 type="button"
                 className="text-xs text-blue-300 hover:text-blue-100 hover:underline shrink-0 whitespace-nowrap"
                 onClick={() => {
+                  const oUrl = overlayImg.url
+                  if (oUrl.startsWith('data:')) {
                   try {
-                    const parts = overlayImg.url.split(',')
+                    const parts = oUrl.split(',')
                     const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg'
                     const b64 = atob(parts[1])
                     const arr = new Uint8Array(b64.length)
@@ -1080,6 +1075,9 @@ export function VerificationSection() {
                     window.open(blobUrl, '_blank')
                     setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
                   } catch { /* */ }
+                  } else {
+                    window.open(oUrl, '_blank')
+                  }
                 }}
               >
                 Open in new tab
