@@ -4,7 +4,7 @@ import { verifyToken } from "@/lib/auth";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/api/auth/login")) {
+  if (pathname.startsWith("/api/auth/login") || pathname.startsWith("/api/auth/logout")) {
     return NextResponse.next();
   }
 
