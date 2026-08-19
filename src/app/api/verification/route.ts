@@ -32,6 +32,39 @@ const CAREGIVER_DOC_TYPES = {
   ],
 };
 
+// Maps care-partner package names to admin doc category keys
+const PACKAGE_TO_DOC_KEY: Record<string, string> = {
+  aadhaar: "aadhaar_card",
+  police: "police_verification",
+  medical: "medical_fitness",
+  video: "video_introduction",
+  address: "address_proof",
+  education: "education_cert",
+  experience: "experience_cert",
+  reference: "reference_letter",
+  medical_degree: "medical_degree",
+  nmc_registration: "nmc_registration",
+  govt_id: "govt_id",
+  passport_photo: "passport_photo",
+  clinic_registration: "clinic_registration",
+  gst_registration: "gst_registration",
+  specialization_cert: "specialization_cert",
+};
+
+// Maps short doc type keys to full admin keys
+const SHORT_TO_FULL_KEY: Record<string, string> = {
+  aadhaar: "aadhaar_card",
+  police: "police_verification",
+  medical: "medical_fitness",
+  video: "video_introduction",
+  address: "address_proof",
+  education: "education_cert",
+  experience: "experience_cert",
+  reference: "reference_letter",
+};
+
+const SINGLE_DOC_PACKAGES = new Set(Object.keys(PACKAGE_TO_DOC_KEY));
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -89,27 +122,59 @@ export async function GET(req: NextRequest) {
           ? doctorMap[v.entityId]
           : caregiverMap[v.entityId];
 
-      let parsedDocs: {
-        type: string;
-        url: string;
-        verified?: boolean;
-        uploadedAt?: string;
-        rejectedAt?: string;
-        rejectionReason?: string;
-      }[] = [];
+      let rawDocs: any[] = [];
       try {
-        parsedDocs = JSON.parse(v.documents || "[]");
+        rawDocs = JSON.parse(v.documents || "[]");
       } catch {
-        parsedDocs = [];
+        rawDocs = [];
       }
 
       const docTypes =
         v.entityType === "doctor" ? DOCTOR_DOC_TYPES : CAREGIVER_DOC_TYPES;
 
-      const mandatoryKeys = docTypes.mandatory.map((d) => d.key);
-      const uploadedDocs = parsedDocs.map((d) => d.type);
+      const normalizedDocs = rawDocs.map((d: any) => {
+        let docType: string = d.type || "";
+        const url = d.fileData || d.url || "";
+
+        if (docType.includes("/")) {
+          docType = PACKAGE_TO_DOC_KEY[v.package || ""] || v.package || docType;
+        } else if (SHORT_TO_FULL_KEY[docType]) {
+          docType = SHORT_TO_FULL_KEY[docType];
+        }
+
+        return {
+          type: docType,
+          url,
+          name: d.name || "",
+          verified: d.verified,
+          uploadedAt: d.uploadedAt || v.createdAt.toISOString(),
+          rejectedAt: d.rejectedAt,
+          rejectionReason: d.rejectionReason,
+        };
+      });
+
+      const isSingleDocPackage = SINGLE_DOC_PACKAGES.has(v.package || "");
+
+      const relevantDocTypes = isSingleDocPackage
+        ? (() => {
+            const pkgKey = PACKAGE_TO_DOC_KEY[v.package || ""] || "";
+            const allMandatoryKeys = docTypes.mandatory.map((d) => d.key);
+            const allOptionalKeys = docTypes.optional.map((d) => d.key);
+            return {
+              mandatory: allMandatoryKeys.includes(pkgKey)
+                ? docTypes.mandatory.filter((d) => d.key === pkgKey)
+                : [],
+              optional: allOptionalKeys.includes(pkgKey)
+                ? docTypes.optional.filter((d) => d.key === pkgKey)
+                : [],
+            };
+          })()
+        : docTypes;
+
+      const mandatoryKeys = relevantDocTypes.mandatory.map((d) => d.key);
+      const uploadedDocTypes = normalizedDocs.map((d) => d.type);
       const mandatoryPending = mandatoryKeys.filter(
-        (k) => !uploadedDocs.includes(k)
+        (k) => !uploadedDocTypes.includes(k)
       );
 
       return {
@@ -122,11 +187,9 @@ export async function GET(req: NextRequest) {
         entitySpecialty: entity?.specialty ?? "",
         entityQualifications: entity?.qualifications ?? "",
         entityExperience: entity?.experience ?? 0,
-        // Doctor-specific
         feeOnline: v.entityType === "doctor" ? (entity as any)?.feeOnline ?? 0 : null,
         feeAtHome: v.entityType === "doctor" ? (entity as any)?.feeAtHome ?? 0 : null,
         isOnline: v.entityType === "doctor" ? (entity as any)?.isOnline ?? false : null,
-        // Caregiver-specific
         caregiverChecks:
           v.entityType === "caregiver"
             ? {
@@ -136,14 +199,13 @@ export async function GET(req: NextRequest) {
                 videoVerified: (entity as any)?.videoVerified ?? false,
               }
             : null,
-        // Verification state
         status: v.status,
         package: v.package,
-        documents: parsedDocs,
-        docTypes,
+        documents: normalizedDocs,
+        docTypes: relevantDocTypes,
         mandatoryPending,
         mandatoryCount: mandatoryKeys.length,
-        uploadedCount: uploadedDocs.length,
+        uploadedCount: normalizedDocs.length,
         attemptCount: v.attemptCount ?? 1,
         attemptsRemaining: Math.max(0, 3 - (v.attemptCount ?? 1)),
         isSuspended: v.isSuspended ?? false,

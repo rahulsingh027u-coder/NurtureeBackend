@@ -203,6 +203,59 @@ async function handleUnsuspend(
   }
 }
 
+
+// ── Admin manual suspend ──
+async function handleSuspend(
+  body: any,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const { notes } = body;
+
+    const verification = await db.verification.findUnique({ where: { id } });
+    if (!verification) {
+      return NextResponse.json({ error: "Verification not found" }, { status: 404 });
+    }
+    if (verification.isSuspended) {
+      return NextResponse.json({ error: "Account is already suspended" }, { status: 400 });
+    }
+    if (verification.status === "approved") {
+      return NextResponse.json({ error: "Cannot suspend an approved account" }, { status: 400 });
+    }
+
+    const suspensionMsg = notes || "Suspended by admin for re-verification.";
+
+    const updated = await db.verification.update({
+      where: { id },
+      data: {
+        status: "suspended",
+        isSuspended: true,
+        suspensionReason: suspensionMsg,
+        reviewedAt: new Date(),
+        reviewedBy: "admin",
+      },
+    });
+
+    if (verification.entityType === "doctor") {
+      await db.doctor.update({
+        where: { id: verification.entityId },
+        data: { isSuspended: true, suspensionReason: suspensionMsg, verified: false },
+      });
+    } else if (verification.entityType === "caregiver") {
+      await db.caregiver.update({
+        where: { id: verification.entityId },
+        data: { isSuspended: true, suspensionReason: suspensionMsg, isVerified: false },
+      });
+    }
+
+    return NextResponse.json({ ...updated, message: "Account suspended successfully." });
+  } catch (error) {
+    console.error("Verification suspend error:", error);
+    return NextResponse.json({ error: "Failed to suspend" }, { status: 500 });
+  }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -213,6 +266,8 @@ export async function POST(
 
     if (action === "resubmit") {
       return handleResubmit(body, { params });
+    } else if (action === "suspend") {
+      return handleSuspend(body, { params });
     } else if (action === "unsuspend") {
       return handleUnsuspend(body, { params });
     } else {

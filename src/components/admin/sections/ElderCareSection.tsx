@@ -64,7 +64,7 @@ export function ElderCareSection() {
     setAssigning(true)
     try {
       const res = await fetch(`/api/bookings/${selectedBooking.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caregiverId: selectedCaregiver }) })
-      if (res.ok) { toast({ title: 'Caregiver Assigned' }); setAssignOpen(false); setSelectedCaregiver(''); fetchData() }
+      if (res.ok) { toast({ title: 'Care Partner Assigned' }); setAssignOpen(false); setSelectedCaregiver(''); fetchData() }
       else toast({ title: 'Error', description: 'Failed to assign', variant: 'destructive' })
     } catch { toast({ title: 'Error', variant: 'destructive' }) }
     finally { setAssigning(false) }
@@ -79,7 +79,7 @@ export function ElderCareSection() {
         {[
           { label: 'Total Bookings', count: bookings.length, icon: CalendarDays, color: 'bg-orange-100 text-orange-600' },
           { label: 'Active Assignments', count: activeAssignments, icon: UserCheck, color: 'bg-blue-100 text-blue-600' },
-          { label: 'Available Caregivers', count: availableCaregivers.length, icon: Users, color: 'bg-blue-100 text-blue-600' },
+          { label: 'Available Care Partners', count: availableCaregivers.length, icon: Users, color: 'bg-blue-100 text-blue-600' },
         ].map(c => (
           <Card key={c.label} className="bg-white rounded-xl shadow-sm border-0">
             <CardContent className="p-4 flex items-center gap-3">
@@ -142,7 +142,7 @@ export function ElderCareSection() {
                 <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Booking ID</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Patient</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Caregiver</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Care Partner</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Actions</TableHead>
@@ -173,7 +173,7 @@ export function ElderCareSection() {
       </Card>
 
       <Card className="bg-white rounded-xl shadow-sm border-0">
-        <CardHeader className="pb-3"><CardTitle className="text-base font-semibold text-gray-900">Elder Care Caregivers</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base font-semibold text-gray-900">Elder Care Care Partners</CardTitle></CardHeader>
         <CardContent>
           {loading ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
           : caregivers.length > 0 ? (
@@ -186,16 +186,16 @@ export function ElderCareSection() {
                 </div>
               ))}
             </div>
-          ) : <p className="text-center text-gray-400 text-sm py-6">No elder care caregivers</p>}
+          ) : <p className="text-center text-gray-400 text-sm py-6">No elder care care partners</p>}
         </CardContent>
       </Card>
 
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Assign Caregiver</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Assign Care Partner</DialogTitle></DialogHeader>
           <p className="text-sm text-gray-600">Assign to <span className="font-mono text-blue-700">{selectedBooking?.bookingId}</span> — <span className="font-medium">{selectedBooking?.patientName}</span></p>
           <Select value={selectedCaregiver} onValueChange={setSelectedCaregiver}>
-            <SelectTrigger><SelectValue placeholder="Select caregiver" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Select care partner" /></SelectTrigger>
             <SelectContent>{availableCaregivers.map(c => <SelectItem key={c.id} value={c.id}>{c.name} — {c.experience} yrs</SelectItem>)}</SelectContent>
           </Select>
           <DialogFooter>

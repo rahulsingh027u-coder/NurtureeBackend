@@ -44,7 +44,7 @@ const sectionLabels: Record<Section, string> = {
   patients: 'Patients',
   bookings: 'Bookings',
   prescriptions: 'Prescriptions',
-  caregivers: 'Caregivers',
+  caregivers: 'Care Partners',
   subusers: 'Sub-Users',
   commission: 'Commission',
   analytics: 'Analytics',

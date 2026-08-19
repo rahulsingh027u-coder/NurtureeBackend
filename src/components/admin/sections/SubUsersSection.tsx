@@ -20,7 +20,7 @@ import { Plus, Pencil, Ban, Loader2, ShieldCheck } from 'lucide-react'
 
 const PERMISSION_MODULES = [
   'Dashboard', 'Child Care', 'Elder Care', 'Doctors', 'Doctor Analytics',
-  'Patients', 'Bookings', 'Prescriptions', 'Caregivers', 'SubUsers',
+  'Patients', 'Bookings', 'Prescriptions', 'Care Partners', 'SubUsers',
   'Commission', 'Revenue', 'Analytics', 'Verification', 'Services', 'Profile',
 ] as const
 

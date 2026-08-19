@@ -124,7 +124,7 @@ export function CaregiversSection() {
         const data = await res.json()
         setCaregivers(Array.isArray(data) ? data : data.data || [])
       } else {
-        toast({ title: 'Error', description: 'Failed to fetch caregivers', variant: 'destructive' })
+        toast({ title: 'Error', description: 'Failed to fetch care partners', variant: 'destructive' })
       }
     } catch {
       toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
@@ -148,7 +148,7 @@ export function CaregiversSection() {
         const data = await res.json()
         setDetail(data)
       } else {
-        toast({ title: 'Error', description: 'Failed to load caregiver details', variant: 'destructive' })
+        toast({ title: 'Error', description: 'Failed to load care partner details', variant: 'destructive' })
         setProfileOpen(false)
       }
     } catch {
@@ -194,13 +194,13 @@ export function CaregiversSection() {
         body: JSON.stringify({ ...form, experience: form.experience ? Number(form.experience) : 0 }),
       })
       if (res.ok) {
-        toast({ title: 'Caregiver Added', description: 'New caregiver has been added successfully' })
+        toast({ title: 'Care Partner Added', description: 'New care partner has been added successfully' })
         setAddOpen(false)
         setForm({ name: '', phone: '', email: '', specialty: '', experience: '', qualifications: '' })
         fetchCaregivers(specialtyFilter, statusFilter, verifiedFilter)
       } else {
         const data = await res.json()
-        toast({ title: 'Error', description: data.error || 'Failed to add caregiver', variant: 'destructive' })
+        toast({ title: 'Error', description: data.error || 'Failed to add care partner', variant: 'destructive' })
       }
     } catch {
       toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
@@ -542,16 +542,16 @@ export function CaregiversSection() {
         <CardHeader className="pb-3 flex flex-row items-center justify-between flex-wrap gap-3">
           <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
             <UserCog className="w-4 h-4 text-blue-600" />
-            Caregivers
+            Care Partners
           </CardTitle>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
-                <Plus className="w-4 h-4" /> Add Caregiver
+                <Plus className="w-4 h-4" /> Add Care Partner
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
-              <DialogHeader><DialogTitle>Add New Caregiver</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Add New Care Partner</DialogTitle></DialogHeader>
               <div className="space-y-4 py-2">
                 <div className="space-y-2">
                   <Label>Name *</Label>
@@ -589,7 +589,7 @@ export function CaregiversSection() {
               <DialogFooter>
                 <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate} disabled={creating}>
-                  {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Add Caregiver
+                  {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Add Care Partner
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -694,7 +694,7 @@ export function CaregiversSection() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserCog className="w-5 h-5 text-blue-600" />
-              {detail ? detail.caregiver.name : 'Caregiver Profile'}
+              {detail ? detail.caregiver.name : 'Care Partner Profile'}
               {detail && <span className="text-sm font-mono font-normal text-blue-600 ml-1">{detail.caregiver.caregiverId}</span>}
             </DialogTitle>
           </DialogHeader>

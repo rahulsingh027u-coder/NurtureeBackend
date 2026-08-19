@@ -1,0 +1,220 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+
+const DOCTOR_DOC_TYPES = {
+  mandatory: [
+    { key: "medical_degree", label: "Medical Degree (MBBS/MD/MS)" },
+    { key: "nmc_registration", label: "NMC / State Medical Council Registration" },
+    { key: "govt_id", label: "Government ID (Aadhaar/PAN/Passport)" },
+    { key: "passport_photo", label: "Passport-size Photograph" },
+  ],
+  optional: [
+    { key: "clinic_registration", label: "Clinic / Hospital Registration" },
+    { key: "gst_registration", label: "GST Registration Certificate" },
+    { key: "specialization_cert", label: "Specialization / Super-specialty Certificate" },
+    { key: "experience_cert", label: "Experience Certificate" },
+  ],
+};
+
+const CAREGIVER_DOC_TYPES = {
+  mandatory: [
+    { key: "aadhaar_card", label: "Aadhaar Card" },
+    { key: "police_verification", label: "Police Verification Certificate" },
+    { key: "medical_fitness", label: "Medical Fitness Certificate" },
+    { key: "address_proof", label: "Address Proof" },
+  ],
+  optional: [
+    { key: "education_cert", label: "Education / Qualification Certificate" },
+    { key: "experience_cert", label: "Experience Certificate" },
+    { key: "reference_letter", label: "Reference Letter" },
+    { key: "video_introduction", label: "Video Introduction" },
+  ],
+};
+
+// Map care-partner package names to doc type keys
+const PACKAGE_TO_DOC_KEY: Record<string, string> = {
+  aadhaar: "aadhaar_card",
+  police: "police_verification",
+  medical: "medical_fitness",
+  video: "video_introduction",
+  basic: "aadhaar_card",
+  standard: "police_verification",
+  premium: "medical_fitness",
+};
+
+function isMimeType(type: string) {
+  return type?.includes("/") || type?.startsWith("image/") || type?.startsWith("application/");
+}
+
+function normalizeDocuments(documents: any[], pkg: string | null) {
+  if (!Array.isArray(documents)) return [];
+  const docKey = pkg ? PACKAGE_TO_DOC_KEY[pkg] : null;
+  return documents.map((d: any) => {
+    // If type is a MIME type, normalize it to a category
+    if (isMimeType(d.type) && docKey) {
+      return {
+        ...d,
+        type: docKey,
+        url: d.url || d.dataUrl || null,
+        uploadedAt: d.uploadedAt || new Date().toISOString(),
+      };
+    }
+    return d;
+  });
+}
+
+function buildEntityResponse(v: any, entity: any) {
+  const rawDocs: any[] = [];
+  try { Array.isArray(v.documents) ? rawDocs.push(...v.documents) : void 0; } catch {}
+  try { const parsed = JSON.parse(v.documents || "[]"); if (Array.isArray(parsed)) rawDocs.push(...parsed); } catch {}
+
+  const documents = normalizeDocuments(rawDocs, v.package);
+
+  const docTypes = v.entityType === "doctor" ? DOCTOR_DOC_TYPES : CAREGIVER_DOC_TYPES;
+  const mandatoryKeys = docTypes.mandatory.map((d) => d.key);
+  const uploadedDocTypes = documents.map((d: any) => d.type);
+  const mandatoryPending = mandatoryKeys.filter((k) => !uploadedDocTypes.includes(k));
+
+  return {
+    id: v.id,
+    entityType: v.entityType,
+    entityId: v.entityId,
+    entityName: entity?.name ?? "Unknown",
+    entityPhone: entity?.phone ?? "",
+    entityEmail: entity?.email ?? "",
+    entitySpecialty: entity?.specialty ?? "",
+    entityQualifications: entity?.qualifications ?? "",
+    entityExperience: entity?.experience ?? 0,
+    feeOnline: v.entityType === "doctor" ? (entity as any)?.feeOnline ?? 0 : null,
+    feeAtHome: v.entityType === "doctor" ? (entity as any)?.feeAtHome ?? 0 : null,
+    isOnline: v.entityType === "doctor" ? (entity as any)?.isOnline ?? false : null,
+    caregiverChecks: v.entityType === "caregiver"
+      ? {
+          aadhaarVerified: (entity as any)?.aadhaarVerified ?? false,
+          policeVerified: (entity as any)?.policeVerified ?? false,
+          medicalFitness: (entity as any)?.medicalFitness ?? false,
+          videoVerified: (entity as any)?.videoVerified ?? false,
+        }
+      : null,
+    status: v.status,
+    package: v.package,
+    documents,
+    docTypes,
+    mandatoryPending,
+    mandatoryCount: mandatoryKeys.length,
+    uploadedCount: [...new Set(uploadedDocTypes)].filter((t) => mandatoryKeys.includes(t)).length,
+    attemptCount: v.attemptCount ?? 1,
+    attemptsRemaining: Math.max(0, 3 - (v.attemptCount ?? 1)),
+    isSuspended: v.isSuspended ?? false,
+    suspensionReason: v.suspensionReason ?? null,
+    reviewNotes: v.reviewNotes,
+    reviewedBy: v.reviewedBy,
+    reviewedAt: v.reviewedAt,
+    createdAt: v.createdAt,
+    updatedAt: v.updatedAt,
+  };
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get("type");
+
+    const where = type && ["doctor", "caregiver"].includes(type) ? { entityType: type } : {};
+
+    const verifications = await db.verification.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    const submittedCaregiverIds = new Set(verifications.filter((v) => v.entityType === "caregiver").map((v) => v.entityId));
+    const submittedDoctorIds = new Set(verifications.filter((v) => v.entityType === "doctor").map((v) => v.entityId));
+
+    const [caregiversWithoutSubmission, doctorsWithoutSubmission, caregivers, doctors] = await Promise.all([
+      type !== "doctor"
+        ? db.caregiver.findMany({
+            where: submittedCaregiverIds.size > 0 ? { id: { notIn: Array.from(submittedCaregiverIds) } } : {},
+            select: {
+              id: true, name: true, phone: true, email: true,
+              specialty: true, qualifications: true, experience: true,
+              isVerified: true, isSuspended: true, suspensionReason: true,
+              aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: true,
+              createdAt: true, updatedAt: true,
+            },
+          })
+        : [],
+      type !== "caregiver"
+        ? db.doctor.findMany({
+            where: submittedDoctorIds.size > 0 ? { id: { notIn: Array.from(submittedDoctorIds) } } : {},
+            select: {
+              id: true, name: true, phone: true, email: true,
+              specialty: true, qualifications: true, experience: true,
+              feeOnline: true, feeAtHome: true,
+              verified: true, isSuspended: true, suspensionReason: true,
+              isBlocked: true, isOnline: true,
+              createdAt: true, updatedAt: true,
+            },
+          })
+        : [],
+      (async () => {
+        const ids = verifications.filter((v) => v.entityType === "caregiver").map((v) => v.entityId);
+        return ids.length > 0 ? db.caregiver.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, name: true, phone: true, email: true, specialty: true, qualifications: true, experience: true, isVerified: true, isSuspended: true, suspensionReason: true, aadhaarVerified: true, policeVerified: true, medicalFitness: true, videoVerified: true },
+        }) : [];
+      })(),
+      (async () => {
+        const ids = verifications.filter((v) => v.entityType === "doctor").map((v) => v.entityId);
+        return ids.length > 0 ? db.doctor.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, name: true, phone: true, email: true, specialty: true, qualifications: true, experience: true, feeOnline: true, feeAtHome: true, verified: true, isSuspended: true, suspensionReason: true, isBlocked: true, isOnline: true },
+        }) : [];
+      })(),
+    ]);
+
+    const caregiverMap = Object.fromEntries(caregivers.map((c) => [c.id, c]));
+    const doctorMap = Object.fromEntries(doctors.map((d) => [d.id, d]));
+
+    const data = verifications.map((v) => {
+      const entity = v.entityType === "doctor" ? doctorMap[v.entityId] : caregiverMap[v.entityId];
+      return buildEntityResponse(v, entity);
+    });
+
+    for (const c of caregiversWithoutSubmission) {
+      const docTypes = CAREGIVER_DOC_TYPES;
+      const mandatoryKeys = docTypes.mandatory.map((d) => d.key);
+      data.push({
+        id: `pending_${c.id}`, entityType: "caregiver", entityId: c.id,
+        entityName: c.name ?? "Unknown", entityPhone: c.phone ?? "", entityEmail: c.email ?? "",
+        entitySpecialty: c.specialty ?? "", entityQualifications: c.qualifications ?? "", entityExperience: c.experience ?? 0,
+        feeOnline: null, feeAtHome: null, isOnline: null,
+        caregiverChecks: { aadhaarVerified: c.aadhaarVerified ?? false, policeVerified: c.policeVerified ?? false, medicalFitness: c.medicalFitness ?? false, videoVerified: c.videoVerified ?? false },
+        status: "not_submitted", package: null, documents: [],
+        docTypes, mandatoryPending: mandatoryKeys, mandatoryCount: mandatoryKeys.length, uploadedCount: 0,
+        attemptCount: 0, attemptsRemaining: 3, isSuspended: c.isSuspended ?? false, suspensionReason: c.suspensionReason ?? null,
+        reviewNotes: null, reviewedBy: null, reviewedAt: null, createdAt: c.createdAt, updatedAt: c.updatedAt,
+      });
+    }
+
+    for (const d of doctorsWithoutSubmission) {
+      const docTypes = DOCTOR_DOC_TYPES;
+      const mandatoryKeys = docTypes.mandatory.map((d2) => d2.key);
+      data.push({
+        id: `pending_${d.id}`, entityType: "doctor", entityId: d.id,
+        entityName: d.name ?? "Unknown", entityPhone: d.phone ?? "", entityEmail: d.email ?? "",
+        entitySpecialty: d.specialty ?? "", entityQualifications: d.qualifications ?? "", entityExperience: d.experience ?? 0,
+        feeOnline: d.feeOnline ?? 0, feeAtHome: d.feeAtHome ?? 0, isOnline: d.isOnline ?? false,
+        caregiverChecks: null,
+        status: "not_submitted", package: null, documents: [],
+        docTypes, mandatoryPending: mandatoryKeys, mandatoryCount: mandatoryKeys.length, uploadedCount: 0,
+        attemptCount: 0, attemptsRemaining: 3, isSuspended: d.isSuspended ?? false, suspensionReason: d.suspensionReason ?? null,
+        reviewNotes: null, reviewedBy: null, reviewedAt: null, createdAt: d.createdAt, updatedAt: d.updatedAt,
+      });
+    }
+
+    return NextResponse.json({ data });
+  } catch (error) {
+    console.error("Verification GET error:", error);
+    return NextResponse.json({ error: "Failed to fetch verifications" }, { status: 500 });
+  }
+}

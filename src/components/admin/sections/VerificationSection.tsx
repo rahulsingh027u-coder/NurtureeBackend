@@ -133,6 +133,11 @@ export function VerificationSection() {
   const [unsuspendNotes, setUnsuspendNotes] = useState('')
   const [unsuspending, setUnsuspending] = useState(false)
 
+  // Entity verifications for detail dialog
+  const [entityVerifications, setEntityVerifications] = useState<Verification[]>([])
+  const [activePkgTab, setActivePkgTab] = useState('all')
+  const [overlayImg, setOverlayImg] = useState<{ url: string; label: string } | null>(null)
+
   // ── Fetch ──
   const fetchVerifications = useCallback(async (type: TabValue) => {
     try {
@@ -172,7 +177,16 @@ export function VerificationSection() {
   const countByStatus = (list: Verification[], ...statuses: string[]) =>
     list.filter((v) => statuses.includes(v.status)).length
 
-  const openDetail = (v: Verification) => { setSelectedVerification(v); setDetailOpen(true) }
+  const openDetail = (v: Verification, allForEntity?: Verification[]) => {
+    setSelectedVerification(v)
+    if (allForEntity && allForEntity.length > 1) {
+      setEntityVerifications(allForEntity)
+      setActivePkgTab(v.package || 'all')
+    } else {
+      setEntityVerifications([])
+    }
+    setDetailOpen(true)
+  }
 
   const openReview = (v: Verification, act: 'approved' | 'rejected') => {
     setSelectedVerification(v)
@@ -290,117 +304,186 @@ export function VerificationSection() {
     return { text: `${uploadedTotal} docs`, color: 'text-green-700', bgColor: 'bg-green-100' }
   }
 
+  // ── Package label helper ──
+  const pkgLabel = (pkg: string | null) => {
+    const map: Record<string, string> = { aadhaar: 'Aadhaar', police: 'Police', medical: 'Medical', video: 'Video' }
+    return pkg ? map[pkg] || pkg : '—'
+  }
+
   // ── Table ──
-  const renderTable = (items: Verification[], entityType: 'doctor' | 'caregiver') => (
-    <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
-            <TableHead className="text-xs font-semibold uppercase text-gray-500">{entityType === 'doctor' ? 'Doctor' : 'Caregiver'}</TableHead>
-            <TableHead className="text-xs font-semibold uppercase text-gray-500">Specialty</TableHead>
-            <TableHead className="text-xs font-semibold uppercase text-gray-500">Contact</TableHead>
-            <TableHead className="text-xs font-semibold uppercase text-gray-500">Documents</TableHead>
-            <TableHead className="text-xs font-semibold uppercase text-gray-500">Attempts</TableHead>
-            <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
-            <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i}>
-                {Array.from({ length: 7 }).map((_, j) => (
-                  <TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : items.length > 0 ? (
-            items.map((v) => {
-              const docStatus = getDocStatus(v)
-              const cfg = statusConfig[v.status] || statusConfig.pending
-              const canAct = v.status === 'pending' || v.status === 'resubmitted'
-              return (
-                <TableRow key={v.id} className={cn('hover:bg-gray-50/50', v.isSuspended && 'bg-gray-50/80')}>
-                  <TableCell>
-                    <div className="flex items-center gap-2.5">
-                      <div className={cn(
-                        'w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0',
-                        entityType === 'doctor' ? 'bg-blue-500' : 'bg-orange-500'
-                      )}>
-                        {v.entityName.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate max-w-[160px]">{v.entityName}</p>
-                        <p className="text-[11px] text-gray-500">{v.entityQualifications || '—'}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-700">{v.entitySpecialty || '—'}</TableCell>
-                  <TableCell>
-                    <div className="text-sm text-gray-700">{v.entityPhone || '—'}</div>
-                    {v.entityEmail && <div className="text-[11px] text-gray-400">{v.entityEmail}</div>}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={cn('text-[11px]', docStatus.bgColor, docStatus.color)}>
-                      <FileText className="w-3 h-3 mr-1" />
-                      {docStatus.text}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <span className={cn(
-                        'text-xs font-medium',
-                        v.attemptCount >= MAX_ATTEMPTS ? 'text-red-600' : v.attemptsRemaining <= 1 ? 'text-amber-600' : 'text-gray-700'
-                      )}>
-                        {v.attemptCount}/{MAX_ATTEMPTS}
-                      </span>
-                      {v.attemptsRemaining > 0 && (
-                        <span className="text-[10px] text-gray-400">({v.attemptsRemaining} left)</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={cn('text-[11px] capitalize flex items-center gap-1 w-fit', cfg.color)}>
-                      {cfg.icon}
-                      {cfg.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-center gap-1">
-                      <Button size="sm" variant="ghost" className="text-[11px] text-gray-600 hover:text-blue-600 hover:bg-blue-50 h-7 px-2" onClick={() => openDetail(v)}>
-                        <Eye className="w-3.5 h-3.5 mr-1" />View
-                      </Button>
-                      {canAct && (
-                        <>
-                          <Button size="sm" className="text-[11px] bg-green-600 hover:bg-green-700 text-white h-7 px-2" onClick={() => openReview(v, 'approved')}>
-                            <UserCheck className="w-3.5 h-3.5 mr-1" />Approve
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-[11px] border-red-200 text-red-600 hover:bg-red-50 h-7 px-2" onClick={() => openReview(v, 'rejected')}>
-                            <UserX className="w-3.5 h-3.5 mr-1" />Reject
-                          </Button>
-                        </>
-                      )}
-                      {v.isSuspended && (
-                        <Button size="sm" variant="outline" className="text-[11px] border-amber-300 text-amber-700 hover:bg-amber-50 h-7 px-2" onClick={() => openUnsuspend(v)}>
-                          <Unlock className="w-3.5 h-3.5 mr-1" />Unsuspend
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })
-          ) : (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-gray-400 text-sm">
-                No verification requests found
-              </TableCell>
+  const renderTable = (items: Verification[], entityType: 'doctor' | 'caregiver') => {
+    const isCaregiver = entityType === 'caregiver'
+    let groupedItems: Verification[][]
+
+    if (isCaregiver) {
+      const entityMap = items.reduce<Record<string, Verification[]>>((acc, v) => {
+        (acc[v.entityId] = acc[v.entityId] || []).push(v)
+        return acc
+      }, {})
+      groupedItems = Object.values(entityMap).map((pkgList) => {
+        pkgList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        return pkgList
+      })
+    } else {
+      groupedItems = items.map((v) => [v])
+    }
+
+    const getCombinedStatus = (pkgs: Verification[]) => {
+      if (pkgs.some((p) => p.isSuspended)) return 'suspended'
+      if (pkgs.every((p) => p.status === 'approved')) return 'approved'
+      if (pkgs.some((p) => p.status === 'pending' || p.status === 'resubmitted')) return 'pending'
+      if (pkgs.some((p) => p.status === 'rejected')) return 'rejected'
+      return 'pending'
+    }
+
+    const pendingPkg = (pkgs: Verification[]) => pkgs.find((p) => p.status === 'pending' || p.status === 'resubmitted') || pkgs[0]
+    const suspendedPkg = (pkgs: Verification[]) => pkgs.find((p) => p.isSuspended)
+
+    return (
+      <div className="max-h-[500px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+              <TableHead className="text-xs font-semibold uppercase text-gray-500">{entityType === 'doctor' ? 'Doctor' : 'Caregiver'}</TableHead>
+              <TableHead className="text-xs font-semibold uppercase text-gray-500">Specialty</TableHead>
+              <TableHead className="text-xs font-semibold uppercase text-gray-500">Contact</TableHead>
+              <TableHead className="text-xs font-semibold uppercase text-gray-500">{isCaregiver ? 'Verifications' : 'Documents'}</TableHead>
+              {isCaregiver && <TableHead className="text-xs font-semibold uppercase text-gray-500">Packages</TableHead>}
+              <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+              <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Actions</TableHead>
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  )
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  {Array.from({ length: isCaregiver ? 7 : 7 }).map((_, j) => (
+                    <TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : groupedItems.length > 0 ? (
+              groupedItems.map((pkgList) => {
+                const v = pkgList[0]
+                const combinedStatus = getCombinedStatus(pkgList)
+                const cfg = statusConfig[combinedStatus] || statusConfig.pending
+                const canAct = !isCaregiver && (v.status === 'pending' || v.status === 'resubmitted')
+                const pPkg = pendingPkg(pkgList)
+                const sPkg = suspendedPkg(pkgList)
+
+                return (
+                  <TableRow key={v.entityId} className={cn('hover:bg-gray-50/50', sPkg && 'bg-gray-50/80')}>
+                    <TableCell>
+                      <div className="flex items-center gap-2.5">
+                        <div className={cn(
+                          'w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0',
+                          entityType === 'doctor' ? 'bg-blue-500' : 'bg-orange-500'
+                        )}>
+                          {v.entityName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate max-w-[160px]">{v.entityName}</p>
+                          <p className="text-[11px] text-gray-500">{v.entityQualifications || '—'}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-700">{v.entitySpecialty || '—'}</TableCell>
+                    <TableCell>
+                      <div className="text-sm text-gray-700">{v.entityPhone || '—'}</div>
+                      {v.entityEmail && <div className="text-[11px] text-gray-400">{v.entityEmail}</div>}
+                    </TableCell>
+                    {isCaregiver ? (
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {pkgList.map((pkg) => {
+                            const pkgCfg = statusConfig[pkg.status] || statusConfig.pending
+                            return (
+                              <Badge key={pkg.id} variant="secondary" className={cn('text-[10px] capitalize flex items-center gap-0.5', pkgCfg.color)}>
+                                {pkgCfg.icon}
+                                {pkgLabel(pkg.package)}
+                              </Badge>
+                            )
+                          })}
+                        </div>
+                      </TableCell>
+                    ) : (
+                      <TableCell>
+                        <Badge variant="secondary" className={cn('text-[11px]', getDocStatus(v).bgColor, getDocStatus(v).color)}>
+                          <FileText className="w-3 h-3 mr-1" />
+                          {getDocStatus(v).text}
+                        </Badge>
+                      </TableCell>
+                    )}
+                    {isCaregiver && (
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <span className={cn('text-xs font-medium', pkgList.length >= 4 ? 'text-green-600' : pkgList.length >= 2 ? 'text-amber-600' : 'text-gray-700')}>
+                            {pkgList.length}/4
+                          </span>
+                          <span className="text-[10px] text-gray-400">pkgs</span>
+                        </div>
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <Badge variant="secondary" className={cn('text-[11px] capitalize flex items-center gap-1 w-fit', cfg.color)}>
+                        {cfg.icon}
+                        {cfg.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button size="sm" variant="ghost" className="text-[11px] text-gray-600 hover:text-blue-600 hover:bg-blue-50 h-7 px-2" onClick={() => openDetail(v, pkgList.length > 1 ? pkgList : undefined)}>
+                          <Eye className="w-3.5 h-3.5 mr-1" />View
+                        </Button>
+                        {isCaregiver ? (
+                          <>
+                            {pPkg && (pPkg.status === 'pending' || pPkg.status === 'resubmitted') && (
+                              <Button size="sm" className="text-[11px] bg-green-600 hover:bg-green-700 text-white h-7 px-2" onClick={() => openReview(pPkg, 'approved')}>
+                                <UserCheck className="w-3.5 h-3.5 mr-1" />Approve
+                              </Button>
+                            )}
+                            {sPkg && (
+                              <Button size="sm" variant="outline" className="text-[11px] border-amber-300 text-amber-700 hover:bg-amber-50 h-7 px-2" onClick={() => openUnsuspend(sPkg)}>
+                                <Unlock className="w-3.5 h-3.5 mr-1" />Unsuspend
+                              </Button>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {canAct && (
+                              <Button size="sm" className="text-[11px] bg-green-600 hover:bg-green-700 text-white h-7 px-2" onClick={() => openReview(v, 'approved')}>
+                                <UserCheck className="w-3.5 h-3.5 mr-1" />Approve
+                              </Button>
+                            )}
+                            {canAct && (
+                              <Button size="sm" variant="outline" className="text-[11px] border-red-200 text-red-600 hover:bg-red-50 h-7 px-2" onClick={() => openReview(v, 'rejected')}>
+                                <UserX className="w-3.5 h-3.5 mr-1" />Reject
+                              </Button>
+                            )}
+                            {v.isSuspended && (
+                              <Button size="sm" variant="outline" className="text-[11px] border-amber-300 text-amber-700 hover:bg-amber-50 h-7 px-2" onClick={() => openUnsuspend(v)}>
+                                <Unlock className="w-3.5 h-3.5 mr-1" />Unsuspend
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={isCaregiver ? 7 : 7} className="text-center py-8 text-gray-400 text-sm">
+                  No verification requests found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    )
+  }
 
   // ── Detail Dialog ──
   const renderDetailDialog = () => {
@@ -409,10 +492,13 @@ export function VerificationSection() {
 
     const cfg = statusConfig[v.status] || statusConfig.pending
     const isDoctor = v.entityType === 'doctor'
-    const canAct = v.status === 'pending' || v.status === 'resubmitted'
+    // For caregivers with multiple packages, allow switching between them
+    const hasMultiplePkgs = entityVerifications.length > 1
+    const displayV = hasMultiplePkgs
+      ? entityVerifications.find((ev) => ev.package === activePkgTab) || v
+      : v
 
-    // Build doc map by key
-    const docMap = new Map(v.documents.map((d) => [d.type, d]))
+    const docMap = new Map(displayV.documents.map((d) => [d.type, d]))
 
     return (
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
@@ -428,14 +514,42 @@ export function VerificationSection() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {/* Package tabs for caregivers with multiple packages */}
+            {hasMultiplePkgs && (
+              <div className="flex gap-1.5 flex-wrap">
+                {entityVerifications.map((ev) => {
+                  const isActive = ev.package === activePkgTab
+                  return (
+                    <button
+                      key={ev.id}
+                      onClick={() => {
+                        setActivePkgTab(ev.package || 'all')
+                        setSelectedVerification(ev)
+                      }}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+                        isActive
+                          ? 'bg-blue-50 border-blue-300 text-blue-700'
+                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                      )}
+                    >
+                      <span className={cn('inline-block w-1.5 h-1.5 rounded-full mr-1.5',
+                        ev.status === 'approved' ? 'bg-green-500' : ev.status === 'rejected' ? 'bg-red-500' : ev.isSuspended ? 'bg-gray-800' : 'bg-yellow-500'
+                      )} />
+                      {pkgLabel(ev.package)}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
             {/* Suspension Banner */}
-            {v.isSuspended && (
+            {displayV.isSuspended && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
                 <Ban className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-semibold text-red-800">Account Suspended</p>
                   <p className="text-xs text-red-600 mt-0.5">
-                    {v.suspensionReason || `Maximum ${MAX_ATTEMPTS} verification attempts exceeded.`}
+                    {displayV.suspensionReason || `Maximum ${MAX_ATTEMPTS} verification attempts exceeded.`}
                   </p>
                   <p className="text-xs text-red-500 mt-1">
                     User cannot re-submit documents. Admin must unsuspend the account first.
@@ -445,16 +559,16 @@ export function VerificationSection() {
             )}
 
             {/* Rejection info */}
-            {v.status === 'rejected' && !v.isSuspended && (
+            {displayV.status === 'rejected' && !displayV.isSuspended && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-semibold text-amber-800">Rejection Info</p>
                   <p className="text-xs text-amber-700 mt-0.5">
-                    {v.reviewNotes || 'Documents did not meet requirements.'}
+                    {displayV.reviewNotes || 'Documents did not meet requirements.'}
                   </p>
                   <p className="text-xs text-amber-600 mt-1">
-                    Attempt {v.attemptCount}/{MAX_ATTEMPTS} used. {v.attemptsRemaining} attempt{v.attemptsRemaining !== 1 ? 's' : ''} remaining.
+                    Attempt {displayV.attemptCount}/{MAX_ATTEMPTS} used. {displayV.attemptsRemaining} attempt{displayV.attemptsRemaining !== 1 ? 's' : ''} remaining.
                     User can re-upload documents and resubmit.
                   </p>
                 </div>
@@ -462,13 +576,13 @@ export function VerificationSection() {
             )}
 
             {/* Resubmitted banner */}
-            {v.status === 'resubmitted' && (
+            {displayV.status === 'resubmitted' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
                 <Upload className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-semibold text-blue-800">Resubmitted for Review</p>
                   <p className="text-xs text-blue-700 mt-0.5">
-                    User has re-uploaded documents. Attempt {v.attemptCount}/{MAX_ATTEMPTS}.
+                    User has re-uploaded documents. Attempt {displayV.attemptCount}/{MAX_ATTEMPTS}.
                   </p>
                 </div>
               </div>
@@ -556,20 +670,20 @@ export function VerificationSection() {
               {/* Attempt Progress */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] text-gray-400">Verification Attempts</span>
+                  <span className="text-[11px] text-gray-400">Verification Attempts{hasMultiplePkgs ? ` (${pkgLabel(displayV.package)})` : ''}</span>
                   <span className={cn(
                     'text-[11px] font-medium',
-                    v.attemptsRemaining === 0 ? 'text-red-600' : v.attemptsRemaining === 1 ? 'text-amber-600' : 'text-gray-600'
+                    displayV.attemptsRemaining === 0 ? 'text-red-600' : displayV.attemptsRemaining === 1 ? 'text-amber-600' : 'text-gray-600'
                   )}>
-                    Attempt {v.attemptCount} of {MAX_ATTEMPTS}
+                    Attempt {displayV.attemptCount} of {MAX_ATTEMPTS}
                   </span>
                 </div>
                 <div className="flex gap-1">
                   {Array.from({ length: MAX_ATTEMPTS }).map((_, i) => (
                     <div key={i} className={cn(
                       'h-1.5 flex-1 rounded-full',
-                      i < v.attemptCount
-                        ? v.isSuspended ? 'bg-red-500' : v.status === 'approved' ? 'bg-green-500' : 'bg-amber-400'
+                      i < displayV.attemptCount
+                        ? displayV.isSuspended ? 'bg-red-500' : displayV.status === 'approved' ? 'bg-green-500' : 'bg-amber-400'
                         : 'bg-gray-200'
                     )} />
                   ))}
@@ -581,11 +695,11 @@ export function VerificationSection() {
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
                 <FileText className="w-4 h-4" />
-                Uploaded Documents ({v.documents.length})
+                Uploaded Documents ({displayV.documents.length})
               </h4>
-              {v.documents.length > 0 ? (
+              {displayV.documents.length > 0 ? (
                 <div className="space-y-1">
-                  {v.documents.map((doc) => (
+                  {displayV.documents.map((doc) => (
                     <div key={doc.type} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-2">
                         {doc.verified ? (
@@ -602,9 +716,20 @@ export function VerificationSection() {
                         {doc.rejectionReason && (
                           <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded">{doc.rejectionReason}</span>
                         )}
-                        <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          onClick={() => {
+                            const url = doc.url
+                            if (url.startsWith('data:')) {
+                              setOverlayImg({ url, label: findDocLabel(displayV, doc.type) })
+                            } else {
+                              window.open(url, '_blank')
+                            }
+                          }}
+                        >
                           <Eye className="w-3 h-3" />View
-                        </a>
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -615,17 +740,17 @@ export function VerificationSection() {
             </div>
 
             {/* Mandatory Documents Pending */}
-            {v.mandatoryPending.length > 0 && (
+            {displayV.mandatoryPending.length > 0 && (
               <div>
                 <h4 className="text-sm font-semibold text-red-700 mb-2 flex items-center gap-1.5">
                   <AlertCircle className="w-4 h-4" />
-                  Mandatory Documents Pending ({v.mandatoryPending.length})
+                  Mandatory Documents Pending ({displayV.mandatoryPending.length})
                 </h4>
                 <div className="space-y-1">
-                  {v.mandatoryPending.map((key) => (
+                  {displayV.mandatoryPending.map((key) => (
                     <div key={key} className="flex items-center gap-2 py-1.5 px-3 bg-red-50 rounded-lg">
                       <XCircle className="w-4 h-4 text-red-500" />
-                      <span className="text-sm text-red-800">{findDocLabel(v, key)}</span>
+                      <span className="text-sm text-red-800">{findDocLabel(displayV, key)}</span>
                     </div>
                   ))}
                 </div>
@@ -644,7 +769,7 @@ export function VerificationSection() {
                 Optional Documents
               </h4>
               <div className="space-y-1">
-                {v.docTypes.optional.map((dt) => {
+                {displayV.docTypes.optional.map((dt) => {
                   const doc = docMap.get(dt.key)
                   return (
                     <div key={dt.key} className="flex items-center justify-between py-1.5 px-3 bg-gray-50/50 rounded-lg">
@@ -653,7 +778,28 @@ export function VerificationSection() {
                         <span className="text-sm text-gray-600">{dt.label}</span>
                       </div>
                       {doc && (
-                        <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">View</a>
+                        <button
+                        type="button"
+                        className="text-xs text-blue-600 hover:underline"
+                        onClick={() => {
+                          const url = doc.url
+                          if (url.startsWith('data:')) {
+                            try {
+                              const p = url.split(',')
+                              const m = p[0].match(/:(.*?);/)?.[1] || 'image/jpeg'
+                              const b = atob(p[1])
+                              const a = new Uint8Array(b.length)
+                              for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i)
+                              const bl = new Blob([a], { type: m })
+                              const bu = URL.createObjectURL(bl)
+                              window.open(bu, '_blank')
+                              setTimeout(() => URL.revokeObjectURL(bu), 30000)
+                            } catch { /* */ }
+                          } else {
+                            window.open(url, '_blank')
+                          }
+                        }}
+                      >View</button>
                       )}
                     </div>
                   )
@@ -662,27 +808,27 @@ export function VerificationSection() {
             </div>
 
             {/* Review Notes (if previously reviewed) */}
-            {v.reviewNotes && v.status !== 'pending' && (
+            {displayV.reviewNotes && displayV.status !== 'pending' && (
               <div className="bg-gray-50 rounded-lg p-3">
                 <p className="text-[11px] text-gray-400 mb-1">Admin Review Notes</p>
-                <p className="text-sm text-gray-700">{v.reviewNotes}</p>
+                <p className="text-sm text-gray-700">{displayV.reviewNotes}</p>
               </div>
             )}
 
             {/* Actions */}
             <div className="flex items-center gap-2 pt-2">
-              {v.isSuspended ? (
-                <Button className="flex-1 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => { setDetailOpen(false); openUnsuspend(v) }}>
+              {displayV.isSuspended ? (
+                <Button className="flex-1 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => { setDetailOpen(false); openUnsuspend(displayV) }}>
                   <Unlock className="w-4 h-4 mr-2" />Unsuspend Account
                 </Button>
-              ) : canAct ? (
+              ) : (displayV.status === 'pending' || displayV.status === 'resubmitted') ? (
                 <>
-                  <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={() => { setDetailOpen(false); openReview(v, 'approved') }}>
+                  <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={() => { setDetailOpen(false); openReview(displayV, 'approved') }}>
                     <ShieldCheck className="w-4 h-4 mr-2" />Approve
                   </Button>
-                  <Button variant="outline" className="flex-1 border-red-200 text-red-600 hover:bg-red-50" onClick={() => { setDetailOpen(false); openReview(v, 'rejected') }}>
+                  <Button variant="outline" className="flex-1 border-red-200 text-red-600 hover:bg-red-50" onClick={() => { setDetailOpen(false); openReview(displayV, 'rejected') }}>
                     <AlertCircle className="w-4 h-4 mr-2" />
-                    {v.attemptsRemaining <= 1 ? `Reject (Final)` : 'Reject'}
+                    {displayV.attemptsRemaining <= 1 ? `Reject (Final)` : 'Reject'}
                   </Button>
                 </>
               ) : v.status === 'approved' ? (
@@ -844,14 +990,8 @@ export function VerificationSection() {
             <TabsTrigger value="doctors" className="gap-1.5">
               <Stethoscope className="w-3.5 h-3.5" />
               Doctors
-              {!loading && countByStatus(doctors, 'pending', 'resubmitted') > 0 && (
-                <Badge className="ml-1 h-4 min-w-4 px-1 text-[10px] bg-yellow-500 text-white border-0">
-                  {countByStatus(doctors, 'pending', 'resubmitted')}
-                </Badge>
-              )}
             </TabsTrigger>
             <TabsTrigger value="caregivers" className="gap-1.5">
-              <HeartPulse className="w-3.5 h-3.5" />
               Caregivers
               {!loading && countByStatus(caregivers, 'pending', 'resubmitted') > 0 && (
                 <Badge className="ml-1 h-4 min-w-4 px-1 text-[10px] bg-yellow-500 text-white border-0">
@@ -915,6 +1055,50 @@ export function VerificationSection() {
       {renderDetailDialog()}
       {renderReviewDialog()}
       {renderUnsuspendDialog()}
+
+      {/* Fullscreen image overlay */}
+      {overlayImg && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setOverlayImg(null)}
+        >
+          <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-white font-medium">{overlayImg.label}</span>
+              <button
+                type="button"
+                className="text-xs text-blue-300 hover:text-blue-100 hover:underline"
+                onClick={() => {
+                  try {
+                    const parts = overlayImg.url.split(',')
+                    const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg'
+                    const b64 = atob(parts[1])
+                    const arr = new Uint8Array(b64.length)
+                    for (let i = 0; i < b64.length; i++) arr[i] = b64.charCodeAt(i)
+                    const blob = new Blob([arr], { type: mime })
+                    const blobUrl = URL.createObjectURL(blob)
+                    window.open(blobUrl, '_blank')
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
+                  } catch { /* */ }
+                }}
+              >
+                Open in new tab
+              </button>
+            </div>
+            <img
+              src={overlayImg.url}
+              alt={overlayImg.label}
+              className="w-full max-h-[85vh] object-contain rounded-lg"
+            />
+            <button
+              onClick={() => setOverlayImg(null)}
+              className="absolute -top-2 -right-2 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center text-gray-600 hover:text-gray-900 shadow-lg text-lg leading-none"
+            >
+              x
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
