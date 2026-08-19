@@ -41,6 +41,7 @@ const navItems: NavItem[] = [
 ]
 
 const handleLogout = () => {
+  fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
   localStorage.removeItem('nurturee_admin_session')
   useAppStore.getState().logout()
 }
