@@ -1049,8 +1049,8 @@ export function VerificationSection() {
           <Card className="bg-white rounded-xl shadow-sm border-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold text-gray-900">
-                Caregiver Verifications
-                {!loading && <span className="text-sm font-normal text-gray-500 ml-2">({caregivers.length} total)</span>}
+                Care Partner Verifications
+                {!loading && <span className="text-sm font-normal text-gray-500 ml-2">({new Set(caregivers.map(c => c.entityId)).size} total)</span>}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">

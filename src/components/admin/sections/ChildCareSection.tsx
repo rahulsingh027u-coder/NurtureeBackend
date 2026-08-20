@@ -136,7 +136,7 @@ export function ChildCareSection() {
         body: JSON.stringify({ caregiverId: selectedCaregiver }),
       })
       if (res.ok) {
-        toast({ title: 'Care Partner Assigned', description: 'Caregiver has been assigned to the booking' })
+        toast({ title: 'Care Partner Assigned', description: 'Care Partner has been assigned to the booking' })
         setAssignOpen(false)
         setSelectedCaregiver('')
         fetchData()
@@ -186,7 +186,7 @@ export function ChildCareSection() {
             </div>
             <div>
               {loading ? <Skeleton className="h-7 w-12" /> : <p className="text-2xl font-bold text-gray-900">{availableCaregivers.length}</p>}
-              <p className="text-xs text-gray-500">Available Caregivers</p>
+              <p className="text-xs text-gray-500">Available Care Partners</p>
             </div>
           </CardContent>
         </Card>
