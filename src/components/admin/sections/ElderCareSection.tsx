@@ -109,7 +109,7 @@ export function ElderCareSection() {
                     <SelectContent>
                       <SelectItem value="companionship">Elderly Companionship</SelectItem>
                       <SelectItem value="medical_attendant">Medical Attendant</SelectItem>
-                      <SelectItem value="full_time">Full-Time Caregiver</SelectItem>
+                      <SelectItem value="full_time">Full-Time Care Partner</SelectItem>
                       <SelectItem value="dementia">Dementia/Alzheimer&apos;s Care</SelectItem>
                       <SelectItem value="post_hospital">Post-Hospitalisation Care</SelectItem>
                     </SelectContent>
