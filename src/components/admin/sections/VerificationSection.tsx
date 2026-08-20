@@ -1000,7 +1000,7 @@ export function VerificationSection() {
               Doctors
             </TabsTrigger>
             <TabsTrigger value="caregivers" className="gap-1.5">
-              Caregivers
+              Care Partners
               {!loading && countUniqueByStatus(caregivers, 'pending', 'resubmitted') > 0 && (
                 <Badge className="ml-1 h-4 min-w-4 px-1 text-[10px] bg-yellow-500 text-white border-0">
                   {countUniqueByStatus(caregivers, 'pending', 'resubmitted')}
