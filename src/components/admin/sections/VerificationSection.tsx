@@ -177,6 +177,22 @@ export function VerificationSection() {
   const countByStatus = (list: Verification[], ...statuses: string[]) =>
     list.filter((v) => statuses.includes(v.status)).length
 
+  const uniqueEntityCounts = (list: Verification[]) => {
+    const map = new Map<string, string[]>()
+    for (const v of list) { map.set(v.entityId, [...(map.get(v.entityId) || []), v.status]) }
+    let pending = 0, approved = 0, rejected = 0, suspended = 0
+    for (const [, ss] of map) {
+      if (ss.includes('suspended')) suspended++
+      else if (ss.every(s => s === 'approved')) approved++
+      else if (ss.some(s => s === 'rejected')) rejected++
+      else pending++
+    }
+    return { pending, approved, rejected, suspended }
+  }
+
+  const countUniqueByStatus = (list: Verification[], ...statuses: string[]) =>
+    new Set(list.filter(v => statuses.includes(v.status)).map(v => v.entityId)).size
+
   const openDetail = (v: Verification, allForEntity?: Verification[]) => {
     setSelectedVerification(v)
     if (allForEntity && allForEntity.length > 1) {
@@ -267,10 +283,9 @@ export function VerificationSection() {
 
   // ── Summary cards ──
   const renderSummaryCards = (list: Verification[], entityType: 'doctor' | 'caregiver') => {
-    const pending = countByStatus(list, 'pending', 'resubmitted')
-    const approved = countByStatus(list, 'approved')
-    const rejected = countByStatus(list, 'rejected')
-    const suspended = countByStatus(list, 'suspended')
+    const { pending, approved, rejected, suspended } = entityType === 'caregiver'
+      ? uniqueEntityCounts(list)
+      : { pending: countByStatus(list, 'pending', 'resubmitted'), approved: countByStatus(list, 'approved'), rejected: countByStatus(list, 'rejected'), suspended: countByStatus(list, 'suspended') }
 
     const cards = [
       { label: 'Pending Review', count: pending, color: 'bg-yellow-100 text-yellow-600', icon: <AlertCircle className="w-5 h-5" /> },
@@ -986,9 +1001,9 @@ export function VerificationSection() {
             </TabsTrigger>
             <TabsTrigger value="caregivers" className="gap-1.5">
               Caregivers
-              {!loading && countByStatus(caregivers, 'pending', 'resubmitted') > 0 && (
+              {!loading && countUniqueByStatus(caregivers, 'pending', 'resubmitted') > 0 && (
                 <Badge className="ml-1 h-4 min-w-4 px-1 text-[10px] bg-yellow-500 text-white border-0">
-                  {countByStatus(caregivers, 'pending', 'resubmitted')}
+                  {countUniqueByStatus(caregivers, 'pending', 'resubmitted')}
                 </Badge>
               )}
             </TabsTrigger>
