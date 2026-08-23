@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/lib/store'
-import { Mail, RefreshCw, Users, MapPin, ShieldAlert, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Mail, RefreshCw, Users, MapPin, ShieldAlert, AlertTriangle, CheckCircle2, Lock, Eye, EyeOff } from 'lucide-react'
 
 interface SubUser {
   id: string
@@ -41,6 +41,15 @@ export function ProfileSection() {
   const [loading, setLoading] = useState(true)
   const [maintenance, setMaintenance] = useState<MaintenanceState | null>(null)
   const [maintenanceLoading, setMaintenanceLoading] = useState(false)
+  const [showCurrent, setShowCurrent] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [currentPwd, setCurrentPwd] = useState('')
+  const [newPwd, setNewPwd] = useState('')
+  const [confirmPwd, setConfirmPwd] = useState('')
+  const [pwdError, setPwdError] = useState('')
+  const [pwdSuccess, setPwdSuccess] = useState('')
+  const [pwdLoading, setPwdLoading] = useState(false)
   const [maintenanceMessage, setMaintenanceMessage] = useState('')
 
   useEffect(() => {
@@ -135,6 +144,22 @@ export function ProfileSection() {
     }
   }
 
+  const handleChangePassword = async () => {
+    setPwdError('')
+    setPwdSuccess('')
+    if (!currentPwd || !newPwd || !confirmPwd) { setPwdError('All fields are required'); return }
+    if (newPwd.length < 6) { setPwdError('New password must be at least 6 characters'); return }
+    if (newPwd !== confirmPwd) { setPwdError('New passwords do not match'); return }
+    setPwdLoading(true)
+    try {
+      const res = await fetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword: currentPwd, newPassword: newPwd }) })
+      const data = await res.json()
+      if (res.ok) { setPwdSuccess(data.message); setCurrentPwd(''); setNewPwd(''); setConfirmPwd('') }
+      else { setPwdError(data.error || 'Failed to change password') }
+    } catch { setPwdError('Something went wrong') }
+    finally { setPwdLoading(false) }
+  }
+
   const initials = (name: string) =>
     name
       .split(' ')
@@ -213,6 +238,49 @@ export function ProfileSection() {
               )}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Change Password Card */}
+      <Card className="bg-white rounded-xl shadow-sm border-0">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-100">
+              <Lock className="w-4 h-4 text-amber-700" />
+            </div>
+            <div className="space-y-0.5">
+              <CardTitle className="text-base font-semibold text-gray-900">Change Password</CardTitle>
+              <p className="text-xs text-gray-400">Update your admin account password</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-600">Current Password</label>
+            <div className="relative">
+              <input type={showCurrent ? "text" : "password"} value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} placeholder="Enter current password" className="w-full h-9 px-3 pr-9 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />
+              <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-600">New Password</label>
+            <div className="relative">
+              <input type={showNew ? "text" : "password"} value={newPwd} onChange={(e) => setNewPwd(e.target.value)} placeholder="Enter new password (min 6 chars)" className="w-full h-9 px-3 pr-9 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />
+              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-600">Confirm New Password</label>
+            <div className="relative">
+              <input type={showConfirm ? "text" : "password"} value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} placeholder="Confirm new password" className="w-full h-9 px-3 pr-9 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" />
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+            </div>
+          </div>
+          {pwdError && <p className="text-xs text-red-600">{pwdError}</p>}
+          {pwdSuccess && <p className="text-xs text-emerald-600">{pwdSuccess}</p>}
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={handleChangePassword} disabled={pwdLoading}>
+            {pwdLoading ? 'Changing...' : 'Change Password'}
+          </Button>
         </CardContent>
       </Card>
 
