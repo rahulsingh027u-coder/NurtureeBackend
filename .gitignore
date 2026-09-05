@@ -42,3 +42,8 @@ start.sh
 .vscode/
 .idea/
 *.bak
+
+# Log files
+*.log
+server.log
+dev.log

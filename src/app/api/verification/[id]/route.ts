@@ -1,10 +1,91 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { PrismaClient } from "@prisma/client";
 
-const MAX_ATTEMPTS = 3;
+const prisma = new PrismaClient();
 
-// ── Admin approve/reject ──
-async function handleReview(
+async function isDoctorProfileId(id: string): Promise<boolean> {
+  try {
+    const result: any = await prisma.$queryRawUnsafe(
+      'SLECT id FROM "DoctorProfile" WHERE id = $1 LIMIT 1',
+      id
+    );
+    return result.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const isDoctor = await isDoctorProfileId(id);
+
+    if (isDoctor) {
+      const rows: any = await prisma.$queryRawUnsafe(
+        'SELECT dp.*, u.name, u.email, u.phone FROM "DoctorProfile" dp JOIN "User" u ON dp."userId" = u.id WHERE dp.id = $1',
+        id
+      );
+      if (!rows || rows.length === 0)
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      const r = rows[0];
+      return NextResponse.json({
+        data: {
+          id: r.id,
+          entityType: "doctor",
+          entityId: r.id,
+          entityName: r.name,
+          entityPhone: r.phone,
+          entityEmail: r.email,
+          entitySpecialty: r.specialization,
+          entityQualifications: r.degree,
+          entityExperience: r.experienceYears,
+          feeOnline: r.consultationFeeOnline,
+          feeAtHome: r.consultationFeeOffline,
+          isOnline: r.practiceType === "online" || r.practiceType === "both",
+          caregiverChecks: null,
+          status: r.isActive ? "approved" : "pending",
+          package: null,
+          documents: [],
+          docTypes: {
+            mandatory: [
+              { key: "medical_degree", label: "Medical Degree (MBBS/MD/MS)" },
+              { key: "nmc_registration", label: "NMC / State Medical Council Registration" },
+              { key: "govt_id", label: "Government ID (Aadhaar/PAN/Passport)" },
+              { key: "passport_photo", label: "Passport-size Photograph" },
+            ],
+            optional: [],
+          },
+          mandatoryPending: ["medical_degree", "nmc_registration", "govt_id", "passport_photo"],
+          mandatoryCount: 4,
+          uploadedCount: 0,
+          attemptCount: 1,
+          attemptsRemaining: 2,
+          isSuspended: false,
+          suspensionReason: null,
+          reviewNotes: null,
+          reviewedBy: null,
+          reviewedAt: null,
+          createdAt: r.createdAt,
+          updatedAt: r.createdAt,
+        },
+      });
+    }
+
+    const verification: any = await (prisma as any).verification.findUnique({
+      where: { id },
+    });
+    if (!verification)
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ data: verification });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -15,49 +96,44 @@ async function handleReview(
 
     if (!status || !["approved", "rejected"].includes(status)) {
       return NextResponse.json(
-        { error: "Status must be 'approved' or 'rejected'" },
+        { error: "Status must be 'approved' or 'rjected'" },
         { status: 400 }
       );
     }
 
-    const verification = await db.verification.findUnique({ where: { id } });
-    if (!verification) {
+    const isDoctor = await isDoctorProfileId(id);
+
+    if (isDoctor) {
+      const isActive = status === "approved";
+      await prisma.$queryRawUnsafe(
+        'UPDATE "DoctorProfile" SET "isActive" = $1 WHERE id = $2',
+        isActive,
+        id
+      );
+      return NextResponse.json({ success: true, status });
+    }
+
+    const verification: any = await (prisma as any).verification.findUnique({
+      where: { id },
+    });
+    if (!verification)
       return NextResponse.json({ error: "Verification not found" }, { status: 404 });
-    }
-
-    if (verification.status === "approved") {
+    if (verification.status === "approved")
       return NextResponse.json({ error: "Already approved" }, { status: 400 });
-    }
-    if (verification.isSuspended) {
-      return NextResponse.json(
-        { error: "Account is suspended. Unsuspend first before reviewing." },
-        { status: 400 }
-      );
-    }
 
+    const MAX_ATTEMPTS = 3;
     let newStatus = status;
-    let newAttemptCount = verification.attemptCount ?? 1;
+    let newAttemptCount = (verification.attemptCount ?? 1) + (status === "rejected" ? 1 : 0);
     let newIsSuspended = verification.isSuspended ?? false;
     let newSuspensionReason: string | null = verification.suspensionReason ?? null;
 
-    if (status === "rejected") {
-      newAttemptCount = (verification.attemptCount ?? 1) + 1;
-      if (newAttemptCount > MAX_ATTEMPTS) {
-        newStatus = "suspended";
-        newIsSuspended = true;
-        newSuspensionReason =
-          reviewNotes ||
-          "Maximum verification attempts (3) exceeded. Account suspended pending mandatory re-verification.";
-      } else {
-        newStatus = "rejected";
-      }
-    } else if (status === "approved") {
-      newStatus = "approved";
-      newIsSuspended = false;
-      newSuspensionReason = null;
+    if (status === "rejected" && newAttemptCount > MAX_ATTEMPTS) {
+      newStatus = "suspended";
+      newIsSuspended = true;
+      newSuspensionReason = reviewNotes || "Maximum verification attempts exceeded.";
     }
 
-    const updated = await db.verification.update({
+    const updated = await (prisma as any).verification.update({
       where: { id },
       data: {
         status: newStatus,
@@ -70,213 +146,19 @@ async function handleReview(
       },
     });
 
-    if (verification.entityType === "doctor") {
-      await db.doctor.update({
+    if (verification.entityType === "caregiver") {
+      await (prisma as any).caregiver.update({
         where: { id: verification.entityId },
-        data: { verified: newStatus === "approved", isSuspended: newIsSuspended, suspensionReason: newSuspensionReason },
-      });
-    } else if (verification.entityType === "caregiver") {
-      await db.caregiver.update({
-        where: { id: verification.entityId },
-        data: { isVerified: newStatus === "approved", isSuspended: newIsSuspended, suspensionReason: newSuspensionReason },
-      });
-    }
-
-    return NextResponse.json({
-      ...updated,
-      _meta: {
-        wasSuspended: newIsSuspended,
-        attemptsUsed: newAttemptCount,
-        attemptsRemaining: Math.max(0, MAX_ATTEMPTS - newAttemptCount),
-      },
-    });
-  } catch (error) {
-    console.error("Verification review error:", error);
-    return NextResponse.json({ error: "Failed to update verification" }, { status: 500 });
-  }
-}
-
-// ── Doctor/Caregiver resubmit after rejection ──
-async function handleResubmit(
-  body: { documents?: any[] },
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const { documents } = body;
-
-    if (!Array.isArray(documents) || documents.length === 0) {
-      return NextResponse.json({ error: "At least one document is required" }, { status: 400 });
-    }
-
-    const verification = await db.verification.findUnique({ where: { id } });
-    if (!verification) {
-      return NextResponse.json({ error: "Verification not found" }, { status: 404 });
-    }
-
-    if (verification.status !== "rejected") {
-      return NextResponse.json({ error: `Cannot resubmit. Current status: ${verification.status}` }, { status: 400 });
-    }
-    if (verification.isSuspended) {
-      return NextResponse.json({ error: "Account is suspended. Contact admin for re-activation." }, { status: 400 });
-    }
-
-    let existingDocs: any[] = [];
-    try { existingDocs = JSON.parse(verification.documents || "[]"); } catch { existingDocs = []; }
-
-    const existingMap = new Map(existingDocs.map((d: any) => [d.type, d]));
-    for (const doc of documents) {
-      existingMap.set(doc.type, {
-        ...existingMap.get(doc.type),
-        type: doc.type,
-        url: doc.url,
-        verified: false,
-        uploadedAt: new Date().toISOString(),
-        rejectedAt: undefined,
-        rejectionReason: undefined,
+        data: {
+          isVerified: newStatus === "approved",
+          isSuspended: newIsSuspended,
+          suspensionReason: newSuspensionReason,
+        },
       });
     }
 
-    const updated = await db.verification.update({
-      where: { id },
-      data: { status: "resubmitted", documents: JSON.stringify(Array.from(existingMap.values())) },
-    });
-
-    return NextResponse.json({
-      success: true,
-      id: updated.id,
-      status: updated.status,
-      attemptCount: updated.attemptCount,
-      attemptsRemaining: Math.max(0, MAX_ATTEMPTS - (updated.attemptCount ?? 1)),
-    });
-  } catch (error) {
-    console.error("Verification resubmit error:", error);
-    return NextResponse.json({ error: "Failed to resubmit verification" }, { status: 500 });
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-
-// ── Admin unsuspend a suspended account ──
-async function handleUnsuspend(
-  body: { notes?: string },
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const { notes } = body;
-
-    const verification = await db.verification.findUnique({ where: { id } });
-    if (!verification) {
-      return NextResponse.json({ error: "Verification not found" }, { status: 404 });
-    }
-    if (!verification.isSuspended) {
-      return NextResponse.json({ error: "Account is not suspended" }, { status: 400 });
-    }
-
-    const updated = await db.verification.update({
-      where: { id },
-      data: {
-        status: "pending",
-        isSuspended: false,
-        suspensionReason: null,
-        attemptCount: 0,
-        reviewNotes: notes
-          ? `Unsuspended: ${notes}. Previous: ${verification.reviewNotes || "N/A"}`
-          : `Unsuspended by admin. Previous: ${verification.reviewNotes || "N/A"}`,
-        reviewedBy: "admin",
-        reviewedAt: new Date(),
-      },
-    });
-
-    if (verification.entityType === "doctor") {
-      await db.doctor.update({ where: { id: verification.entityId }, data: { isSuspended: false, suspensionReason: null } });
-    } else if (verification.entityType === "caregiver") {
-      await db.caregiver.update({ where: { id: verification.entityId }, data: { isSuspended: false, suspensionReason: null } });
-    }
-
-    return NextResponse.json({
-      success: true, id: updated.id, status: updated.status,
-      message: "Account unsuspended. User can now re-submit documents for verification.",
-    });
-  } catch (error) {
-    console.error("Verification unsuspend error:", error);
-    return NextResponse.json({ error: "Failed to unsuspend" }, { status: 500 });
-  }
-}
-
-
-// ── Admin manual suspend ──
-async function handleSuspend(
-  body: any,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const { notes } = body;
-
-    const verification = await db.verification.findUnique({ where: { id } });
-    if (!verification) {
-      return NextResponse.json({ error: "Verification not found" }, { status: 404 });
-    }
-    if (verification.isSuspended) {
-      return NextResponse.json({ error: "Account is already suspended" }, { status: 400 });
-    }
-    if (verification.status === "approved") {
-      return NextResponse.json({ error: "Cannot suspend an approved account" }, { status: 400 });
-    }
-
-    const suspensionMsg = notes || "Suspended by admin for re-verification.";
-
-    const updated = await db.verification.update({
-      where: { id },
-      data: {
-        status: "suspended",
-        isSuspended: true,
-        suspensionReason: suspensionMsg,
-        reviewedAt: new Date(),
-        reviewedBy: "admin",
-      },
-    });
-
-    if (verification.entityType === "doctor") {
-      await db.doctor.update({
-        where: { id: verification.entityId },
-        data: { isSuspended: true, suspensionReason: suspensionMsg, verified: false },
-      });
-    } else if (verification.entityType === "caregiver") {
-      await db.caregiver.update({
-        where: { id: verification.entityId },
-        data: { isSuspended: true, suspensionReason: suspensionMsg, isVerified: false },
-      });
-    }
-
-    return NextResponse.json({ ...updated, message: "Account suspended successfully." });
-  } catch (error) {
-    console.error("Verification suspend error:", error);
-    return NextResponse.json({ error: "Failed to suspend" }, { status: 500 });
-  }
-}
-
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const body = await req.json();
-    const { action } = body;
-
-    if (action === "resubmit") {
-      return handleResubmit(body, { params });
-    } else if (action === "suspend") {
-      return handleSuspend(body, { params });
-    } else if (action === "unsuspend") {
-      return handleUnsuspend(body, { params });
-    } else {
-      return NextResponse.json({ error: "Invalid action. Use 'resubmit' or 'unsuspend'." }, { status: 400 });
-    }
-  } catch (error) {
-    console.error("Verification POST error:", error);
-    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
-  }
-}
-
-export { handleReview as PUT, handleReview as PATCH };

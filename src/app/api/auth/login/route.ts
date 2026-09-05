@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
         activeBranches: JSON.parse(admin.activeBranches || "[]"),
       });
       res.cookies.set("nurturee_admin_token", token, {
-        httpOnly: true, secure: true, sameSite: "lax", maxAge: 86400, path: "/",
+        httpOnly: true, secure: false, sameSite: "lax", maxAge: 86400, path: "/",
       });
       return res;
     }
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
         activeBranches: JSON.parse(subuser.activeBranches || "[]"),
       });
       res.cookies.set("nurturee_admin_token", token, {
-        httpOnly: true, secure: true, sameSite: "lax", maxAge: 86400, path: "/",
+        httpOnly: true, secure: false, sameSite: "lax", maxAge: 86400, path: "/",
       });
       return res;
     }

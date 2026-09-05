@@ -40,7 +40,7 @@ interface DocType {
   label: string
 }
 
-interface CaregiverChecks {
+interface CarePartnerChecks {
   aadhaarVerified: boolean
   policeVerified: boolean
   medicalFitness: boolean
@@ -60,7 +60,7 @@ interface Verification {
   feeOnline: number | null
   feeAtHome: number | null
   isOnline: boolean | null
-  caregiverChecks: CaregiverChecks | null
+  caregiverChecks: CarePartnerChecks | null
   status: string
   package: string | null
   documents: VerificationDoc[]
@@ -106,7 +106,7 @@ function formatDateShort(iso: string) {
   } catch { return iso }
 }
 
-type TabValue = 'doctors' | 'caregivers'
+type TabValue = 'doctors' | 'carepartners'
 
 // ── Component ──
 
@@ -114,7 +114,7 @@ export function VerificationSection() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<TabValue>('doctors')
   const [doctors, setDoctors] = useState<Verification[]>([])
-  const [caregivers, setCaregivers] = useState<Verification[]>([])
+  const [caregivers, setCarePartners] = useState<Verification[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -146,7 +146,7 @@ export function VerificationSection() {
         const json = await res.json()
         const list: Verification[] = Array.isArray(json) ? json : json?.data || []
         if (type === 'doctors') setDoctors(list)
-        else setCaregivers(list)
+        else setCarePartners(list)
       } else {
         toast({ title: 'Error', description: 'Failed to fetch verifications', variant: 'destructive' })
       }
@@ -158,7 +158,7 @@ export function VerificationSection() {
   const fetchAll = useCallback(async () => {
     setLoading(true)
     setSearchQuery('')
-    await Promise.all([fetchVerifications('doctors'), fetchVerifications('caregivers')])
+    await Promise.all([fetchVerifications('doctors'), fetchVerifications('carepartners')])
     setLoading(false)
   }, [fetchVerifications])
 
@@ -327,10 +327,10 @@ export function VerificationSection() {
 
   // ── Table ──
   const renderTable = (items: Verification[], entityType: 'doctor' | 'caregiver') => {
-    const isCaregiver = entityType === 'caregiver'
+    const isCarePartner = entityType === 'caregiver'
     let groupedItems: Verification[][]
 
-    if (isCaregiver) {
+    if (isCarePartner) {
       const entityMap = items.reduce<Record<string, Verification[]>>((acc, v) => {
         (acc[v.entityId] = acc[v.entityId] || []).push(v)
         return acc
@@ -359,11 +359,11 @@ export function VerificationSection() {
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
-              <TableHead className="text-xs font-semibold uppercase text-gray-500">{entityType === 'doctor' ? 'Doctor' : 'Caregiver'}</TableHead>
+              <TableHead className="text-xs font-semibold uppercase text-gray-500">{entityType === 'doctor' ? 'Doctor' : 'Care Partner'}</TableHead>
               <TableHead className="text-xs font-semibold uppercase text-gray-500">Specialty</TableHead>
               <TableHead className="text-xs font-semibold uppercase text-gray-500">Contact</TableHead>
-              <TableHead className="text-xs font-semibold uppercase text-gray-500">{isCaregiver ? 'Verifications' : 'Documents'}</TableHead>
-              {isCaregiver && <TableHead className="text-xs font-semibold uppercase text-gray-500">Packages</TableHead>}
+              <TableHead className="text-xs font-semibold uppercase text-gray-500">{isCarePartner ? 'Verifications' : 'Documents'}</TableHead>
+              {isCarePartner && <TableHead className="text-xs font-semibold uppercase text-gray-500">Packages</TableHead>}
               <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
               <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Actions</TableHead>
             </TableRow>
@@ -372,7 +372,7 @@ export function VerificationSection() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: isCaregiver ? 7 : 7 }).map((_, j) => (
+                  {Array.from({ length: isCarePartner ? 7 : 7 }).map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>
                   ))}
                 </TableRow>
@@ -382,7 +382,7 @@ export function VerificationSection() {
                 const v = pkgList[0]
                 const combinedStatus = getCombinedStatus(pkgList)
                 const cfg = statusConfig[combinedStatus] || statusConfig.pending
-                const canAct = !isCaregiver && (v.status === 'pending' || v.status === 'resubmitted')
+                const canAct = !isCarePartner && (v.status === 'pending' || v.status === 'resubmitted')
                 const pPkg = pendingPkg(pkgList)
                 const sPkg = suspendedPkg(pkgList)
 
@@ -407,7 +407,7 @@ export function VerificationSection() {
                       <div className="text-sm text-gray-700">{v.entityPhone || '—'}</div>
                       {v.entityEmail && <div className="text-[11px] text-gray-400">{v.entityEmail}</div>}
                     </TableCell>
-                    {isCaregiver ? (
+                    {isCarePartner ? (
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {pkgList.map((pkg) => {
@@ -429,7 +429,7 @@ export function VerificationSection() {
                         </Badge>
                       </TableCell>
                     )}
-                    {isCaregiver && (
+                    {isCarePartner && (
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <span className={cn('text-xs font-medium', pkgList.length >= 4 ? 'text-green-600' : pkgList.length >= 2 ? 'text-amber-600' : 'text-gray-700')}>
@@ -450,7 +450,7 @@ export function VerificationSection() {
                         <Button size="sm" variant="ghost" className="text-[11px] text-gray-600 hover:text-blue-600 hover:bg-blue-50 h-7 px-2" onClick={() => openDetail(v, pkgList.length > 1 ? pkgList : undefined)}>
                           <Eye className="w-3.5 h-3.5 mr-1" />View
                         </Button>
-                        {isCaregiver ? (
+                        {isCarePartner ? (
                           <>
                             {pPkg && (pPkg.status === 'pending' || pPkg.status === 'resubmitted') && (
                               <Button size="sm" className="text-[11px] bg-green-600 hover:bg-green-700 text-white h-7 px-2" onClick={() => openReview(pPkg, 'approved')}>
@@ -489,7 +489,7 @@ export function VerificationSection() {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={isCaregiver ? 7 : 7} className="text-center py-8 text-gray-400 text-sm">
+                <TableCell colSpan={isCarePartner ? 7 : 7} className="text-center py-8 text-gray-400 text-sm">
                   No verification requests found
                 </TableCell>
               </TableRow>

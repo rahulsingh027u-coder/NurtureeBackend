@@ -196,7 +196,7 @@ export function DoctorsSection() {
   const toggleVerified = useCallback(async (val: boolean) => {
     if (!doctor) return
     try {
-      const res = await fetch(`/api/doctors/${doctor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verified: val }) })
+      const res = await fetch(`/api/doctors/${doctor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: val }) })
       if (res.ok) { setDoctor({ ...doctor, verified: val }); fetchDoctors() }
     } catch { toast({ title: 'Error', variant: 'destructive' }) }
   }, [doctor, toast])
@@ -227,7 +227,7 @@ export function DoctorsSection() {
       if (specFilter !== 'all') params.set('specialization', specFilter)
       if (verifiedFilter !== 'all') params.set('verified', verifiedFilter)
       const res = await fetch(`/api/doctors?${params.toString()}`)
-      if (res.ok) { const data = await res.json(); setDoctors(Array.isArray(data) ? data : data.data || []) }
+      if (res.ok) { const data = await res.json(); setDoctors(Array.isArray(data) ? data : data.doctors || []) }
     } catch { toast({ title: 'Error', description: 'Failed to fetch doctors', variant: 'destructive' }) }
     finally { setLoading(false) }
   }
@@ -267,16 +267,16 @@ export function DoctorsSection() {
       ])
       if (docRes.ok) {
         const d = await docRes.json()
-        setDoctor(d)
-        setCommissionValue(String(d.commissionRate))
+        setDoctor(d.doctor)
+        setCommissionValue(String(d.doctor?.commissionRate || 0))
       }
       if (bookingsRes.ok) {
         const data = await bookingsRes.json()
-        setDoctorBookings(Array.isArray(data) ? data : data.data || [])
+        setDoctorBookings(Array.isArray(data) ? data : data.doctors || [])
       }
       if (prescriptionsRes.ok) {
         const data = await prescriptionsRes.json()
-        setDoctorPrescriptions(Array.isArray(data) ? data : data.data || [])
+        setDoctorPrescriptions(Array.isArray(data) ? data : data.doctors || [])
       }
     } catch { /* silent */ }
     finally { setDocLoading(false) }
@@ -332,7 +332,7 @@ export function DoctorsSection() {
     { label: 'Online', value: onlineCount, icon: Wifi, color: 'bg-green-50', iconColor: 'text-green-500', valueColor: 'text-green-700', filterValue: 'online' },
     { label: 'Offline', value: offlineCount, icon: WifiOff, color: 'bg-gray-50', iconColor: 'text-gray-400', valueColor: 'text-gray-700', filterValue: 'offline' },
     { label: 'Blocked', value: blockedCount, icon: ShieldOff, color: 'bg-red-50', iconColor: 'text-red-500', valueColor: 'text-red-700', filterValue: 'blocked' },
-    { label: 'Using Portal', value: portalCount, icon: Monitor, color: 'bg-purple-50', iconColor: 'text-purple-500', valueColor: 'text-purple-700', filterValue: null },
+    { label: 'Pending Approval', value: doctors.length - doctors.filter(d => (d as any).isSuspended === false).length, icon: Clock, color: 'bg-yellow-50', iconColor: 'text-yellow-500', valueColor: 'text-yellow-700', filterValue: 'pending' },
   ]
 
   const completedBookings = doctorBookings.filter(b => b.status === 'completed').length
@@ -349,9 +349,8 @@ export function DoctorsSection() {
           <SelectTrigger className="w-full sm:w-[140px] h-9 rounded-lg border-gray-200 text-sm"><SelectValue placeholder="All Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="online">Online</SelectItem>
-            <SelectItem value="offline">Offline</SelectItem>
-            <SelectItem value="blocked">Blocked</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
           </SelectContent>
         </Select>
         <Select value={specFilter} onValueChange={setSpecFilter}>

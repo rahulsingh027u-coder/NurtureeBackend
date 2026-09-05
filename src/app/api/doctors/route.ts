@@ -1,157 +1,82 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import bcrypt from "bcryptjs";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const search = searchParams.get("search") ?? "";
-    const status = searchParams.get("status");
-    const verified = searchParams.get("verified");
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
-    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") ?? "20")));
+    const url = new URL(req.url);
+    const search = url.searchParams.get("search") || "";
+    const status = url.searchParams.get("status") || "all";
+    const page = parseInt(url.searchParams.get("page") || "1");
+    const limit = parseInt(url.searchParams.get("limit") || "20");
+    const offset = (page - 1) * limit;
 
-    const specialization = searchParams.get("specialization");
-    const where: Record<string, unknown> = {};
+    let whereParts: string[] = [];
+    let paramIdx = 1;
+    const values: any[] = [];
 
     if (search) {
-      where.OR = [
-        { name: { contains: search } },
-        { email: { contains: search } },
-        { phone: { contains: search } },
-        { specialty: { contains: search } },
-      ];
+      whereParts.push(
+        "(u.name ILIKE $" + paramIdx + " OR dp.specialization ILIKE $" + paramIdx + " OR dp.area ILIKE $" + paramIdx + " OR u.phone ILIKE $" + paramIdx + ")"
+      );
+      values.push("%" + search + "%");
+      paramIdx++;
     }
 
-    if (status === "online") where.isOnline = true;
-    else if (status === "offline") where.isOnline = false;
-    else if (status === "blocked") where.isBlocked = true;
-
-    if (verified === "true") where.verified = true;
-    else if (verified === "false") where.verified = false;
-
-    if (specialization) where.specialty = specialization;
-
-    const [doctors, total] = await Promise.all([
-      db.doctor.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          _count: { select: { bookings: true } },
-          commissions: {
-            where: { paymentStatus: "pending" },
-            select: { commissionAmount: true },
-          },
-        },
-      }),
-      db.doctor.count({ where }),
-    ]);
-
-    // Get total earnings per doctor from completed bookings
-    const doctorIds = doctors.map((d) => d.id);
-    const earningsMap: Record<string, number> = {};
-    if (doctorIds.length > 0) {
-      const earningsRows = await db.booking.groupBy({
-        by: ["doctorId"],
-        where: { doctorId: { in: doctorIds }, status: "completed" },
-        _sum: { doctorEarnings: true },
-      });
-      for (const row of earningsRows) {
-        earningsMap[row.doctorId!] = row._sum.doctorEarnings || 0;
-      }
+    if (status === "pending") {
+      whereParts.push('dp."isActive" = false');
+    } else if (status === "approved") {
+      whereParts.push('dp."isActive" = true');
     }
 
-    const data = doctors.map((d) => ({
-      id: d.id,
-      name: d.name,
-      email: d.email,
-      phone: d.phone,
-      specialty: d.specialty,
-      qualifications: d.qualifications,
-      experience: d.experience,
-      languages: d.languages,
-      area: d.area,
-      feeOnline: d.feeOnline,
-      feeAtHome: d.feeAtHome,
-      commissionRate: d.commissionRate,
-      isOnline: d.isOnline,
-      isPortalUser: d.isPortalUser,
-      isBlocked: d.isBlocked,
-      verified: d.verified,
-      avgRating: d.avgRating,
-      totalConsultations: d.totalConsultations,
-      bookingCount: d._count.bookings,
-      totalEarnings: earningsMap[d.id] || 0,
-      commissionDue: d.commissions.reduce(
-        (sum: number, c: { commissionAmount: number }) => sum + c.commissionAmount,
-        0
-      ),
-      createdAt: d.createdAt,
+    const whereSQL = whereParts.length > 0 ? " AND " + whereParts.join(" AND ") : "";
+
+    const countSQL =
+      'SELECT COUNT(*)::int as total FROM "DoctorProfile" dp JOIN "User" u ON dp."userId" = u.id WHERE 1=1' +
+      whereSQL;
+    const countResult: any = await prisma.$queryRawUnsafe(countSQL, ...values);
+    const total = countResult[0].total;
+
+    const dataSQL =
+      'SELECT dp.id, dp."userId", dp.specialization, dp.degree, dp."experienceYears", dp."consultationFeeOnline", dp."consultationFeeOffline", dp."registrationNo", dp.area, dp.languages, dp."availableDays", dp.bio, dp."profileComplete", dp."isActive", dp."practiceType", dp."createdAt", u.name, u.email, u.phone, u."createdAt" as "userCreatedAt" FROM "DoctorProfile" dp JOIN "User" u ON dp."userId" = u.id WHERE 1=1' +
+      whereSQL +
+      ' ORDER BY dp."createdAt" DESC LIMIT ' +
+      limit +
+      " OFFSET " +
+      offset;
+    const rows: any = await prisma.$queryRawUnsafe(dataSQL, ...values);
+
+    const doctors = rows.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      phone: r.phone,
+      specialty: r.specialization,
+      qualifications: r.degree,
+      experience: r.experienceYears,
+      feeOnline: r.consultationFeeOnline,
+      feeAtHome: r.consultationFeeOffline,
+      area: r.area,
+      languages: r.languages,
+      registrationNo: r.registrationNo,
+      practiceType: r.practiceType,
+      availableDays: r.availableDays,
+      bio: r.bio,
+      profileComplete: r.profileComplete,
+      isActive: r.isActive,
+      isOnline: r.practiceType === "online" || r.practiceType === "both",
+      isBlocked: false,
+      verified: r.isActive,
+      avgRating: 0,
+      totalConsultations: 0,
+      commissionRate: 0,
+      createdAt: r.createdAt,
     }));
 
-    return NextResponse.json({ data, total, page, limit });
-  } catch (error) {
+    return NextResponse.json({ doctors, total, page, limit });
+  } catch (error: any) {
     console.error("Doctors GET error:", error);
-    return NextResponse.json({ error: "Failed to fetch doctors" }, { status: 500 });
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const {
-      name,
-      email,
-      phone,
-      password,
-      specialty,
-      qualifications,
-      experience,
-      languages,
-      area,
-      feeOnline,
-      feeAtHome,
-      commissionRate,
-      bio,
-    } = body;
-
-    if (!name || !email || !phone || !password || !specialty) {
-      return NextResponse.json(
-        { error: "Name, email, phone, password, and specialty are required" },
-        { status: 400 }
-      );
-    }
-
-    const existing = await db.doctor.findUnique({ where: { email } });
-    if (existing) {
-      return NextResponse.json({ error: "Doctor with this email already exists" }, { status: 409 });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const doctor = await db.doctor.create({
-      data: {
-        name,
-        email,
-        phone,
-        password: hashedPassword,
-        specialty,
-        qualifications: qualifications ?? "",
-        experience: experience ?? 0,
-        languages: languages ? JSON.stringify(languages) : "[]",
-        area: area ?? "",
-        feeOnline: feeOnline ?? 0,
-        feeAtHome: feeAtHome ?? 0,
-        commissionRate: commissionRate ?? 15,
-        bio: bio ?? null,
-      },
-    });
-
-    return NextResponse.json(doctor, { status: 201 });
-  } catch (error) {
-    console.error("Doctors POST error:", error);
-    return NextResponse.json({ error: "Failed to create doctor" }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
