@@ -4,6 +4,20 @@ import { verifyToken, verifyPortalToken } from "@/lib/auth";
 const PUBLIC_PATHS = ["/api/auth/login", "/api/auth/logout"];
 const PORTAL_PREFIXES = ["/api/doctor-portal/", "/api/patient-portal/"];
 
+// P0-7: Map admin API route prefixes to the permission module they require.
+const ROUTE_PERMISSIONS: { prefix: string; permission: string }[] = [
+  { prefix: "/api/verification", permission: "Verification" },
+  { prefix: "/api/doctors", permission: "Doctors" },
+  { prefix: "/api/caregivers", permission: "Care Partners" },
+  { prefix: "/api/patients", permission: "Patients" },
+  { prefix: "/api/bookings", permission: "Bookings" },
+  { prefix: "/api/prescriptions", permission: "Prescriptions" },
+  { prefix: "/api/commission", permission: "Commission" },
+  { prefix: "/api/subusers", permission: "SubUsers" },
+  { prefix: "/api/notifications", permission: "Dashboard" },
+  { prefix: "/api/upload", permission: "Verification" },
+];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -55,6 +69,27 @@ async function handleAdmin(request: NextRequest) {
   headers.set("x-user-id", String(payload.id));
   headers.set("x-user-email", String(payload.email));
   headers.set("x-user-role", String(payload.role));
+
+  // P0-7: Stamp permissions so route handlers can read them if needed.
+  const permissions = Array.isArray(payload.permissions) ? payload.permissions : [];
+  headers.set("x-user-permissions", JSON.stringify(permissions));
+
+  // P0-7: Enforce per-module permissions for sub_users.
+  const role = String(payload.role);
+  if (role === "sub_user") {
+    const { pathname } = request.nextUrl;
+    for (const { prefix, permission } of ROUTE_PERMISSIONS) {
+      if (pathname.startsWith(prefix)) {
+        if (!permissions.includes(permission)) {
+          return NextResponse.json(
+            { error: `Forbidden: requires '${permission}' permission`, requiredPermission: permission },
+            { status: 403 }
+          );
+        }
+        break;
+      }
+    }
+  }
 
   return NextResponse.next({ request: { headers } });
 }

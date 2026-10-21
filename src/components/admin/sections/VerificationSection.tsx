@@ -225,7 +225,7 @@ export function VerificationSection() {
       const res = await fetch(`/api/verification/${selectedVerification.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: action, reviewNotes: reviewNotes || null, reviewedBy: 'admin' }),
+        body: JSON.stringify({ status: action, reviewNotes: reviewNotes || null }),
       })
       if (res.ok) {
         const data = await res.json()

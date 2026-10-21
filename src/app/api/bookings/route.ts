@@ -92,3 +92,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Failed to fetch bookings" }, { status: 500 });
   }
 }
+// PATCH /api/bookings — approve/reject booking + assign caregiver
+export async function PATCH(req: NextRequest) {
+  try {
+    const { id, status, caregiverId, callDuration, cancelReason } = await req.json();
+    if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+    const data: Record<string, unknown> = {};
+    if (status) data.status = status;
+    if (caregiverId !== undefined) data.caregiverId = caregiverId;
+    if (callDuration !== undefined) data.callDuration = callDuration;
+    if (cancelReason) data.cancelReason = cancelReason;
+
+    const booking = await db.booking.update({ where: { id }, data });
+
+    return NextResponse.json(booking);
+  } catch (error) {
+    console.error("Booking PATCH error:", error);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  }
+}

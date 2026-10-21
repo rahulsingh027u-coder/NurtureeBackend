@@ -209,9 +209,9 @@ model Service {
   description  String?
   duration     String
   priceType    String   @default("per_consultation")
-  priceOnline  Float?
-  priceAtHome  Float?
-  price        Float?
+  priceOnline  Int?
+  priceAtHome  Int?
+  price        Int?
   mode         String   @default("both")
   includes     String   @default("[]")
   isActive     Boolean  @default(true)
@@ -223,20 +223,20 @@ model Service {
 
 model Booking {
   id               String   @id @default(cuid())
-  bookingId        String   @unique
-  patientId        String
+  bookingId        String?  @unique
+  patientId        String?
   doctorId         String?
   caregiverId      String?
-  serviceId        String
-  bookingType      String
+  serviceId        String   @default("")
+  bookingType      String   @default("consultation")
   consultationMode String   @default("in_home")
   status           String   @default("pending")
   source           String   @default("portal")
   date             String
-  startTime        String
+  startTime        String?
   endTime          String?
-  patientName      String
-  patientPhone     String
+  patientName      String   @default("")
+  patientPhone     String   @default("")
   address          String?
   city             String?
   pincode          String?
@@ -246,10 +246,10 @@ model Booking {
   doctorEarnings   Float    @default(0)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
-  patient       Patient      @relation(fields: [patientId], references: [id])
+  patient       Patient?     @relation(fields: [patientId], references: [id])
   doctor        Doctor?      @relation(fields: [doctorId], references: [id])
   caregiver     Caregiver?   @relation(fields: [caregiverId], references: [id])
-  service       Service      @relation(fields: [serviceId], references: [id])
+  service       Service?     @relation(fields: [serviceId], references: [id])
   prescription  Prescription?
   review        Review?
   commission    Commission?
@@ -352,4 +352,147 @@ model Verification {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   @@index([entityType, entityId])
+}
+
+// ─── Schema B models (Doctor Portal compatibility) ───────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  phone         String?   @unique
+  name          String
+  role          String    @default("CUSTOMER")
+  practiceType  String?
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model OtpCode {
+  id              String   @id @default(cuid())
+  phone           String
+  code            String
+  verified        Boolean  @default(false)
+  isSuspended     Boolean  @default(false)
+  suspensionReason String?
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  userId          String?
+}
+
+model DoctorProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  specialization   String
+  degree           String
+  experienceYears  Int      @default(0)
+  consultationFeeOnline  Int @default(0)
+  consultationFeeOffline Int @default(0)
+  registrationNo   String?
+  area             String   @default("")
+  languages        String   @default("")
+  availableFrom    String   @default("09:00")
+  availableTo      String   @default("21:00")
+  availableDays    String   @default("1,2,3,4,5,6")
+  bio              String?
+  profileComplete  Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  verified         Boolean  @default(false)
+  isSuspended      Boolean  @default(false)
+  suspensionReason String?
+  practiceType     String?
+  clinicId         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Clinic {
+  id            String   @id @default(cuid())
+  name          String
+  address       String   @default("")
+  city          String   @default("")
+  phone         String?
+  email         String?
+  logo          String?
+  department    String   @default("")
+  type          String   @default("clinic")
+  operatingHours String @default("{}")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ClinicDoctor {
+  id              String   @id @default(cuid())
+  clinicId        String
+  doctorId        String
+  department      String   @default("")
+  associationType String   @default("full-time")
+  isActive        Boolean  @default(true)
+  joinedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@unique([clinicId, doctorId])
+}
+
+model StaffMember {
+  id            String   @id @default(cuid())
+  doctorId      String?
+  clinicId      String?
+  userId        String?  @unique
+  name          String
+  phone         String
+  role          String   @default("receptionist")
+  associationType String @default("full-time")
+  permissions   String   @default("{}")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model TimeSlot {
+  id        String   @id @default(cuid())
+  doctorId  String
+  date      String
+  startTime String
+  endTime   String
+  isBooked  Boolean  @default(false)
+  bookingId String?
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  bookingId   String?
+  doctorId    String
+  amount      Int
+  platformFee Int      @default(0)
+  netPayout   Int
+  method      String   @default("online")
+  status      String   @default("pending")
+  paidAt      DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model PrescriptionItem {
+  id            String   @id @default(cuid())
+  prescriptionId String
+  medicine      String
+  dosage        String   @default("")
+  frequency     String   @default("")
+  duration      String   @default("")
+  instructions  String   @default("")
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+}
+
+model LinkedDoctor {
+  id              String   @id @default(cuid())
+  primaryDoctorId String
+  linkedDoctorId  String
+  permissions     String   @default("{}")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@unique([primaryDoctorId, linkedDoctorId])
 }

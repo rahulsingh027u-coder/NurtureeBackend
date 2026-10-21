@@ -15,14 +15,17 @@ export async function POST(req: NextRequest) {
       const valid = bcrypt.compareSync(password, admin.password);
       if (!valid) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
       if (!admin.isActive) return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
-      const token = await createToken({ id: admin.id, email: admin.email, role: admin.role });
+      const token = await createToken({
+        id: admin.id, email: admin.email, role: admin.role,
+        permissions: JSON.parse(admin.permissions || "[]"),
+      });
       const res = NextResponse.json({
         id: admin.id, name: admin.name, email: admin.email, role: admin.role,
         permissions: JSON.parse(admin.permissions || "[]"),
         activeBranches: JSON.parse(admin.activeBranches || "[]"),
       });
       res.cookies.set("nurturee_admin_token", token, {
-        httpOnly: true, secure: false, sameSite: "lax", maxAge: 86400, path: "/",
+        httpOnly: true, secure: true, sameSite: "lax", maxAge: 86400, path: "/",
       });
       return res;
     }
@@ -32,14 +35,17 @@ export async function POST(req: NextRequest) {
       const valid = bcrypt.compareSync(password, subuser.password);
       if (!valid) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
       if (!subuser.isActive) return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
-      const token = await createToken({ id: subuser.id, email: subuser.email, role: "sub_user" });
+      const token = await createToken({
+        id: subuser.id, email: subuser.email, role: "sub_user",
+        permissions: JSON.parse(subuser.permissions || "[]"),
+      });
       const res = NextResponse.json({
         id: subuser.id, name: subuser.name, email: subuser.email, role: "sub_user" as const,
         permissions: JSON.parse(subuser.permissions || "[]"),
         activeBranches: JSON.parse(subuser.activeBranches || "[]"),
       });
       res.cookies.set("nurturee_admin_token", token, {
-        httpOnly: true, secure: false, sameSite: "lax", maxAge: 86400, path: "/",
+        httpOnly: true, secure: true, sameSite: "lax", maxAge: 86400, path: "/",
       });
       return res;
     }

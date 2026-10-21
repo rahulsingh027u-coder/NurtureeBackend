@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 async function isDoctorProfileId(id: string): Promise<boolean> {
   try {
     const result: any = await prisma.$queryRawUnsafe(
-      'SLECT id FROM "DoctorProfile" WHERE id = $1 LIMIT 1',
+      'SELECT id FROM "DoctorProfile" WHERE id = $1 LIMIT 1',
       id
     );
     return result.length > 0;
@@ -92,11 +92,11 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { status, reviewNotes, reviewedBy } = body;
+    const { status, reviewNotes } = body; const reviewedBy = req.headers.get("x-user-email") || "unknown";
 
     if (!status || !["approved", "rejected"].includes(status)) {
       return NextResponse.json(
-        { error: "Status must be 'approved' or 'rjected'" },
+        { error: "Status must be 'approved' or 'rejected'" },
         { status: 400 }
       );
     }
@@ -106,7 +106,7 @@ export async function PUT(
     if (isDoctor) {
       const isActive = status === "approved";
       await prisma.$queryRawUnsafe(
-        'UPDATE "DoctorProfile" SET "isActive" = $1 WHERE id = $2',
+        'UPDATE "DoctorProfile" SET "isActive" = $1, verified = $1 WHERE id = $2',
         isActive,
         id
       );

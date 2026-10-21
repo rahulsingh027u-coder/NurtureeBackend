@@ -166,3 +166,29 @@ export async function GET(
     );
   }
 }
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const { documentType, url } = body as { documentType?: string; url?: string };
+    if (!documentType) return NextResponse.json({ error: "documentType is required" }, { status: 400 });
+    const caregiver = await db.caregiver.findUnique({ where: { id } });
+    if (!caregiver) return NextResponse.json({ error: "Caregiver not found" }, { status: 404 });
+    let verification = await db.verification.findFirst({ where: { entityType: "caregiver", entityId: id } });
+    const docUrl = url || "/uploads/" + id + "/" + documentType + "-" + Date.now();
+    if (!verification) {
+      verification = await db.verification.create({ data: { entityType: "caregiver", entityId: id, status: "pending", package: "comprehensive", documents: JSON.stringify([{ type: documentType, url: docUrl, verified: false, uploadedAt: new Date().toISOString() }]) } });
+    } else {
+      let existingDocs: any[] = [];
+      try { existingDocs = JSON.parse(verification.documents || "[]"); } catch { existingDocs = []; }
+      const existingMap = new Map(existingDocs.map((d: any) => [d.type, d]));
+      existingMap.set(documentType, { type: documentType, url: docUrl, verified: false, uploadedAt: new Date().toISOString() });
+      await db.verification.update({ where: { id: verification.id }, data: { documents: JSON.stringify(Array.from(existingMap.values())) } });
+    }
+    return NextResponse.json({ success: true, message: documentType + " document uploaded", documentType });
+  } catch (error) {
+    console.error("Caregiver PATCH error:", error);
+    return NextResponse.json({ error: "Failed to update caregiver" }, { status: 500 });
+  }
+}

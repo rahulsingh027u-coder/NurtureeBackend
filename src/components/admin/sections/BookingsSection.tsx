@@ -47,6 +47,7 @@ interface Booking {
   commissionPercent?: number
   netAmount?: number
   createdAt?: string
+  caregiverName?: string | null
 }
 
 const statusColor: Record<string, string> = {
@@ -55,6 +56,7 @@ const statusColor: Record<string, string> = {
   in_progress: 'bg-purple-100 text-purple-800',
   completed: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
+  pending_admin_approval: 'bg-orange-100 text-orange-800',
 }
 
 const modeColor: Record<string, string> = {
@@ -78,6 +80,13 @@ export function BookingsSection() {
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [cardFilter, setCardFilter] = useState<string | null>(null)
+
+  const [assignOpen, setAssignOpen] = useState(false)
+  const [assignBooking, setAssignBooking] = useState<Booking | null>(null)
+  const [caregivers, setCaregivers] = useState<{ id: string; name: string; specialty?: string }[]>([])
+  const [selectedCaregiver, setSelectedCaregiver] = useState('')
+  const [approving, setApproving] = useState(false)
+
 
   // Card click handler: sets the right filter (status or mode)
   const handleCardClick = (filterValue: string, filterType: 'status' | 'mode' | 'today' | 'all') => {
@@ -130,6 +139,44 @@ export function BookingsSection() {
       setLoading(false)
     }
   }, [buildQueryString, toast])
+
+  const fetchCaregivers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/caregivers?verified=true')
+      if (res.ok) { const data = await res.json(); setCaregivers(data.data || []) }
+    } catch {}
+  }, [])
+
+  const handleApproveAndAssign = async () => {
+    if (!assignBooking || !selectedCaregiver) return
+    setApproving(true)
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: assignBooking.id, status: 'confirmed', caregiverId: selectedCaregiver }),
+      })
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Booking approved & caregiver assigned' })
+        setAssignOpen(false); setSelectedCaregiver(''); setAssignBooking(null); fetchBookings()
+      } else { toast({ title: 'Error', description: 'Failed', variant: 'destructive' }) }
+    } catch { toast({ title: 'Error', description: 'Network issue', variant: 'destructive' }) }
+    finally { setApproving(false) }
+  }
+
+  const handleRejectBooking = async (booking: Booking) => {
+    if (!confirm('Reject this booking?')) return
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: booking.id, status: 'cancelled' }),
+      })
+      if (res.ok) { toast({ title: 'Rejected', description: booking.bookingId + ' cancelled' }); fetchBookings() }
+    } catch { toast({ title: 'Error', description: 'Failed', variant: 'destructive' }) }
+  }
+
+  const openAssignDialog = (booking: Booking) => {
+    setAssignBooking(booking); setAssignOpen(true); fetchCaregivers()
+  }
 
   useEffect(() => {
     fetchBookings()
@@ -185,6 +232,7 @@ export function BookingsSection() {
     { label: 'Offline', value: offlineCount, icon: WifiOff, bg: 'bg-amber-100', text: 'text-amber-600', filterValue: 'in_home', filterType: 'mode' as const },
     { label: 'Completed', value: completedCount, icon: CheckCircle, bg: 'bg-green-100', text: 'text-green-600', filterValue: 'completed', filterType: 'status' as const },
     { label: 'Cancelled', value: cancelledCount, icon: XCircle, bg: 'bg-red-100', text: 'text-red-600', filterValue: 'cancelled', filterType: 'status' as const },
+    { label: 'Pending Approval', value: bookings.filter(b => b.status === 'pending_admin_approval').length, icon: CheckCircle, bg: 'bg-orange-100', text: 'text-orange-600', filterValue: 'pending_admin_approval', filterType: 'status' as const },
   ]
 
   return (
@@ -285,6 +333,7 @@ export function BookingsSection() {
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="pending_admin_approval">Pending Approval</SelectItem>
                   <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
@@ -326,6 +375,7 @@ export function BookingsSection() {
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Mode</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Service</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Caregiver</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500">Amount</TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-500 text-center">Actions</TableHead>
                 </TableRow>
@@ -334,7 +384,7 @@ export function BookingsSection() {
                 {loading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 10 }).map((_, j) => (
+                      {Array.from({ length: 11 }).map((_, j) => (
                         <TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>
                       ))}
                     </TableRow>
@@ -374,24 +424,30 @@ export function BookingsSection() {
                           {b.status.replace('_', ' ')}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-sm text-gray-700">
+                        {b.caregiverName || <span className="text-gray-400">-</span>}
+                      </TableCell>
                       <TableCell className="text-sm font-medium text-gray-900">
                         {b.amount != null ? `₹${b.amount.toLocaleString('en-IN')}` : '-'}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-blue-600 hover:bg-blue-50"
-                          onClick={() => handleViewBooking(b)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:bg-blue-50" onClick={() => handleViewBooking(b)}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {b.status === 'pending_admin_approval' && (
+                            <Button size="sm" className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openAssignDialog(b)}>Approve</Button>
+                          )}
+                          {b.status === 'pending_admin_approval' && (
+                            <Button size="sm" variant="outline" className="h-8 text-xs text-red-600 border-red-300 hover:bg-red-50" onClick={() => handleRejectBooking(b)}>Reject</Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-400 text-sm">
+                    <TableCell colSpan={11} className="text-center py-8 text-gray-400 text-sm">
                       {hasActiveFilters ? 'No bookings found matching your filters' : 'No bookings found'}
                     </TableCell>
                   </TableRow>
@@ -467,6 +523,16 @@ export function BookingsSection() {
                 </div>
               </div>
 
+              {/* Caregiver */}
+              {selectedBooking.caregiverName && (
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" /> Assigned Caregiver
+                  </h4>
+                  <p className="text-sm font-medium text-gray-900">{selectedBooking.caregiverName}</p>
+                </div>
+              )}
+
               {/* Booking Details */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <h4 className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1.5">
@@ -529,6 +595,14 @@ export function BookingsSection() {
                 </div>
               )}
 
+              {/* Approve / Reject Actions */}
+              {selectedBooking.status === 'pending_admin_approval' && (
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" className="flex-1 text-red-600 border-red-300 hover:bg-red-50" onClick={() => { handleRejectBooking(selectedBooking); setDetailOpen(false) }}>Reject</Button>
+                  <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={() => { openAssignDialog(selectedBooking); setDetailOpen(false) }}>Approve &amp; Assign</Button>
+                </div>
+              )}
+
               {/* Amount & Commission */}
               <div className="bg-blue-50 rounded-lg p-4 space-y-2">
                 <h4 className="text-xs font-semibold text-blue-600 uppercase flex items-center gap-1.5">
@@ -560,6 +634,47 @@ export function BookingsSection() {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Caregiver Dialog */}
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              Approve &amp; Assign Caregiver
+            </DialogTitle>
+          </DialogHeader>
+          {assignBooking && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+                <p className="text-xs text-gray-400">Booking</p>
+                <p className="font-mono text-sm text-blue-700">{assignBooking.bookingId}</p>
+                <p className="text-sm text-gray-700">{assignBooking.patientName} — {assignBooking.serviceName}</p>
+                <p className="text-xs text-gray-500">Date: {assignBooking.date}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Select Caregiver</label>
+                <Select value={selectedCaregiver} onValueChange={setSelectedCaregiver}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Choose a verified caregiver..." /></SelectTrigger>
+                  <SelectContent>
+                    {caregivers.length === 0 ? (
+                      <SelectItem value="_none" disabled>No verified caregivers available</SelectItem>
+                    ) : caregivers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}{c.specialty ? ' — ' + c.specialty : ''}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => { setAssignOpen(false); setSelectedCaregiver('') }}>Cancel</Button>
+                <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white" disabled={!selectedCaregiver || approving} onClick={handleApproveAndAssign}>
+                  {approving ? 'Approving...' : 'Approve &amp; Assign'}
+                </Button>
               </div>
             </div>
           )}

@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
       entry.commission += b.commissionAmount;
       entry.earnings += b.doctorEarnings;
       entry.bookings.push({
-        bookingId: b.bookingId,
+        bookingId: b.bookingId || "",
         patientName: b.patientName,
         date: b.date,
         amount: b.totalAmount,

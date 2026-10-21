@@ -29,9 +29,11 @@ export async function POST(req: NextRequest) {
   if (!doctor) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
+
   if (doctor.isBlocked) {
     return NextResponse.json({ error: "Account is blocked" }, { status: 403 });
   }
+
   if (!doctor.isPortalUser) {
     return NextResponse.json({ error: "Portal access not enabled" }, { status: 403 });
   }
@@ -39,6 +41,17 @@ export async function POST(req: NextRequest) {
   const valid = await bcrypt.compare(password, doctor.password);
   if (!valid) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+  }
+
+  // P0-6: Block login for unverified doctors.
+  if (!doctor.verified) {
+    return NextResponse.json(
+      {
+        error: "Account pending verification. Please complete document verification before logging in.",
+        code: "PENDING_VERIFICATION",
+      },
+      { status: 403 }
+    );
   }
 
   const { password: _, ...doctorData } = doctor;
