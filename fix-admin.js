@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 async function main() {
   const prisma = new PrismaClient();
   try {
-    const hash = await bcrypt.hash('Nurturee@2024', 10);
+    const hash = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD || 'changeme-' + Date.now(), 10);
     const admin = await prisma.admin.upsert({
       where: { email: 'admin@nurturee.in' },
       update: { password: hash, name: 'Super Admin', role: 'super_admin', isActive: true },

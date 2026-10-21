@@ -21,7 +21,7 @@ async function main() {
     data: {
       name: "Nurturee Admin",
       email: "admin@nurturee.in",
-      password: hashPwd("admin123"),
+      password: hashPwd(process.env.SEED_ADMIN_PASSWORD || "changeme-" + Date.now()),
       role: "super_admin",
       permissions: JSON.stringify({
         dashboard: true, child_care: true, elder_care: true, doctors: true,
@@ -37,7 +37,7 @@ async function main() {
     data: {
       name: "Rahul Operations",
       email: "rahul@nurturee.in",
-      password: hashPwd("rahul123"),
+      password: hashPwd(process.env.SEED_SUBUSER_PASSWORD || "changeme-" + Date.now()),
       permissions: JSON.stringify({
         dashboard: true, child_care: true, elder_care: true, doctors: true,
         patients: true, bookings: true, prescriptions: false, caregivers: true,
@@ -53,7 +53,7 @@ async function main() {
     data: {
       name: "Priya Finance",
       email: "priya@nurturee.in",
-      password: hashPwd("priya123"),
+      password: hashPwd(process.env.SEED_SUBUSER_PASSWORD || "changeme-" + Date.now()),
       permissions: JSON.stringify({
         dashboard: true, child_care: false, elder_care: false, doctors: true,
         patients: false, bookings: true, prescriptions: false, caregivers: false,
@@ -70,7 +70,7 @@ async function main() {
     prisma.doctor.create({
       data: {
         name: "Dr. Vikram Singh", email: "vikram@nurturee.in", phone: "9876543210",
-        password: hashPwd("doc123"), specialty: "Gynaecologist & IVF Specialist",
+        password: hashPwd(process.env.SEED_DOCTOR_PASSWORD || "changeme-" + Date.now()), specialty: "Gynaecologist & IVF Specialist",
         qualifications: "MBBS, MS (OBG)", experience: 20,
         languages: JSON.stringify(["English", "Hindi", "Punjabi"]),
         area: "Sector 18", isOnline: true, isPortalUser: true, verified: true,
@@ -80,7 +80,7 @@ async function main() {
     prisma.doctor.create({
       data: {
         name: "Dr. Meera Iyer", email: "meera@nurturee.in", phone: "9876543211",
-        password: hashPwd("doc123"), specialty: "Gynaecologist & Obstetrician",
+        password: hashPwd(process.env.SEED_DOCTOR_PASSWORD || "changeme-" + Date.now()), specialty: "Gynaecologist & Obstetrician",
         qualifications: "MBBS, DNB (OBG)", experience: 16,
         languages: JSON.stringify(["English", "Hindi"]),
         area: "Sector 61", isOnline: true, isPortalUser: true, verified: true,
@@ -90,7 +90,7 @@ async function main() {
     prisma.doctor.create({
       data: {
         name: "Dr. Arun Gupta", email: "arun@nurturee.in", phone: "9876543212",
-        password: hashPwd("doc123"), specialty: "General Physician & Internal Medicine",
+        password: hashPwd(process.env.SEED_DOCTOR_PASSWORD || "changeme-" + Date.now()), specialty: "General Physician & Internal Medicine",
         qualifications: "MBBS, MD (Medicine)", experience: 18,
         languages: JSON.stringify(["English", "Hindi"]),
         area: "Sector 29", isOnline: false, isPortalUser: true, verified: true,
@@ -100,7 +100,7 @@ async function main() {
     prisma.doctor.create({
       data: {
         name: "Dr. Kavita Reddy", email: "kavita@nurturee.in", phone: "9876543213",
-        password: hashPwd("doc123"), specialty: "Geriatric Specialist & Internal Medicine",
+        password: hashPwd(process.env.SEED_DOCTOR_PASSWORD || "changeme-" + Date.now()), specialty: "Geriatric Specialist & Internal Medicine",
         qualifications: "MBBS, MD (Geriatrics)", experience: 12,
         languages: JSON.stringify(["English", "Hindi", "Telugu"]),
         area: "Sector 50", isOnline: true, isPortalUser: false, verified: true,
@@ -110,7 +110,7 @@ async function main() {
     prisma.doctor.create({
       data: {
         name: "Dr. Neha Kapoor", email: "neha@nurturee.in", phone: "9876543214",
-        password: hashPwd("doc123"), specialty: "General Physician & Family Doctor",
+        password: hashPwd(process.env.SEED_DOCTOR_PASSWORD || "changeme-" + Date.now()), specialty: "General Physician & Family Doctor",
         qualifications: "MBBS, DNB (Family Medicine)", experience: 7,
         languages: JSON.stringify(["English", "Hindi"]),
         area: "Sector 82", isOnline: true, isPortalUser: true, verified: true,
@@ -120,7 +120,7 @@ async function main() {
     prisma.doctor.create({
       data: {
         name: "Dr. Suresh Patel", email: "suresh@nurturee.in", phone: "9876543215",
-        password: hashPwd("doc123"), specialty: "Pediatrician",
+        password: hashPwd(process.env.SEED_DOCTOR_PASSWORD || "changeme-" + Date.now()), specialty: "Pediatrician",
         qualifications: "MBBS, MD (Pediatrics)", experience: 15,
         languages: JSON.stringify(["English", "Hindi", "Gujarati"]),
         area: "Sector 45", isOnline: false, isPortalUser: true, verified: false,
@@ -410,9 +410,9 @@ async function main() {
   });
 
   console.log("Seed completed successfully!");
-  console.log(`Admin: admin@nurturee.in / admin123`);
-  console.log(`SubUsers: rahul@nurturee.in / rahul123, priya@nurturee.in / priya123`);
-  console.log(`Doctors: vikram@nurturee.in / doc123, meera@nurturee.in / doc123, etc.`);
+  console.log("Admin: admin@nurturee.in (password from SEED_ADMIN_PASSWORD env var)")
+  console.log("SubUsers: rahul@nurturee.in, priya@nurturee.in (passwords from SEED_SUBUSER_PASSWORD)")
+  console.log("Doctors: vikram@nurturee.in, etc. (passwords from SEED_DOCTOR_PASSWORD)")
   console.log(`Created: ${doctors.length} doctors, ${patients.length} patients, ${services.length} services, ${bookings.length} bookings, ${caregivers.length} caregivers`);
 }
 
