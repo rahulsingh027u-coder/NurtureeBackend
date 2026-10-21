@@ -8,7 +8,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_MIME = new Set([
   "image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf",
 ]);
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
+const UPLOAD_DIR = path.join(process.cwd(), "private_uploads");
 
 export async function POST(req: NextRequest) {
   try {
