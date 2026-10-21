@@ -3,8 +3,9 @@ import { db } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
+    const doctorId = req.headers.get("x-portal-user-id");
+    if (!doctorId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
     const { searchParams } = new URL(req.url);
-    const doctorId = searchParams.get("doctorId");
     const status = searchParams.get("status");
 
     if (!doctorId) {

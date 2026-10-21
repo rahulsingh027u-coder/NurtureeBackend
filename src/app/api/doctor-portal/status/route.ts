@@ -3,9 +3,11 @@ import { db } from "@/lib/db";
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { doctorId, isOnline } = await req.json();
+    const doctorId = req.headers.get("x-portal-user-id");
+    if (!doctorId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
+    const { isOnline } = await req.json();
 
-    if (!doctorId || isOnline === undefined) {
+    if (isOnline === undefined) {
       return NextResponse.json(
         { error: "doctorId and isOnline are required" },
         { status: 400 }

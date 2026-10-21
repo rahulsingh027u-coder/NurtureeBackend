@@ -4,9 +4,10 @@ import { db } from "@/lib/db";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    const doctorId = req.headers.get("x-portal-user-id");
+    if (!doctorId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
     const {
       bookingId,
-      doctorId,
       patientId,
       patientUhid,
       diagnosis,
