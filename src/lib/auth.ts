@@ -1,10 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const secretString = process.env.NEXTAUTH_SECRET || "";
+const secretString = process.env.NEXTAUTH_SECRET || (() => { throw new Error("NEXTAUTH_SECRET env var is required"); })();
 const secret = new TextEncoder().encode(secretString);
 
 const portalSecret = new TextEncoder().encode(
-  process.env.SIGNAL_JWT_SECRET ?? ""
+  process.env.SIGNAL_JWT_SECRET ?? (() => { throw new Error("SIGNAL_JWT_SECRET env var is required"); })()
 );
 
 export async function createToken(payload: Record<string, unknown>) {
