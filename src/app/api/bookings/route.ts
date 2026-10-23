@@ -96,6 +96,10 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const { id, status, caregiverId, callDuration, cancelReason } = await req.json();
+    if (!id || typeof id !== 'string') return NextResponse.json({ error: 'Valid id required' }, { status: 400 });
+    if (status && !['pending', 'pending_admin_approval', 'confirmed', 'in_progress', 'completed', 'cancelled'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
     const data: Record<string, unknown> = {};
