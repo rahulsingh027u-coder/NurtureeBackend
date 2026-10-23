@@ -661,10 +661,10 @@ export function CaregiversSection() {
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">{c.experience} yrs</TableCell>
                       <TableCell>{renderStarRating(c.rating)}</TableCell>
-                      <TableCell className="text-center"><VerificationIcon verified={c.isAadhaarVerified} /></TableCell>
-                      <TableCell className="text-center"><VerificationIcon verified={c.isPoliceVerified} /></TableCell>
-                      <TableCell className="text-center"><VerificationIcon verified={c.isMedicalVerified} /></TableCell>
-                      <TableCell className="text-center"><VerificationIcon verified={c.isVideoVerified} /></TableCell>
+                      <TableCell className="text-center"><VerificationIcon verified={(c as any).aadhaarVerified} /></TableCell>
+                      <TableCell className="text-center"><VerificationIcon verified={(c as any).policeVerified} /></TableCell>
+                      <TableCell className="text-center"><VerificationIcon verified={(c as any).medicalFitness} /></TableCell>
+                      <TableCell className="text-center"><VerificationIcon verified={(c as any).videoVerified} /></TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={cn('text-[11px]', c.isAvailable ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700')}>
                           {c.isAvailable ? 'Available' : 'Unavailable'}
