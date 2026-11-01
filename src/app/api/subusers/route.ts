@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const { password, ...safeSubuser } = subuser;
+    const { password: _stripped, ...safeSubuser } = subuser;
     return NextResponse.json(safeSubuser, { status: 201 });
   } catch (error) {
     console.error("Subusers POST error:", error);
