@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId") ?? "";
+    // IDOR fix: use authenticated user ID from JWT, not from query string
+    const userId = req.headers.get("x-user-id") || "";
     const userType = searchParams.get("userType") ?? "admin";
 
     const notifications = await db.notification.findMany({

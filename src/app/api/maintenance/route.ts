@@ -41,6 +41,11 @@ export async function GET() {
 
 // PUT /api/maintenance — toggle maintenance
 export async function PUT(req: NextRequest) {
+  // Security: only super_admin can toggle maintenance mode
+  const role = req.headers.get("x-user-role");
+  if (role !== "super_admin") {
+    return NextResponse.json({ error: "Super admin access required" }, { status: 403 });
+  }
   try {
     const body = await req.json();
     const { enabled, message, updatedBy } = body;

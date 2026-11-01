@@ -31,6 +31,10 @@ export async function POST(req: NextRequest) {
     }
 
     const entityDir = path.join(UPLOAD_DIR, entityType, entityId);
+
+    if (entityId && !/^[a-zA-Z0-9_-]{1,64}$/.test(entityId)) {
+      return NextResponse.json({ error: "Invalid entity ID" }, { status: 400 });
+    }
     await mkdir(entityDir, { recursive: true });
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "bin";

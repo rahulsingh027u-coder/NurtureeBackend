@@ -50,7 +50,9 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password, permissions, activeBranches, assignedBy } = body;
+    const { name, email, password, permissions, activeBranches } = body;
+    // Security: use authenticated admin ID, not client-supplied value
+    const assignedBy = req.headers.get("x-user-id") || "";
 
     if (!name || !email || !password || !assignedBy) {
       return NextResponse.json(
@@ -77,7 +79,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(subuser, { status: 201 });
+    const { password, ...safeSubuser } = subuser;
+    return NextResponse.json(safeSubuser, { status: 201 });
   } catch (error) {
     console.error("Subusers POST error:", error);
     return NextResponse.json({ error: "Failed to create subuser" }, { status: 500 });
